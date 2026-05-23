@@ -1,8 +1,31 @@
 /* Auralis top nav — sticky, glass-backed.
-   Logo · primary nav · language toggle (繁 ↔ 简 ↔ EN) · account · cart. */
+   Logo · primary nav · locale controls (language + display currency) · account · cart. */
 
 (function () {
-  const { Icon, LANGS, CURRENCIES, pick } = window.AuralisUI;
+  const { useState, useEffect, useRef } = React;
+  const { Icon, LANGS, CURRENCIES, pick, currencyLabel } = window.AuralisUI;
+
+  const PILL_SHELL = {
+    position: 'relative',
+    display: 'inline-flex',
+    height: 36,
+    padding: 3,
+    borderRadius: 999,
+    background: 'var(--base-100)',
+    boxShadow: 'inset 0 0 0 1px var(--base-200)',
+    alignItems: 'center',
+  };
+
+  function useClickOutside(ref, onClose, enabled) {
+    useEffect(() => {
+      if (!enabled) return undefined;
+      function onPointerDown(e) {
+        if (ref.current && !ref.current.contains(e.target)) onClose();
+      }
+      document.addEventListener('mousedown', onPointerDown);
+      return () => document.removeEventListener('mousedown', onPointerDown);
+    }, [enabled, onClose]);
+  }
 
   function Nav({ currentScreen, onNav, cartCount = 0, lang, onCycleLang, displayCurrency, onCurrencyChange, fxDate }) {
     const T = (opts) => pick(lang, opts);
@@ -50,19 +73,25 @@
           })}
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <CurrencySelect value={displayCurrency} onChange={onCurrencyChange} fxDate={fxDate} />
-          <LangToggle lang={lang} onCycle={onCycleLang} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <LocaleControls
+            lang={lang}
+            onLangChange={onCycleLang}
+            displayCurrency={displayCurrency}
+            onCurrencyChange={onCurrencyChange}
+            fxDate={fxDate}
+          />
 
-          <button style={{
-            width: 40, height: 40, borderRadius: 999, border: 0, cursor: 'pointer',
-            background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--fg-1)',
-          }}>
+          <button type="button" aria-label={T({ hant: '帳戶', hans: '账户', en: 'Account' })}
+                  style={{
+                    width: 40, height: 40, borderRadius: 999, border: 0, cursor: 'pointer',
+                    background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--fg-1)',
+                  }}>
             <Icon name="user" size={20} />
           </button>
 
-          <button onClick={() => onNav('checkout')}
+          <button type="button" onClick={() => onNav('checkout')}
                   style={{
                     height: 40, padding: '0 14px 0 12px', borderRadius: 999,
                     border: 0, cursor: 'pointer',
@@ -80,23 +109,75 @@
     );
   }
 
-  // Three-way pill: 繁 / 简 / EN. Clicking a segment selects it; the active
-  // one rides a gradient capsule that slides between positions.
-  function LangToggle({ lang, onCycle }) {
-    const activeIdx = Math.max(0, LANGS.findIndex(l => l.id === lang));
+  function LocaleControls({ lang, onLangChange, displayCurrency, onCurrencyChange, fxDate }) {
+    const T = (opts) => pick(lang, opts);
+
     return (
-      <div role="group" aria-label="Language"
-           style={{
-             position: 'relative',
-             display: 'inline-flex',
-             height: 36,
-             padding: 3,
-             borderRadius: 999,
-             background: 'var(--base-100)',
-             boxShadow: 'inset 0 0 0 1px var(--base-200)',
-             alignItems: 'center',
-           }}>
-        {/* Sliding active capsule */}
+      <div
+        role="group"
+        aria-label={T({ hant: '語言與幣別', hans: '语言与币别', en: 'Language and currency' })}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          padding: '6px 12px 6px 10px',
+          borderRadius: 16,
+          background: 'rgba(255,255,255,0.55)',
+          boxShadow: 'inset 0 0 0 1px rgba(20,30,60,0.06)',
+        }}
+      >
+        <LocaleField
+          icon="languages"
+          label={T({ hant: '語言', hans: '语言', en: 'Language' })}
+        >
+          <LangToggle lang={lang} onChange={onLangChange} />
+        </LocaleField>
+
+        <span aria-hidden="true" style={{ width: 1, height: 28, background: 'var(--base-200)', flexShrink: 0 }} />
+
+        <LocaleField
+          icon="coins"
+          label={T({ hant: '幣別', hans: '币别', en: 'Currency' })}
+        >
+          <CurrencyPicker
+            lang={lang}
+            value={displayCurrency}
+            onChange={onCurrencyChange}
+            fxDate={fxDate}
+          />
+        </LocaleField>
+      </div>
+    );
+  }
+
+  function LocaleField({ icon, label, children }) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          font: '600 10px/1 var(--font-text)',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          color: 'var(--fg-3)',
+        }}>
+          <Icon name={icon} size={11} color="var(--fg-3)" />
+          {label}
+        </span>
+        {children}
+      </div>
+    );
+  }
+
+  function LangToggle({ lang, onChange }) {
+    const activeIdx = Math.max(0, LANGS.findIndex((l) => l.id === lang));
+    const titles = {
+      hant: { hant: '繁體中文', hans: '繁体中文', en: 'Traditional Chinese' },
+      hans: { hant: '簡體中文', hans: '简体中文', en: 'Simplified Chinese' },
+      en:   { hant: 'English',  hans: 'English',  en: 'English' },
+    };
+
+    return (
+      <div role="group" aria-label="Language" style={PILL_SHELL}>
         <span aria-hidden="true" style={{
           position: 'absolute',
           top: 3, bottom: 3,
@@ -107,26 +188,34 @@
           borderRadius: 999,
           boxShadow: '0 4px 12px rgba(0,213,255,0.35)',
           transition: 'transform var(--dur-base) var(--ease-out)',
-        }}/>
+          pointerEvents: 'none',
+        }} />
         {LANGS.map((l) => {
           const active = lang === l.id;
           return (
-            <button key={l.id}
-                    onClick={() => onCycle(l.id)}
-                    aria-pressed={active}
-                    title={l.htmlLang}
-                    style={{
-                      position: 'relative',
-                      zIndex: 1,
-                      flex: 1, minWidth: 36,
-                      padding: '0 10px',
-                      height: 30,
-                      border: 0, background: 'transparent', cursor: 'pointer',
-                      font: '700 13px/1 var(--font-text)',
-                      color: active ? '#062F2A' : 'var(--fg-2)',
-                      letterSpacing: l.id === 'en' ? '0.04em' : 0,
-                      transition: 'color var(--dur-fast) var(--ease-out)',
-                    }}>
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => onChange(l.id)}
+              aria-pressed={active}
+              aria-label={pick(lang, titles[l.id])}
+              title={pick(lang, titles[l.id])}
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                flex: 1,
+                minWidth: 40,
+                padding: '0 12px',
+                height: 30,
+                border: 0,
+                background: 'transparent',
+                cursor: 'pointer',
+                font: '700 13px/1 var(--font-text)',
+                color: active ? '#062F2A' : 'var(--fg-2)',
+                letterSpacing: l.id === 'en' ? '0.04em' : 0,
+                transition: 'color var(--dur-fast) var(--ease-out)',
+              }}
+            >
               {l.label}
             </button>
           );
@@ -135,31 +224,157 @@
     );
   }
 
-  function CurrencySelect({ value, onChange, fxDate }) {
+  function CurrencyPicker({ lang, value, onChange, fxDate }) {
+    const T = (opts) => pick(lang, opts);
+    const [open, setOpen] = useState(false);
+    const rootRef = useRef(null);
+
+    useClickOutside(rootRef, () => setOpen(false), open);
+
+    useEffect(() => {
+      if (!open) return undefined;
+      function onKey(e) {
+        if (e.key === 'Escape') setOpen(false);
+      }
+      document.addEventListener('keydown', onKey);
+      return () => document.removeEventListener('keydown', onKey);
+    }, [open]);
+
+    const current = CURRENCIES.find((c) => c.code === value) || CURRENCIES[0];
+    const fxHint = fxDate
+      ? T({
+          hant: `匯率基準日 ${fxDate}（ECB 參考）`,
+          hans: `汇率基准日 ${fxDate}（ECB 参考）`,
+          en: `Rates as of ${fxDate} (ECB reference)`,
+        })
+      : T({ hant: '匯率載入中…', hans: '汇率加载中…', en: 'Loading exchange rates…' });
+
     return (
-      <label style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label="Display currency"
-          title={fxDate ? `FX as of ${fxDate} (Frankfurter / ECB)` : 'Loading exchange rates…'}
+      <div ref={rootRef} style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={T({
+            hant: `顯示幣別：${currencyLabel(value, lang)}`,
+            hans: `显示币别：${currencyLabel(value, lang)}`,
+            en: `Display currency: ${currencyLabel(value, lang)}`,
+          })}
           style={{
             height: 36,
-            padding: '0 10px',
+            minWidth: 132,
+            padding: '0 12px 0 14px',
             borderRadius: 999,
             border: 0,
-            background: 'var(--base-100)',
-            boxShadow: 'inset 0 0 0 1px var(--base-200)',
-            font: '600 12px/1 var(--font-text)',
-            color: 'var(--fg-1)',
             cursor: 'pointer',
+            background: open ? '#fff' : 'var(--base-100)',
+            boxShadow: open
+              ? 'inset 0 0 0 2px var(--aurora-cyan), 0 0 0 4px rgba(0,213,255,0.15)'
+              : 'inset 0 0 0 1px var(--base-200)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            font: '600 13px/1 var(--font-text)',
+            color: 'var(--fg-1)',
+            transition: 'box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out)',
           }}
         >
-          {CURRENCIES.map((c) => (
-            <option key={c.code} value={c.code}>{c.label}</option>
-          ))}
-        </select>
-      </label>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <span style={{
+              font: '700 11px/1 var(--font-text)',
+              letterSpacing: '0.06em',
+              color: 'var(--fg-3)',
+            }}>{current.code}</span>
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: 88,
+            }}>{pick(lang, current.name)}</span>
+          </span>
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color="var(--fg-3)" />
+        </button>
+
+        {open && (
+          <div
+            role="listbox"
+            aria-label={T({ hant: '選擇顯示幣別', hans: '选择显示币别', en: 'Choose display currency' })}
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              zIndex: 60,
+              width: 280,
+              padding: 8,
+              borderRadius: 16,
+              background: 'rgba(255,255,255,0.96)',
+              backdropFilter: 'blur(20px) saturate(1.2)',
+              WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
+              boxShadow: 'var(--shadow-4), inset 0 0 0 1px rgba(255,255,255,0.8)',
+            }}
+          >
+            <div style={{
+              padding: '8px 10px 10px',
+              font: '500 11px/1.4 var(--font-text)',
+              color: 'var(--fg-3)',
+              borderBottom: '1px solid var(--base-200)',
+              marginBottom: 4,
+            }}>
+              {fxHint}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 320, overflowY: 'auto' }}>
+              {CURRENCIES.map((c) => {
+                const selected = c.code === value;
+                return (
+                  <button
+                    key={c.code}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onChange(c.code);
+                      setOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: 0,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      background: selected ? 'var(--gradient-aurora-soft)' : 'transparent',
+                      boxShadow: selected ? 'inset 0 0 0 1px rgba(0,213,255,0.35)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      transition: 'background var(--dur-fast) var(--ease-out)',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selected) e.currentTarget.style.background = 'var(--base-50)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!selected) e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                      <span style={{ font: '600 14px/1 var(--font-text)', color: 'var(--fg-1)' }}>
+                        {pick(lang, c.name)}
+                      </span>
+                      <span style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)' }}>
+                        {c.code} · {c.symbol}
+                      </span>
+                    </span>
+                    {selected && <Icon name="check" size={16} color="var(--aurora-deep)" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 

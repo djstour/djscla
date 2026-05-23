@@ -64,16 +64,21 @@
   // FX — USD anchor (Bókun) → display currency via Frankfurter (/api/fx/rates)
   // ------------------------------------------------------------------
   const CURRENCIES = [
-    { code: 'USD', label: 'USD $' },
-    { code: 'TWD', label: 'TWD NT$' },
-    { code: 'CNY', label: 'CNY ¥' },
-    { code: 'HKD', label: 'HKD HK$' },
-    { code: 'SGD', label: 'SGD S$' },
-    { code: 'MYR', label: 'MYR RM' },
-    { code: 'MOP', label: 'MOP MOP$' },
-    { code: 'CAD', label: 'CAD $' },
-    { code: 'AUD', label: 'AUD $' },
+    { code: 'USD', symbol: '$',   name: { hant: '美元',       hans: '美元',       en: 'US dollar' } },
+    { code: 'TWD', symbol: 'NT$', name: { hant: '新台幣',     hans: '新台币',     en: 'Taiwan dollar' } },
+    { code: 'CNY', symbol: '¥',   name: { hant: '人民幣',     hans: '人民币',     en: 'Chinese yuan' } },
+    { code: 'HKD', symbol: 'HK$', name: { hant: '港幣',       hans: '港币',       en: 'Hong Kong dollar' } },
+    { code: 'SGD', symbol: 'S$',  name: { hant: '新加坡元',   hans: '新加坡元',   en: 'Singapore dollar' } },
+    { code: 'MYR', symbol: 'RM',  name: { hant: '馬來西亞令吉', hans: '马来西亚令吉', en: 'Malaysian ringgit' } },
+    { code: 'MOP', symbol: 'MOP$', name: { hant: '澳門幣',     hans: '澳门币',     en: 'Macau pataca' } },
+    { code: 'CAD', symbol: '$',   name: { hant: '加拿大元',   hans: '加拿大元',   en: 'Canadian dollar' } },
+    { code: 'AUD', symbol: '$',   name: { hant: '澳元',       hans: '澳元',       en: 'Australian dollar' } },
   ];
+
+  function currencyLabel(currency, lang) {
+    const c = CURRENCIES.find((x) => x.code === currency) || CURRENCIES[0];
+    return `${c.code} · ${pick(lang, c.name)}`;
+  }
 
   const FX_BASE = 'USD';
 
@@ -214,7 +219,7 @@
 
   window.AuralisUI = {
     Icon, formatPrice, singleCurrency, formatTotalAmount,
-    CURRENCIES, FX_BASE, defaultCurrencyForLang,
+    CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
     fakePhoto, PhotoSparkles, CATEGORIES, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
   };
