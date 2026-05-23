@@ -368,6 +368,12 @@ html {
     height: 40px !important;
   }
 
+  .detail-photo-thumb-btn {
+    min-width: 56px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
   .detail-layout {
     padding-top: 20px !important;
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;

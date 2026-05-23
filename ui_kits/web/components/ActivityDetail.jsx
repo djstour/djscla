@@ -94,6 +94,17 @@
     const T = (opts) => pick(lang, opts);
     const imgProfile = useResponsiveImageProfile();
     const isMobile = window.AuralisUI.isMobileViewport();
+    const [activePhoto, setActivePhoto] = useState(0);
+
+    const galleryPhotos = tour
+      ? ((tour.photoUrls && tour.photoUrls.length)
+        ? tour.photoUrls
+        : (tour.coverImageUrl ? [tour.coverImageUrl] : []))
+      : [];
+
+    useEffect(() => {
+      setActivePhoto(0);
+    }, [tour && tour.id, galleryPhotos.length]);
 
     if (!tour && loading) {
       return <DetailSkeleton onBack={onBack} lang={lang} />;
@@ -110,8 +121,8 @@
 
     if (!tour) return null;
 
-    const photos = (tour.photoUrls && tour.photoUrls.length) ? tour.photoUrls : [];
-    const heroUrl = photos[0] || tour.coverImageUrl;
+    const safeIndex = Math.min(activePhoto, Math.max(0, galleryPhotos.length - 1));
+    const heroUrl = galleryPhotos[safeIndex] || tour.coverImageUrl;
     const cancelHrs = tour.availability && tour.cancellationCutoffMinutes != null
       ? Math.round(tour.cancellationCutoffMinutes / 60)
       : null;
@@ -120,38 +131,76 @@
       <div style={{ background: 'var(--bg-page)', minHeight: '100vh', paddingBottom: 100 }}>
         <div className="detail-hero">
           <DetailHeroImage heroUrl={heroUrl} placeholderKey={tour.photo} />
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(180deg, rgba(17,21,31,0.15) 0%, rgba(17,21,31,0.55) 100%)',
-          }} />
-          <div className="auralis-container" style={{ position: 'relative', paddingTop: 24, paddingBottom: 24 }}>
+          <div
+            className="detail-hero-scrim"
+            aria-hidden="true"
+            style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              background: 'linear-gradient(180deg, rgba(17,21,31,0.15) 0%, rgba(17,21,31,0.55) 100%)',
+            }}
+          />
+          <div className="auralis-container detail-hero-top" style={{ position: 'relative', zIndex: 2, paddingTop: 24, paddingBottom: 24 }}>
             <BackButton onBack={onBack} lang={lang} light />
           </div>
-          {photos.length > 1 && (
+          {galleryPhotos.length > 1 && (
             <div
               className="detail-photo-strip"
+              role="tablist"
+              aria-label={T({ hant: '行程照片', hans: '行程照片', en: 'Tour photos' })}
               style={{
                 position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+                zIndex: 3,
                 display: 'flex', gap: 8, maxWidth: '90%', overflowX: 'auto', padding: '0 8px',
                 WebkitOverflowScrolling: 'touch',
               }}
             >
-              {photos.slice(0, isMobile ? 4 : 6).map((url, i) => (
-                <img
-                  key={url + i}
-                  src={proxyImageUrl(url, imgProfile.gallery)}
-                  alt=""
-                  loading={i === 0 ? 'eager' : 'lazy'}
-                  decoding="async"
-                  className="detail-photo-thumb"
-                  style={{
-                    width: 72, height: 48, borderRadius: 10, flexShrink: 0,
-                    objectFit: 'cover', objectPosition: 'center',
-                    boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.8)',
-                    background: 'var(--base-100)',
-                  }}
-                />
-              ))}
+              {galleryPhotos.slice(0, isMobile ? 6 : 8).map((url, i) => {
+                const selected = safeIndex === i;
+                return (
+                  <button
+                    key={url + i}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    aria-label={T({
+                      hant: `照片 ${i + 1}`,
+                      hans: `照片 ${i + 1}`,
+                      en: `Photo ${i + 1}`,
+                    })}
+                    className={`detail-photo-thumb-btn${selected ? ' is-selected' : ''}`}
+                    onClick={() => setActivePhoto(i)}
+                    style={{
+                      flexShrink: 0,
+                      padding: 0,
+                      border: 0,
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      background: 'transparent',
+                      boxShadow: selected
+                        ? '0 0 0 2px #fff, 0 0 0 4px var(--aurora-cyan)'
+                        : 'inset 0 0 0 2px rgba(255,255,255,0.85)',
+                      overflow: 'hidden',
+                      opacity: selected ? 1 : 0.88,
+                      transition: 'opacity var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out)',
+                    }}
+                  >
+                    <img
+                      src={proxyImageUrl(url, imgProfile.gallery)}
+                      alt=""
+                      loading={i === 0 || i === safeIndex ? 'eager' : 'lazy'}
+                      decoding="async"
+                      draggable={false}
+                      className="detail-photo-thumb"
+                      style={{
+                        display: 'block',
+                        width: 72, height: 48,
+                        objectFit: 'cover', objectPosition: 'center',
+                        background: 'var(--base-100)',
+                      }}
+                    />
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
