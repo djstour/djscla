@@ -180,13 +180,32 @@
   // Bókun lets vendors tag activities with free-form English categories.
   // Map them to our six-category navigation chips.
   const CATEGORY = {
-    'Self-drive':  { hant: '自駕 · Self-drive',       hans: '自驾 · Self-drive',       en: 'Self-drive',       chipId: 'self-drive' },
-    'Aurora':      { hant: '極光 · Northern Lights',  hans: '极光 · Northern Lights',  en: 'Northern Lights',  chipId: 'aurora' },
-    'Glacier':     { hant: '冰川 · Glacier',          hans: '冰川 · Glacier',          en: 'Glacier',          chipId: 'glacier' },
-    'Hot spring':  { hant: '溫泉 · Hot spring',       hans: '温泉 · Hot spring',       en: 'Hot spring',       chipId: 'hotspring' },
-    'Day trip':    { hant: '一日遊 · Day trip',       hans: '一日游 · Day trip',       en: 'Day trip',         chipId: 'day' },
-    'Premium':     { hant: '頂級 · Premium',          hans: '顶级 · Premium',          en: 'Premium',          chipId: 'premium' },
-    'Adventure':   { hant: '探險',                    hans: '探险',                    en: 'Adventure',        chipId: null },
+    'Self-drive':  { hant: '自駕',   hans: '自驾',   en: 'Self-drive',       chipId: 'self-drive' },
+    'Aurora':      { hant: '極光',   hans: '极光',   en: 'Northern Lights',  chipId: 'aurora' },
+    'Glacier':     { hant: '冰川',   hans: '冰川',   en: 'Glacier',          chipId: 'glacier' },
+    'Hot spring':  { hant: '溫泉',   hans: '温泉',   en: 'Hot spring',       chipId: 'hotspring' },
+    'Day trip':    { hant: '一日遊', hans: '一日游', en: 'Day trip',         chipId: 'day' },
+    'Premium':     { hant: '頂級',   hans: '顶级',   en: 'Premium',          chipId: 'premium' },
+    'Adventure':   { hant: '探險',   hans: '探险',   en: 'Adventure',        chipId: null },
+  };
+
+  const GUIDE_LANGUAGE = {
+    english: { hant: '英語', hans: '英语', en: 'English' },
+    icelandic: { hant: '冰島語', hans: '冰岛语', en: 'Icelandic' },
+    german: { hant: '德語', hans: '德语', en: 'German' },
+    french: { hant: '法語', hans: '法语', en: 'French' },
+    spanish: { hant: '西班牙語', hans: '西班牙语', en: 'Spanish' },
+    mandarin: { hant: '華語', hans: '华语', en: 'Mandarin' },
+    chinese: { hant: '中文', hans: '中文', en: 'Chinese' },
+    japanese: { hant: '日語', hans: '日语', en: 'Japanese' },
+    korean: { hant: '韓語', hans: '韩语', en: 'Korean' },
+    italian: { hant: '義大利語', hans: '意大利语', en: 'Italian' },
+    portuguese: { hant: '葡萄牙語', hans: '葡萄牙语', en: 'Portuguese' },
+    dutch: { hant: '荷蘭語', hans: '荷兰语', en: 'Dutch' },
+    norwegian: { hant: '挪威語', hans: '挪威语', en: 'Norwegian' },
+    swedish: { hant: '瑞典語', hans: '瑞典语', en: 'Swedish' },
+    danish: { hant: '丹麥語', hans: '丹麦语', en: 'Danish' },
+    finnish: { hant: '芬蘭語', hans: '芬兰语', en: 'Finnish' },
   };
 
   // ------------------------------------ pricing-category title localisation --
@@ -207,6 +226,6 @@
 
   window.AuralisData = window.AuralisData || {};
   window.AuralisData.BOKUN_TRANSLATIONS = {
-    ACTIVITIES, VENDOR, TAG, CATEGORY, PRICING_CATEGORY, WARNING,
+    ACTIVITIES, VENDOR, TAG, CATEGORY, PRICING_CATEGORY, WARNING, GUIDE_LANGUAGE,
   };
 })();

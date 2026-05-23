@@ -63,7 +63,7 @@
           </div>
         </Section>
 
-        <Section title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })} subtitle="Bókun">
+        <Section title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {supplierOptions.length <= 1 ? (
               <p style={{ margin: 0, font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-3)' }}>

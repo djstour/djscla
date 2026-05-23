@@ -167,9 +167,11 @@
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name="clock" size={12} />{tour.duration}
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Icon name="car-front" size={12} />{tour.mode}
-            </span>
+            {tour.mode && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="car-front" size={12} />{tour.mode}
+              </span>
+            )}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name="star" size={12} color="#FFB347" />
               <b style={{ color: 'var(--fg-1)' }}>{tour.rating}</b>

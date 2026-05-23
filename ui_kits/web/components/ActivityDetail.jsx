@@ -265,7 +265,7 @@
             {tour.stops && tour.stops.length > 0 && (
               <Section title={T({ hant: '行程站點', hans: '行程站点', en: 'Itinerary stops' })}>
                 <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {tour.stops.map((stop, i) => (
+                  {tour.stops.filter((stop) => stop.name).map((stop, i) => (
                     <li key={stop.id} style={{
                       display: 'flex', gap: 14, alignItems: 'flex-start',
                       padding: 14, borderRadius: 14, background: '#fff', boxShadow: 'var(--shadow-1)',

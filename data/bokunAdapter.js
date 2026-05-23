@@ -24,7 +24,6 @@
  *   {
  *     id:           number,            // Bókun activity id
  *     title:        string,            // already localised
- *     titleEn:      string,            // raw EN — useful for analytics
  *     summary:      string,            // localised, plain text (no HTML)
  *     supplier:     string,            // vendor.title (Latin brand name)
  *     supplierRole: string,            // localised vendor role line
@@ -52,18 +51,35 @@
     return (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
-  // Generic overlay lookup with fallback. Always returns a string.
-  // `entry` is a { hant, hans, en, meta? } object OR null/undefined.
-  // `fallback` is the raw English string (mandatory) used when no overlay
-  // exists for the chosen lang.
+  // Overlay lookup. English may use Bókun source as fallback; zh locales never
+  // surface raw English or entry.en when hant/hans is missing.
   function pickFromOverlay(entry, lang, fallback) {
-    if (!entry) return fallback;
+    const fb = fallback != null ? String(fallback) : '';
+    if (lang === 'en') {
+      if (!entry) return fb;
+      if (entry.en != null && entry.en !== '') return entry.en;
+      if (entry[lang] != null && entry[lang] !== '') return entry[lang];
+      return fb;
+    }
+    if (!entry) return '';
     if (entry[lang] != null && entry[lang] !== '') return entry[lang];
-    // Cross-script fallback within Chinese before reaching English.
     if (lang === 'hant' && entry.hans) return entry.hans;
     if (lang === 'hans' && entry.hant) return entry.hant;
-    if (entry.en) return entry.en;
-    return fallback;
+    return '';
+  }
+
+  function guideLanguageLabel(phrase, lang) {
+    if (!phrase) return '';
+    if (lang === 'en') return String(phrase);
+    const T = A.BOKUN_TRANSLATIONS || {};
+    const key = String(phrase).trim().toLowerCase().replace(/[\s-]+/g, '_');
+    return pickFromOverlay(T.GUIDE_LANGUAGE && T.GUIDE_LANGUAGE[key], lang, '');
+  }
+
+  function localizeMeetingPoint(mp, lang) {
+    if (!mp) return null;
+    if (lang === 'en') return mp;
+    return null;
   }
 
   /** Merge static bokunTranslations.js with Supabase overlays from API. */
@@ -201,14 +217,21 @@
       const overlay = getActivityOverlay(activity.id);
 
       // ---- core text ----
-      const title = pickFromOverlay(overlay.title, lang, activity.title);
-      const summary = pickFromOverlay(overlay.summary, lang, stripHtml(activity.summary || activity.description));
+      const enTitle = activity.title || '';
+      const title = pickFromOverlay(overlay.title, lang, lang === 'en' ? enTitle : '');
+      const summary = pickFromOverlay(
+        overlay.summary,
+        lang,
+        lang === 'en' ? stripHtml(activity.summary || activity.description) : '',
+      );
       const description = pickFromOverlay(
         overlay.description,
         lang,
-        stripHtml(activity.description || activity.summary || ''),
+        lang === 'en' ? stripHtml(activity.description || activity.summary || '') : '',
       );
-      const mode = pickFromOverlay(overlay.mode, lang, activity.categories && activity.categories[0]);
+      const catKey = activity.categories && activity.categories[0];
+      const mode = pickFromOverlay(overlay.mode, lang, '')
+        || (catKey ? pickFromOverlay(T.CATEGORY[catKey], lang, lang === 'en' ? catKey : '') : '');
 
       // ---- vendor ----
       const vendorOverlay = T.VENDOR[activity.vendor && activity.vendor.id] || {};
@@ -218,7 +241,9 @@
       // ---- duration ----
       // Bókun ships `durationText` as English. For Chinese locales we render
       // a templated version using the numeric `durationMinutes`.
-      const duration = formatDuration(activity.durationMinutes, lang) || activity.durationText;
+      const duration = formatDuration(activity.durationMinutes, lang)
+        || (lang === 'en' ? activity.durationText : '')
+        || '';
 
       // ---- pricing ----
       const defaultCategoryId = (activity.pricingCategories || []).find(c => c.defaultCategory)?.id
@@ -226,30 +251,34 @@
       const defaultRow = (activity.pricing || []).find(p => p.pricingCategoryId === defaultCategoryId)
                      || activity.pricing?.[0];
 
-      const priceTable = (activity.pricing || []).map(row => {
-        const cat = T.PRICING_CATEGORY[row.pricingCategoryId];
-        const catRaw = (activity.pricingCategories || []).find(c => c.id === row.pricingCategoryId);
-        return {
-          categoryId: row.pricingCategoryId,
-          label: pickFromOverlay(cat, lang, catRaw ? catRaw.fullTitle : 'Adult'),
-          amount: row.amount,
-          currency: row.currency,
-        };
-      });
+      const priceTable = (activity.pricing || [])
+        .map((row) => {
+          const cat = T.PRICING_CATEGORY[row.pricingCategoryId];
+          const catRaw = (activity.pricingCategories || []).find((c) => c.id === row.pricingCategoryId);
+          return {
+            categoryId: row.pricingCategoryId,
+            label: pickFromOverlay(cat, lang, lang === 'en' && catRaw ? catRaw.fullTitle : ''),
+            amount: row.amount,
+            currency: row.currency,
+          };
+        })
+        .filter((row) => row.label);
 
       // ---- stops (for the trip-with-map screen) ----
       const stops = (activity.stops || []).map(stop => ({
         id: stop.id,
-        name: pickFromOverlay(overlay.stops && overlay.stops[String(stop.id)], lang, stop.title),
+        name: pickFromOverlay(overlay.stops && overlay.stops[String(stop.id)], lang, lang === 'en' ? stop.title : ''),
         geo: stop.geoPoint,
         durationMinutes: stop.durationMinutes,
       }));
 
       // ---- tags ----
-      const tags = (activity.tags || []).map(key => ({
-        key,
-        label: pickFromOverlay(T.TAG[key], lang, key),
-      }));
+      const tags = (activity.tags || [])
+        .map((key) => ({
+          key,
+          label: pickFromOverlay(T.TAG[key], lang, lang === 'en' ? key : ''),
+        }))
+        .filter((t) => t.label);
 
       // ---- badge (a single hero label) ----
       const badgeKey = pickPrimaryBadge(activity.tags);
@@ -261,7 +290,9 @@
         bookableNow: !!(activity.availability && activity.availability.bookableNow),
         capacityRemaining: activity.availability?.capacityRemaining ?? null,
         nextAvailableDates: activity.availability?.nextAvailableDates || [],
-        warning: avWarning ? pickFromOverlay(T.WARNING[avWarning], lang, avWarning) : null,
+        warning: avWarning
+          ? pickFromOverlay(T.WARNING[avWarning], lang, lang === 'en' ? avWarning : '')
+          : null,
         cancellationCutoffMinutes: activity.cancellationCutoffMinutes,
         lastChecked: activity.availability?.lastChecked,
       };
@@ -269,7 +300,6 @@
       return {
         id: activity.id,
         title,
-        titleEn: activity.title,
         summary,
         description,
         supplier,
@@ -292,7 +322,7 @@
         photoUrls: (activity.photoUrls && activity.photoUrls.length)
           ? activity.photoUrls
           : (activity.coverImageUrl ? [activity.coverImageUrl] : []),
-        meetingPoint: activity.meetingPoint || null,
+        meetingPoint: localizeMeetingPoint(activity.meetingPoint, lang),
         meetingType: activity.meetingType || null,
         startTimes: activity.startTimes || [],
         categories: activity.categories || [],
@@ -300,7 +330,9 @@
         tags,
         availability,
         vendor: activity.vendor,
-        languages: activity.languages || [],
+        languages: (activity.languages || [])
+          .map((phrase) => guideLanguageLabel(phrase, lang))
+          .filter(Boolean),
         raw: activity,
       };
     },
@@ -317,11 +349,11 @@
     // contexts where you don't have an activity in hand.
     tagLabel(key, lang) {
       const T = A.BOKUN_TRANSLATIONS || {};
-      return pickFromOverlay(T.TAG?.[key], lang, key);
+      return pickFromOverlay(T.TAG?.[key], lang, lang === 'en' ? key : '');
     },
     categoryLabel(key, lang) {
       const T = A.BOKUN_TRANSLATIONS || {};
-      return pickFromOverlay(T.CATEGORY?.[key], lang, key);
+      return pickFromOverlay(T.CATEGORY?.[key], lang, lang === 'en' ? key : '');
     },
     pricingCategoryLabel(id, lang) {
       const T = A.BOKUN_TRANSLATIONS || {};
@@ -329,8 +361,9 @@
     },
     warningLabel(key, lang) {
       const T = A.BOKUN_TRANSLATIONS || {};
-      return pickFromOverlay(T.WARNING?.[key], lang, key);
+      return pickFromOverlay(T.WARNING?.[key], lang, lang === 'en' ? key : '');
     },
+    guideLanguageLabel,
 
     /* ---- 4. translation validation ---- */
 
