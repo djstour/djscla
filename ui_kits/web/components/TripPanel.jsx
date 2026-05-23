@@ -114,6 +114,13 @@
   function TripPanel({ trip, onRemove, onCheckout, lang, displayCurrency = 'USD', fxRates = { USD: 1 } }) {
     const T = (opts) => pick(lang, opts);
     const totalUsd = tripTotalUsd(trip);
+    const tripTitle = trip.length === 0
+      ? T({ hant: '我的行程', hans: '我的行程', en: 'My itinerary' })
+      : T({
+          hant: `${trip.length} 個體驗`,
+          hans: `${trip.length} 个体验`,
+          en: `${trip.length} experience${trip.length === 1 ? '' : 's'}`,
+        });
 
     return (
       <div className="glass" style={{
@@ -126,16 +133,16 @@
             {T({ hant: '我的行程', hans: '我的行程', en: 'My itinerary' })}
           </span>
           <h3 style={{ margin: '6px 0 0', font: '700 26px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
-            {T({ hant: '南岸自駕 7 日', hans: '南岸自驾 7 日', en: 'South-coast self-drive · 7 days' })}
+            {tripTitle}
           </h3>
-          <div style={{ display: 'flex', gap: 12, marginTop: 8, color: 'var(--fg-3)', font: '500 12px/1 var(--font-text)' }}>
-            <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-              <Icon name="calendar" size={12} />12 → 19 Mar 2026
-            </span>
-            <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-              <Icon name="users" size={12} />{T({ hant: '2 位旅人', hans: '2 位旅客', en: '2 adults' })}
-            </span>
-          </div>
+          {trip.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, marginTop: 8, color: 'var(--fg-3)', font: '500 12px/1 var(--font-text)' }}>
+              <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                <Icon name="calendar" size={12} />
+                {T({ hant: '日期待選', hans: '日期待选', en: 'Dates not set' })}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Day-by-day */}

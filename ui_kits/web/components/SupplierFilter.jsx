@@ -1,11 +1,29 @@
 /* SupplierFilter — left rail on the Tours screen. */
 
 (function () {
-  const { Icon, CATEGORIES, getSupplierOptions, pick } = window.AuralisUI;
+  const { useMemo } = React;
+  const { Icon, CATEGORIES, getSupplierOptions, formatDisplayPrice, pick } = window.AuralisUI;
 
-  function SupplierFilter({ activeSupplier, onSupplier, activeCats, onToggleCat, priceMin, priceMax, lang = 'hant' }) {
+  function SupplierFilter({
+    activities = [],
+    activeSupplier,
+    onSupplier,
+    activeCats,
+    onToggleCat,
+    lang = 'hant',
+    displayCurrency = 'USD',
+    fxRates = { USD: 1 },
+  }) {
     const T = (opts) => pick(lang, opts);
-    const supplierOptions = getSupplierOptions(lang);
+    const supplierOptions = getSupplierOptions(lang, activities);
+
+    const priceRange = useMemo(() => {
+      const prices = activities
+        .map((a) => Number(a.priceUsd ?? a.price))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (!prices.length) return null;
+      return { min: Math.min(...prices), max: Math.max(...prices) };
+    }, [activities]);
 
     return (
       <aside style={{
@@ -21,18 +39,14 @@
           <h3 style={{ margin: 0, font: '600 18px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
             {T({ hant: '篩選 · Filters', hans: '筛选 · Filters', en: 'Filters' })}
           </h3>
-          <button style={{ border: 0, background: 'transparent', color: 'var(--coral)', cursor: 'pointer', font: '600 12px/1 var(--font-text)' }}>
-            {T({ hant: '重設', hans: '重置', en: 'Reset' })}
-          </button>
         </div>
 
-        {/* Categories */}
         <Section title={T({ hant: '體驗類型', hans: '体验类型', en: 'Experience' })}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {CATEGORIES.map(c => {
               const active = activeCats.includes(c.id);
               return (
-                <button key={c.id} onClick={() => onToggleCat(c.id)}
+                <button key={c.id} type="button" onClick={() => onToggleCat(c.id)}
                         style={{
                           height: 40, padding: '0 12px',
                           display: 'flex', alignItems: 'center', gap: 10,
@@ -52,69 +66,48 @@
           </div>
         </Section>
 
-        {/* Suppliers */}
-        <Section title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })} subtitle="via Bókun">
+        <Section title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })} subtitle="Bókun">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {supplierOptions.map(s => {
-              const active = activeSupplier === s.id;
-              return (
-                <button key={s.id} onClick={() => onSupplier(s.id)}
-                        style={{
-                          height: 36, padding: '0 12px',
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          background: active ? 'var(--base-100)' : 'transparent',
-                          border: 0, borderRadius: 10, cursor: 'pointer',
-                          color: active ? 'var(--fg-1)' : 'var(--fg-2)',
-                          font: active ? '700 13px/1 var(--font-text)' : '500 13px/1 var(--font-text)',
-                          textAlign: 'left',
-                        }}>
-                  <span style={{
-                    width: 16, height: 16, borderRadius: 4,
-                    border: '1.5px solid ' + (active ? 'var(--aurora-deep)' : 'var(--base-300)'),
-                    background: active ? 'var(--aurora-cyan)' : 'transparent',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>{active && <Icon name="check" size={11} color="#fff" />}</span>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
-                </button>
-              );
-            })}
+            {supplierOptions.length <= 1 ? (
+              <p style={{ margin: 0, font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-3)' }}>
+                {T({ hant: '載入目錄後顯示供應商', hans: '加载目录后显示供应商', en: 'Suppliers appear after catalog loads' })}
+              </p>
+            ) : (
+              supplierOptions.map(s => {
+                const active = activeSupplier === s.id;
+                return (
+                  <button key={String(s.id)} type="button" onClick={() => onSupplier(s.id)}
+                          style={{
+                            height: 36, padding: '0 12px',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            background: active ? 'var(--base-100)' : 'transparent',
+                            border: 0, borderRadius: 10, cursor: 'pointer',
+                            color: active ? 'var(--fg-1)' : 'var(--fg-2)',
+                            font: active ? '700 13px/1 var(--font-text)' : '500 13px/1 var(--font-text)',
+                            textAlign: 'left',
+                          }}>
+                    <span style={{
+                      width: 16, height: 16, borderRadius: 4,
+                      border: '1.5px solid ' + (active ? 'var(--aurora-deep)' : 'var(--base-300)'),
+                      background: active ? 'var(--aurora-cyan)' : 'transparent',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>{active && <Icon name="check" size={11} color="#fff" />}</span>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
+                  </button>
+                );
+              })
+            )}
           </div>
         </Section>
 
-        {/* Price */}
-        <Section title={T({ hant: '預算', hans: '预算', en: 'Price' })}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', font: '600 13px/1 var(--font-text)', color: 'var(--fg-1)', marginBottom: 8 }}>
-            <span>NT$ {priceMin.toLocaleString()}</span>
-            <span>NT$ {priceMax.toLocaleString()}</span>
-          </div>
-          <div style={{ position: 'relative', height: 6, background: 'var(--base-100)', borderRadius: 999 }}>
-            <div style={{ position: 'absolute', left: '8%', right: '20%', top: 0, bottom: 0,
-                          background: 'var(--gradient-aurora)', borderRadius: 999 }}/>
-            <div style={{ position: 'absolute', left: '8%', top: '50%', transform: 'translate(-50%,-50%)',
-                          width: 18, height: 18, borderRadius: 999, background: '#fff', boxShadow: 'var(--shadow-2), inset 0 0 0 2px var(--aurora-cyan)' }}/>
-            <div style={{ position: 'absolute', left: '80%', top: '50%', transform: 'translate(-50%,-50%)',
-                          width: 18, height: 18, borderRadius: 999, background: '#fff', boxShadow: 'var(--shadow-2), inset 0 0 0 2px var(--aurora-cyan)' }}/>
-          </div>
-        </Section>
-
-        {/* Language */}
-        <Section title={T({ hant: '嚮導語言', hans: '向导语言', en: 'Guide language' })}>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {[
-              T({ hant: '繁中', hans: '简中', en: '中文' }),
-              'English',
-              T({ hant: '日本語', hans: '日本語', en: '日本語' }),
-            ].map((l, i) => (
-              <span key={l} style={{
-                padding: '6px 10px', borderRadius: 999,
-                font: '600 12px/1 var(--font-text)',
-                background: i === 0 ? '#D6F7E8' : 'var(--base-100)',
-                color: i === 0 ? '#0A7B4F' : 'var(--fg-2)',
-                boxShadow: i === 0 ? 'inset 0 0 0 1px #16C68333' : 'none',
-              }}>{l}</span>
-            ))}
-          </div>
-        </Section>
+        {priceRange && (
+          <Section title={T({ hant: '價格範圍（目錄）', hans: '价格范围（目录）', en: 'Price range (catalog)' })}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', font: '600 13px/1 var(--font-text)', color: 'var(--fg-1)' }}>
+              <span>{formatDisplayPrice(priceRange.min, displayCurrency, fxRates)}</span>
+              <span>{formatDisplayPrice(priceRange.max, displayCurrency, fxRates)}</span>
+            </div>
+          </Section>
+        )}
       </aside>
     );
   }

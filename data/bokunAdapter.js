@@ -72,16 +72,16 @@
     /* ---- 1. fetch ---- */
 
     /**
-     * Simulated GET /activity.json. The real call would attach an
-     * `X-Bokun-AccessKey` header and respect the `Accept-Language` we set
-     * via langToBokunLocale(); for now we return our static mocks after a
-     * short delay so the UI has a chance to render its skeleton state.
+     * GET /api/bokun/activities → production Bókun catalog (no mock fallback).
+     * @returns {Promise<{ activities: object[], meta: { total?: number, page?: number, pageSize?: number } }>}
      */
     fetchActivities(opts = {}) {
-      const { lang = 'hant', page = 1, pageSize = 50, useMockOnError = true } = opts;
+      const { lang = 'hant', page = 1, pageSize = 50 } = opts;
 
       if (typeof fetch === 'undefined') {
-        return Promise.resolve(JSON.parse(JSON.stringify(A.MOCK_BOKUN_ACTIVITIES)));
+        const err = new Error('fetch is not available — use a browser or vercel dev');
+        err.code = 'NO_FETCH';
+        return Promise.reject(err);
       }
 
       const qs = new URLSearchParams({
@@ -96,25 +96,22 @@
           if (!res.ok) {
             const err = new Error(data.error || `Bókun proxy HTTP ${res.status}`);
             err.status = res.status;
+            err.hints = data.hints;
             throw err;
           }
           const list = data.activities;
           if (!Array.isArray(list)) {
             throw new Error('Invalid response from /api/bokun/activities');
           }
-          return list;
-        })
-        .catch((err) => {
-          if (useMockOnError && A.MOCK_BOKUN_ACTIVITIES && A.MOCK_BOKUN_ACTIVITIES.length) {
-            console.warn('[Auralis] Bókun API unavailable — showing mocks:', err.message);
-            return JSON.parse(JSON.stringify(A.MOCK_BOKUN_ACTIVITIES));
-          }
-          throw err;
+          return {
+            activities: list,
+            meta: data.meta || { total: list.length, page, pageSize },
+          };
         });
     },
 
-    fetchActivityById(id) {
-      return BokunAdapter.fetchActivities().then(list => list.find(a => a.id === id));
+    fetchActivityById(id, opts = {}) {
+      return BokunAdapter.fetchActivities(opts).then(({ activities }) => activities.find((a) => a.id === id));
     },
 
     // Bókun expects ISO 639-1 + optional region for the Accept-Language header.
@@ -303,7 +300,9 @@
     const { useState, useEffect } = React;
 
     A.useActivities = function useActivities(lang) {
-      const [state, setState] = useState({ loading: true, error: null, activities: [], raw: [] });
+      const [state, setState] = useState({
+        loading: true, error: null, activities: [], raw: [], meta: { total: 0 },
+      });
 
       useEffect(() => {
         let cancelled = false;
@@ -313,19 +312,23 @@
         // initial mount.
         setState(s => ({ ...s, loading: s.raw.length === 0, error: null }));
 
-        const remap = (raw) => {
+        const remap = (raw, meta) => {
           if (cancelled) return;
           const viewModels = BokunAdapter.toViewModels(raw, lang);
-          setState({ loading: false, error: null, activities: viewModels, raw });
+          setState({ loading: false, error: null, activities: viewModels, raw, meta: meta || state.meta });
         };
 
         if (state.raw.length > 0) {
           // Cheap path: lang change. Remap synchronously, no fetch.
-          remap(state.raw);
+          remap(state.raw, state.meta);
         } else {
           BokunAdapter.fetchActivities({ lang })
-            .then(remap)
-            .catch(err => { if (!cancelled) setState({ loading: false, error: err, activities: [], raw: [] }); });
+            .then(({ activities: raw, meta }) => remap(raw, meta))
+            .catch((err) => {
+              if (!cancelled) {
+                setState({ loading: false, error: err, activities: [], raw: [], meta: { total: 0 } });
+              }
+            });
         }
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps

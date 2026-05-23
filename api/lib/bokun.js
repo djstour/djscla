@@ -20,7 +20,7 @@ function getConfig() {
   const secretKey = (process.env.BOKUN_SECRET_KEY || process.env.BOKUN_SECRET || '').trim();
   const host = (process.env.BOKUN_API_HOST || 'https://api.bokun.io').replace(/\/$/, '');
   const lang = process.env.BOKUN_LANG || 'EN';
-  const currency = process.env.BOKUN_CURRENCY || 'ISK';
+  const currency = process.env.BOKUN_CURRENCY || 'USD';
 
   if (!accessKey || !secretKey) {
     const err = new Error('BOKUN_ACCESS_KEY and BOKUN_SECRET_KEY must be set in the environment');
@@ -101,7 +101,7 @@ async function getActivityById(id, { uiLang } = {}) {
 
 /** Bókun often leaves `currency: ISK` on items even when search used `currency=USD`. */
 function getQuoteCurrency() {
-  return (process.env.BOKUN_CURRENCY || 'ISK').trim().toUpperCase();
+  return (process.env.BOKUN_CURRENCY || 'USD').trim().toUpperCase();
 }
 
 function applyQuoteCurrency(activities, quoteCurrency = getQuoteCurrency()) {

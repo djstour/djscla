@@ -3,21 +3,15 @@
 
 (function () {
   const { useState } = React;
-  const { Icon, pick } = window.AuralisUI;
+  const { Icon, pick, formatCatalogCount } = window.AuralisUI;
 
-  function Hero({ onSearch, lang }) {
+  function Hero({ onSearch, lang, catalogTotal = 0 }) {
     const T = (opts) => pick(lang, opts);
+    const countLabel = formatCatalogCount(catalogTotal, lang);
 
-    const [city, setCity] = useState('Reykjavík (KEF)');
-    const [dates, setDates] = useState('12 → 19 Mar 2026');
-    // Travelers placeholder re-syncs when language changes — the input is
-    // controlled, so without an effect React keeps the stale TC string.
-    const defaultPeople = T({ hant: '2 位旅人', hans: '2 位旅客', en: '2 adults' });
-    const [people, setPeople] = useState(defaultPeople);
-    const [peopleDirty, setPeopleDirty] = useState(false);
-    React.useEffect(() => {
-      if (!peopleDirty) setPeople(defaultPeople);
-    }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
+    const [city, setCity] = useState('');
+    const [dates, setDates] = useState('');
+    const [people, setPeople] = useState('');
 
     const headlineGrad = T({
       hant: ['為你而轉的', '冰島旅程。'],
@@ -25,10 +19,13 @@
       en:   ['The Iceland trip', 'that bends to you.'],
     });
 
+    const datePlaceholder = T({ hant: '選擇日期', hans: '选择日期', en: 'Select dates' });
+    const peoplePlaceholder = T({ hant: '旅人數', hans: '旅客数', en: 'Travelers' });
+    const cityPlaceholder = T({ hant: '雷克雅維克 (KEF)', hans: '雷克雅未克 (KEF)', en: 'Reykjavík (KEF)' });
+
     return (
       <section style={{ position: 'relative', minHeight: 640, overflow: 'hidden' }}
                className="bg-aurora-animated">
-        {/* Decorative drift sparks */}
         <svg viewBox="0 0 1440 640" preserveAspectRatio="none"
              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.6 }}>
           {Array.from({ length: 40 }, (_, i) => (
@@ -39,10 +36,9 @@
 
         <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '96px 32px 48px',
                       display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 48, alignItems: 'center' }}>
-          {/* Copy */}
           <div>
             <span className="overline" style={{ color: 'var(--coral)' }}>
-              {T({ hant: '限時 · 3 月 12 – 19 日', hans: '限时 · 3 月 12 – 19 日', en: 'Limited · 12 – 19 Mar' })}
+              {T({ hant: '冰島 · 即時庫存', hans: '冰岛 · 即时库存', en: 'Iceland · live inventory' })}
             </span>
             <h1 style={{
               margin: '14px 0 0',
@@ -66,13 +62,13 @@
               margin: '20px 0 0', maxWidth: 480,
               font: '500 18px/1.5 var(--font-text)', color: 'var(--fg-2)',
             }}>{T({
-              hant: '一次規劃，多家供應商無縫整合 — 800+ 在地嚮導任你挑選。',
-              hans: '一次规划，多家供应商无缝整合 — 800+ 当地向导任你挑选。',
-              en:   '800+ verified local operators, one fluid itinerary, one checkout.',
+              hant: '透過 Bókun 即時串接在地供應商 — 一次規劃，多家體驗，一筆結帳。',
+              hans: '通过 Bókun 实时串接当地供应商 — 一次规划，多家体验，一笔结账。',
+              en:   'Live operator inventory via Bókun — plan once, book many, pay once.',
             })}</p>
 
             <div style={{ display: 'flex', gap: 14, marginTop: 32, alignItems: 'center' }}>
-              <button onClick={() => onSearch && onSearch()} style={{
+              <button type="button" onClick={() => onSearch && onSearch()} style={{
                 height: 54, padding: '0 28px', borderRadius: 999, border: 0, cursor: 'pointer',
                 background: 'var(--gradient-aurora)', color: '#062F2A',
                 font: '700 15px/1 var(--font-text)',
@@ -82,29 +78,9 @@
                 {T({ hant: '開始規劃', hans: '开始规划', en: 'Start your itinerary' })}
                 <Icon name="arrow-right" size={18} />
               </button>
-              <button style={{
-                height: 54, padding: '0 24px', borderRadius: 999, border: 0, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(20px)',
-                color: 'var(--fg-1)', font: '600 15px/1 var(--font-text)',
-                boxShadow: 'var(--ring-glass)',
-              }}>{T({ hant: '查看樣板行程', hans: '查看样板行程', en: 'Browse sample trips' })}</button>
-            </div>
-
-            <div style={{ display: 'flex', gap: 28, marginTop: 36 }}>
-              {[
-                { n: '800+',  l: { hant: '在地嚮導', hans: '当地向导', en: 'local operators' } },
-                { n: '4.8 ★', l: { hant: '平均評分', hans: '平均评分', en: 'avg rating' } },
-                { n: '24 h',  l: { hant: '免費取消', hans: '免费取消', en: 'free cancel' } },
-              ].map(s => (
-                <div key={s.n}>
-                  <div style={{ font: '700 24px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>{s.n}</div>
-                  <div style={{ font: '500 12px/1.3 var(--font-text)', color: 'var(--fg-3)', marginTop: 4 }}>{T(s.l)}</div>
-                </div>
-              ))}
             </div>
           </div>
 
-          {/* Search panel — glass */}
           <div className="glass" style={{ padding: 24, borderRadius: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <Icon name="map-pin" size={16} color="var(--coral)" />
@@ -114,18 +90,18 @@
             </div>
 
             <Field label={T({ hant: '出發城市', hans: '出发城市', en: 'Departure' })} icon="search">
-              <input value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle} />
+              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder={cityPlaceholder} style={inputStyle} />
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10, marginTop: 10 }}>
               <Field label={T({ hant: '日期', hans: '日期', en: 'Dates' })} icon="calendar" focused>
-                <input value={dates} onChange={(e) => setDates(e.target.value)} style={inputStyle} />
+                <input value={dates} onChange={(e) => setDates(e.target.value)} placeholder={datePlaceholder} style={inputStyle} />
               </Field>
               <Field label={T({ hant: '旅人', hans: '旅客', en: 'Travelers' })} icon="users">
-                <input value={people} onChange={(e) => { setPeople(e.target.value); setPeopleDirty(true); }} style={inputStyle} />
+                <input value={people} onChange={(e) => setPeople(e.target.value)} placeholder={peoplePlaceholder} style={inputStyle} />
               </Field>
             </div>
 
-            <button onClick={() => onSearch && onSearch()} style={{
+            <button type="button" onClick={() => onSearch && onSearch()} style={{
               marginTop: 16, width: '100%', height: 52, borderRadius: 16, border: 0, cursor: 'pointer',
               background: 'var(--gradient-aurora)', color: '#062F2A',
               font: '700 15px/1 var(--font-text)',
@@ -133,7 +109,11 @@
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
               <Icon name="search" size={18} />
-              {T({ hant: '搜尋 1,247 個體驗', hans: '搜索 1,247 个体验', en: 'Search 1,247 experiences' })}
+              {T({
+                hant: `搜尋 ${countLabel} 個體驗`,
+                hans: `搜索 ${countLabel} 个体验`,
+                en: `Search ${countLabel} experiences`,
+              })}
             </button>
 
             <div style={{

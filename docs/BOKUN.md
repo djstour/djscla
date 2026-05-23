@@ -18,9 +18,9 @@ Access key + secret never reach the browser.
 |----------|----------|---------|
 | `BOKUN_ACCESS_KEY` | Yes | From Bókun → Settings → API keys |
 | `BOKUN_SECRET_KEY` | Yes | Same key pair |
-| `BOKUN_API_HOST` | No | `https://api.bokun.io` (prod) or `https://api.bokuntest.com` (sandbox) |
+| `BOKUN_API_HOST` | No | `https://api.bokun.io` (production). Use `https://api.bokuntest.com` only with sandbox keys. |
 | `BOKUN_LANG` | No | `EN` — product copy from Bókun; TC/SC from `bokunTranslations.js` |
-| `BOKUN_CURRENCY` | No | `ISK` or `USD` — passed to `activity.json/search?currency=`. Bókun may still label rows `ISK` in JSON; the proxy rewrites display currency to match this env. |
+| `BOKUN_CURRENCY` | No | `USD` (default) — passed to `activity.json/search?currency=`. The proxy rewrites display currency to match this env. |
 
 Set these in https://vercel.com/djstours-projects/djscla/settings/environment-variables then redeploy.
 
@@ -37,13 +37,9 @@ npx vercel dev
 
 Production: https://djscla.vercel.app/ui_kits/web/index.html
 
-## Fallback
-
-If the proxy fails (missing keys, bad signature, rate limit), the UI falls back to `mockBokunData.js` and logs a console warning.
-
 ## Troubleshooting `401 Invalid API key`
 
-Console: `[Auralis] Bókun API unavailable — showing mocks` and `/api/bokun/activities` returns 401.
+There is **no mock catalog fallback**. If `/api/bokun/activities` fails, the UI shows an error banner and empty catalog state.
 
 | Check | Action |
 |-------|--------|

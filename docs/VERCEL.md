@@ -31,7 +31,7 @@ Static hosting for the Auralis design system and UI kit. No build step.
 | `SUPABASE_URL` | `https://pmdfdkhfkjyuvucsfsoe.supabase.co` |
 | `SUPABASE_ANON_KEY` | Dashboard → API |
 
-Current prototype uses `/data/*.js` mocks only.
+Catalog data comes from production Bókun via `/api/bokun/activities` (no mock fallback). Set `BOKUN_API_HOST=https://api.bokun.io` and live API keys on Vercel.
 
 ## Supabase ↔ Vercel
 

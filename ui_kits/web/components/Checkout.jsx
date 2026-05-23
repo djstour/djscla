@@ -187,11 +187,11 @@
           {/* Card form */}
           {method === 'card' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={T({ hant: '持卡人', hans: '持卡人', en: 'Cardholder' })} value="Hsin-Yi Chen" />
-              <Field label={T({ hant: '卡號', hans: '卡号', en: 'Card number' })} value="4242 4242 4242 4242" icon="credit-card" />
+              <Field label={T({ hant: '持卡人', hans: '持卡人', en: 'Cardholder' })} placeholder={T({ hant: '與卡片相同', hans: '与卡片相同', en: 'As on card' })} />
+              <Field label={T({ hant: '卡號', hans: '卡号', en: 'Card number' })} placeholder="•••• •••• •••• ••••" icon="credit-card" />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Field label={T({ hant: '到期', hans: '到期', en: 'Expiry' })} value="08 / 28" />
-                <Field label="CVC" value="•••" />
+                <Field label={T({ hant: '到期', hans: '到期', en: 'Expiry' })} placeholder="MM / YY" />
+                <Field label="CVC" placeholder="•••" />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, color: 'var(--fg-3)', font: '500 12px/1 var(--font-text)' }}>
                 <Icon name="lock" size={12} />
@@ -239,7 +239,7 @@
     );
   }
 
-  function Field({ label, value, icon }) {
+  function Field({ label, placeholder, icon }) {
     return (
       <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ font: '600 11px/1 var(--font-text)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--fg-3)' }}>{label}</span>
@@ -249,7 +249,7 @@
           boxShadow: 'inset 0 0 0 1px var(--base-200)',
         }}>
           {icon && <Icon name={icon} size={16} color="var(--fg-3)" />}
-          <input defaultValue={value}
+          <input placeholder={placeholder}
                  style={{ flex: 1, border: 0, outline: 0, background: 'transparent', font: '500 15px/1 var(--font-text)', color: 'var(--fg-1)' }} />
         </span>
       </label>
@@ -279,15 +279,14 @@
         </h2>
         <p style={{ margin: 0, maxWidth: 480, font: '500 16px/1.5 var(--font-text)', color: 'var(--fg-2)' }}>
           {T({
-            hant: '確認信已寄出至 hsinyi.c@gmail.com — 隨身行李別忘記攜帶相機。',
-            hans: '确认信已发送至 hsinyi.c@gmail.com — 别忘了带上相机。',
-            en:   'Confirmation is on its way to hsinyi.c@gmail.com — don\u2019t forget your camera.',
+            hant: '確認信將寄至你填寫的電子郵件。',
+            hans: '确认信将寄至你填写的电子邮件。',
+            en:   'A confirmation email will be sent to the address you provide.',
           })}
         </p>
 
         <div style={{ display: 'flex', gap: 18, marginTop: 14 }}>
           <Stat n={trip.length} l={T({ hant: '個體驗', hans: '个体验', en: 'experiences' })} />
-          <Stat n="7" l={T({ hant: '天', hans: '天', en: 'days' })} />
           <Stat n={formatTotalDisplay(totalUsd, displayCurrency, fxRates)} l={T({ hant: '已支付', hans: '已支付', en: 'paid' })} />
         </div>
 

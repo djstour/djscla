@@ -210,17 +210,30 @@
   // current language, and so the list automatically picks up new vendors
   // as Bókun adds them.
   // -------------------------------------------------------------------
-  function getSupplierOptions(lang) {
-    const all = { id: 'all', label: pick(lang, { hant: '全部 · All suppliers', hans: '全部 · All suppliers', en: 'All suppliers' }) };
-    const vendors = window.AuralisData && window.AuralisData.MOCK_BOKUN_VENDORS;
-    if (!vendors) return [all];
-    return [all, ...Object.values(vendors).map(v => ({ id: v.id, label: v.title }))];
+  function formatCatalogCount(n, lang) {
+    const num = Number(n);
+    if (!Number.isFinite(num) || num <= 0) return pick(lang, { hant: '—', hans: '—', en: '—' });
+    const locale = lang === 'en' ? 'en-US' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW';
+    return num.toLocaleString(locale);
+  }
+
+  /** Supplier filter options derived from live Bókun activities. */
+  function getSupplierOptions(lang, activities = []) {
+    const all = { id: 'all', label: pick(lang, { hant: '全部供應商', hans: '全部供应商', en: 'All suppliers' }) };
+    const byId = new Map();
+    (activities || []).forEach((vm) => {
+      const v = vm.raw && vm.raw.vendor;
+      if (!v || v.id == null) return;
+      if (!byId.has(v.id)) byId.set(v.id, { id: v.id, label: v.title || vm.supplier || String(v.id) });
+    });
+    const vendors = [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
+    return [all, ...vendors];
   }
 
   window.AuralisUI = {
     Icon, formatPrice, singleCurrency, formatTotalAmount,
     CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
-    fakePhoto, PhotoSparkles, CATEGORIES, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+    fakePhoto, PhotoSparkles, CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
   };
 })();

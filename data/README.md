@@ -4,9 +4,8 @@ This folder is the **source-of-truth boundary** between the live Bókun OTA inve
 
 ```
 data/
-├── mockBokunData.js          ← raw API payloads (replaces /activity.json in dev)
 ├── bokunTranslations.js      ← per-field i18n overlay keyed by Bókun ID
-├── bokunAdapter.js           ← maps raw → view-model, owns lookup + caching
+├── bokunAdapter.js           ← fetch /api/bokun/activities → view-model
 └── README.md                 ← this file
 ```
 

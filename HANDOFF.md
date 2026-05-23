@@ -18,7 +18,7 @@ Auralis · 極光旅 是為華語旅人打造的冰島 OTA 設計系統。透過
 ├── assets/                  ← Logo 各版本、漸層底圖
 ├── preview/                 ← 設計系統卡片（color/type/spacing/components/brand）
 ├── data/                    ← ★ Bókun 資料層
-│   ├── mockBokunData.js     ← 模擬 GET /activity.json 回傳
+│   ├── bokunAdapter.js      ← GET /api/bokun/activities（生產 Bókun，無 mock）
 │   ├── bokunTranslations.js ← 翻譯 overlay（每個 activity 對應的 hant/hans）
 │   ├── bokunAdapter.js      ← Bókun → view model 轉換 + React hook
 │   └── README.md            ← ★ 含 OpenAI 翻譯 pipeline 架構圖
