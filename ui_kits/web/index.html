@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440, initial-scale=1">
+<title>Auralis · 極光旅 — UI Kit</title>
+<link rel="icon" href="../../assets/logo-mark.svg">
+<link rel="stylesheet" href="../../colors_and_type.css">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.474.0/dist/umd/lucide.js"></script>
+
+<!-- Data layer — loaded before any Babel component scripts so the adapter
+     is ready by the time React mounts. Plain JS (no JSX). -->
+<script src="../../data/mockBokunData.js"></script>
+<script src="../../data/bokunTranslations.js"></script>
+<script src="../../data/bokunAdapter.js"></script>
+
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg-page); font-family: var(--font-text); color: var(--fg-2); }
+  body { min-width: 1280px; }
+  *, *::before, *::after { box-sizing: border-box; }
+  button { font-family: var(--font-text); }
+  input { font-family: var(--font-text); }
+  ::selection { background: rgba(46,255,184,0.4); color: var(--fg-1); }
+</style>
+</head>
+<body data-screen-label="Auralis Web · 極光旅">
+<div id="root"></div>
+
+<script type="text/babel" src="components/_shared.jsx"></script>
+<script type="text/babel" src="components/Nav.jsx"></script>
+<script type="text/babel" src="components/Hero.jsx"></script>
+<script type="text/babel" src="components/TourCard.jsx"></script>
+<script type="text/babel" src="components/SupplierFilter.jsx"></script>
+<script type="text/babel" src="components/TripPanel.jsx"></script>
+<script type="text/babel" src="components/Checkout.jsx"></script>
+<script type="text/babel" src="components/Footer.jsx"></script>
+<script type="text/babel" src="components/App.jsx"></script>
+<script type="text/babel">
+  // Mount once all components are registered. Because Babel scripts load
+  // sequentially, App.jsx runs last and registers AuralisApp on window.
+  ReactDOM.createRoot(document.getElementById('root')).render(<window.AuralisApp />);
+</script>
+</body>
+</html>

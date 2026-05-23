@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-label="Auralis">
+  <defs>
+    <linearGradient id="auralis-mark-grad" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2EFFB8"></stop>
+      <stop offset="0.55" stop-color="#00D5FF"></stop>
+      <stop offset="1" stop-color="#6B2FE6"></stop>
+    </linearGradient>
+    <linearGradient id="auralis-mark-grad-2" x1="14" y1="36" x2="38" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"></stop>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.45"></stop>
+    </linearGradient>
+  </defs>
+  
+  <path d="M24 4 C 12 18, 8 28, 6 42 L 14 42 C 16 32, 20 22, 24 16 C 28 22, 32 32, 34 42 L 42 42 C 40 28, 36 18, 24 4 Z" fill="url(#auralis-mark-grad)"></path>
+  <path d="M24 16 C 21 22, 18 30, 16.5 38 L 31.5 38 C 30 30, 27 22, 24 16 Z" fill="url(#auralis-mark-grad-2)"></path>
+  <circle cx="24" cy="11" r="2.4" fill="#FFFFFF"></circle>
+</svg>

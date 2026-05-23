@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Components · Cart Row</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/lucide@0.474.0/dist/umd/lucide.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body { font-family: var(--font-text); color: var(--fg-2); }
+  .card-frame { box-sizing: border-box; padding: 20px; min-height: 200px; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .col { display: flex; flex-direction: column; gap: 6px; }
+  .label { font: 600 11px/1 var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 6px; }
+  .desc  { font: 400 12px/1.4 var(--font-text); color: var(--fg-3); }
+
+  /* Buttons */
+  .btn { font-family: var(--font-text); font-weight: 600; font-size: 14px; line-height: 1; cursor: pointer; border: 0; display: inline-flex; align-items: center; gap: 8px; transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out); }
+  .btn--md { height: 44px; padding: 0 20px; border-radius: 999px; }
+  .btn--sm { height: 36px; padding: 0 16px; border-radius: 999px; font-size: 13px; }
+  .btn--lg { height: 52px; padding: 0 26px; border-radius: 999px; font-size: 15px; }
+  .btn--primary { background: var(--gradient-aurora); color: #062F2A; box-shadow: var(--shadow-glow-aurora); }
+  .btn--primary:hover { filter: brightness(1.06); }
+  .btn--sun { background: var(--gradient-sun); color: #fff; box-shadow: var(--shadow-glow-sun); }
+  .btn--coral { background: var(--coral); color: #fff; box-shadow: 0 8px 22px rgba(255,90,106,0.35); }
+  .btn--glass { background: var(--glass-strong); color: var(--fg-1); backdrop-filter: blur(20px); box-shadow: var(--shadow-2), var(--ring-glass); }
+  .btn--ghost { background: transparent; color: var(--fg-1); box-shadow: inset 0 0 0 1px var(--base-300); }
+  .btn--ghost:hover { background: var(--base-100); }
+  .btn:active { transform: scale(0.98); }
+  .btn [data-lucide] { width: 16px; height: 16px; }
+</style>
+</head>
+<body><div class="card-frame">
+    <div class="col" style="gap:10px;max-width:640px">
+      
+        <div class="row" style="gap:12px;background:#fff;border-radius:16px;padding:12px 14px;box-shadow:var(--shadow-1);border:1px solid var(--base-200)">
+          <div style="width:44px;height:44px;border-radius:10px;background:var(--gradient-aurora);flex:none;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="ticket" style="width:20px;height:20px"></i></div>
+          <div class="col" style="flex:1;gap:2px">
+            <div class="row" style="gap:8px"><span style="font:600 14px/1.2 var(--font-display);color:var(--fg-1)">Northern Lights minibus</span><span style="display:inline-flex;height:20px;align-items:center;padding:0 8px;border-radius:999px;background:#D6F7E8;color:#0A7B4F;font:600 10px/1 var(--font-text);letter-spacing:0.04em">中文</span></div>
+            <div style="font:400 12px/1.3 var(--font-text);color:var(--fg-3)">Reykjavík Excursions · 4 hr · 12 Mar · 2 adults</div>
+          </div>
+          <div class="col" style="align-items:flex-end;gap:4px">
+            <span style="font:700 14px/1 var(--font-display);color:var(--fg-1)">NT$ 3,200</span>
+            <button style="background:transparent;border:0;color:var(--fg-3);cursor:pointer;display:flex;align-items:center;gap:4px;font:500 12px/1 var(--font-text)"><i data-lucide="x" style="width:12px;height:12px"></i>remove</button>
+          </div>
+        </div>
+      
+        <div class="row" style="gap:12px;background:#fff;border-radius:16px;padding:12px 14px;box-shadow:var(--shadow-1);border:1px solid var(--base-200)">
+          <div style="width:44px;height:44px;border-radius:10px;background:var(--gradient-aurora);flex:none;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="ticket" style="width:20px;height:20px"></i></div>
+          <div class="col" style="flex:1;gap:2px">
+            <div class="row" style="gap:8px"><span style="font:600 14px/1.2 var(--font-display);color:var(--fg-1)">Blue Lagoon Premium</span></div>
+            <div style="font:400 12px/1.3 var(--font-text);color:var(--fg-3)">Blue Lagoon hf · 3 hr · 13 Mar · 2 adults</div>
+          </div>
+          <div class="col" style="align-items:flex-end;gap:4px">
+            <span style="font:700 14px/1 var(--font-display);color:var(--fg-1)">NT$ 5,600</span>
+            <button style="background:transparent;border:0;color:var(--fg-3);cursor:pointer;display:flex;align-items:center;gap:4px;font:500 12px/1 var(--font-text)"><i data-lucide="x" style="width:12px;height:12px"></i>remove</button>
+          </div>
+        </div>
+      
+        <div class="row" style="gap:12px;background:#fff;border-radius:16px;padding:12px 14px;box-shadow:var(--shadow-1);border:1px solid var(--base-200)">
+          <div style="width:44px;height:44px;border-radius:10px;background:var(--gradient-aurora);flex:none;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="ticket" style="width:20px;height:20px"></i></div>
+          <div class="col" style="flex:1;gap:2px">
+            <div class="row" style="gap:8px"><span style="font:600 14px/1.2 var(--font-display);color:var(--fg-1)">South Coast self-drive</span><span style="display:inline-flex;height:20px;align-items:center;padding:0 8px;border-radius:999px;background:#D6F7E8;color:#0A7B4F;font:600 10px/1 var(--font-text);letter-spacing:0.04em">中文</span></div>
+            <div style="font:400 12px/1.3 var(--font-text);color:var(--fg-3)">Arctic Adventures · 11 hr · 15 Mar · 2 adults</div>
+          </div>
+          <div class="col" style="align-items:flex-end;gap:4px">
+            <span style="font:700 14px/1 var(--font-display);color:var(--fg-1)">NT$ 4,280</span>
+            <button style="background:transparent;border:0;color:var(--fg-3);cursor:pointer;display:flex;align-items:center;gap:4px;font:500 12px/1 var(--font-text)"><i data-lucide="x" style="width:12px;height:12px"></i>remove</button>
+          </div>
+        </div>
+      
+    </div></div><script>lucide.createIcons();</script></body>
+</html>

@@ -1,0 +1,339 @@
+/* =========================================================================
+   Auralis · 極光旅 — Design Tokens
+   Premium OTA for Iceland adventure travel · Mandarin-speaking market
+   ========================================================================= */
+
+/* ---- Webfonts (Latin self-hosted; Chinese via Google Fonts CDN)
+       繁體 (TC) for Taiwan / Hong Kong · 简体 (SC) for Mainland / Singapore.
+       Both faces are by the same designer (Adobe Source Han / Google Noto),
+       so they sit visually identical alongside Sora/Manrope. */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=LXGW+WenKai+TC&family=LXGW+WenKai&display=swap');
+
+@font-face {
+  font-family: 'Sora';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Sora-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Sora';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Sora-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Sora';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Sora-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Sora';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Sora-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Manrope-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Manrope-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Manrope-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Manrope-700.woff2') format('woff2');
+}
+
+:root {
+  /* =====================================================================
+     COLOR — Brand
+     The brand reads BRIGHT. Backgrounds are near-white with cool tints.
+     Vibrancy comes from gradient washes layered behind frosted-glass cards,
+     not from saturated UI chrome.
+     ===================================================================== */
+
+  /* Aurora gradient (primary) — green → cyan */
+  --aurora-green:    #2EFFB8;   /* electric aurora */
+  --aurora-mint:     #5BFFD0;   /* lighter step */
+  --aurora-cyan:     #00D5FF;   /* neon cyan */
+  --aurora-deep:     #00A3D1;   /* darker cyan, for text-on-gradient */
+  --gradient-aurora: linear-gradient(120deg, #2EFFB8 0%, #00D5FF 100%);
+  --gradient-aurora-soft: linear-gradient(120deg, #BDFFE7 0%, #B5F0FF 100%);
+
+  /* Midnight-sun gradient (secondary) — violet → orange */
+  --sun-violet:      #6B2FE6;
+  --sun-magenta:     #B331E2;
+  --sun-orange:      #FF7A2E;
+  --sun-amber:       #FFB347;
+  --gradient-sun:    linear-gradient(120deg, #6B2FE6 0%, #B331E2 45%, #FF7A2E 100%);
+  --gradient-sun-soft: linear-gradient(120deg, #D9C9FF 0%, #FFD3A8 100%);
+
+  /* Glacier mist (tertiary, for hover overlays + alt heros) — lavender → peach */
+  --gradient-mist:   linear-gradient(135deg, #E8E2FF 0%, #FFE9D6 50%, #DBF7FF 100%);
+
+  /* Accents */
+  --coral:           #FF5A6A;   /* primary interactive accent */
+  --coral-press:     #E63E50;
+  --lime:            #C6FF3F;   /* badge / supplier-filter accent */
+  --lime-deep:       #9EE800;
+
+  /* =====================================================================
+     COLOR — Base / Neutral
+     Cool-tinted near-whites; charcoal foreground (NOT pure black).
+     ===================================================================== */
+  --base-0:          #FFFFFF;   /* card surface */
+  --base-50:         #FAFBFE;   /* page background */
+  --base-100:        #F1F4FA;   /* subtle fill */
+  --base-200:        #E4E9F2;   /* hairline / divider on light */
+  --base-300:        #C9D2E1;   /* disabled / placeholder bg */
+  --base-400:        #99A4B8;   /* placeholder text */
+  --base-500:        #6B7689;   /* secondary text */
+  --base-700:        #2E3647;   /* primary text */
+  --base-900:        #11151F;   /* heaviest text — used sparingly */
+
+  /* Semantic foregrounds */
+  --fg-1:            var(--base-900);   /* headings */
+  --fg-2:            var(--base-700);   /* body */
+  --fg-3:            var(--base-500);   /* secondary */
+  --fg-4:            var(--base-400);   /* placeholder / disabled */
+  --fg-on-grad:      #FFFFFF;           /* text over gradient */
+  --fg-on-glass:     var(--base-900);   /* text over frosted card */
+
+  /* Semantic backgrounds */
+  --bg-page:         var(--base-50);
+  --bg-card:         var(--base-0);
+  --bg-subtle:       var(--base-100);
+
+  /* Glass surfaces — used over gradient backdrops.
+     ALWAYS pair with backdrop-filter: blur(20-30px) + a 1px inner border. */
+  --glass-strong:    rgba(255, 255, 255, 0.72);
+  --glass-medium:    rgba(255, 255, 255, 0.55);
+  --glass-light:     rgba(255, 255, 255, 0.32);
+  --glass-tint:      rgba(255, 255, 255, 0.18);   /* on dark gradient sections */
+  --glass-border:    rgba(255, 255, 255, 0.55);
+  --glass-border-soft: rgba(255, 255, 255, 0.28);
+
+  /* Status / system */
+  --success:         #16C683;
+  --success-soft:    #D6F7E8;
+  --warning:         #FFB347;
+  --warning-soft:    #FFEBC9;
+  --danger:          #FF4D5E;
+  --danger-soft:     #FFD8DD;
+  --info:            #00D5FF;
+  --info-soft:       #CFF4FF;
+
+  /* =====================================================================
+     TYPE
+     Latin: Sora (display) + Manrope (text)
+     Chinese (TC): Noto Sans TC for UI, LXGW WenKai TC for editorial quotes
+     ===================================================================== */
+  /* Default font stacks list Traditional Chinese first, Simplified second.
+     When localising for Mainland, set [lang="zh-Hans"] on <html> to swap
+     the Han priority via the rules at the bottom of this file. */
+  --font-display:    'Sora', 'Noto Sans TC', 'Noto Sans SC', system-ui, sans-serif;
+  --font-text:       'Manrope', 'Noto Sans TC', 'Noto Sans SC', system-ui, sans-serif;
+  --font-han-display:'Noto Sans TC', 'Noto Sans SC', 'Sora', system-ui, sans-serif;
+  --font-han-quote:  'LXGW WenKai TC', 'LXGW WenKai', 'Noto Sans TC', 'Noto Sans SC', serif;
+  --font-mono:       'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Type scale — designed for 1440 desktop; rescale at breakpoints */
+  --t-display-1:     clamp(56px, 7vw, 96px);   /* hero billboard */
+  --t-display-2:     clamp(40px, 5vw, 64px);   /* page hero */
+  --t-h1:            40px;
+  --t-h2:            32px;
+  --t-h3:            24px;
+  --t-h4:            20px;
+  --t-body-lg:       18px;
+  --t-body:          16px;
+  --t-body-sm:       14px;
+  --t-caption:       12px;
+  --t-overline:      11px;
+
+  --lh-tight:        1.08;
+  --lh-snug:         1.22;
+  --lh-normal:       1.5;
+  --lh-loose:        1.7;
+
+  --tracking-tight:  -0.02em;
+  --tracking-normal: -0.005em;
+  --tracking-wide:   0.08em;     /* overlines, badges */
+
+  /* =====================================================================
+     SPACING (4-pt grid)
+     ===================================================================== */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* =====================================================================
+     RADIUS — generous, soft. Pills for chips/CTAs; 20–28 for cards.
+     ===================================================================== */
+  --r-xs:    6px;
+  --r-sm:    10px;
+  --r-md:    14px;
+  --r-lg:    20px;
+  --r-xl:    28px;
+  --r-2xl:   40px;
+  --r-pill:  999px;
+
+  /* =====================================================================
+     SHADOWS — soft, cool-tinted. Glass cards get a TIGHT inner ring + a
+     diffuse cool drop-shadow. Never use pure-black shadows.
+     ===================================================================== */
+  --shadow-1: 0 1px 2px rgba(20, 30, 60, 0.06);
+  --shadow-2: 0 4px 14px rgba(20, 30, 60, 0.08);
+  --shadow-3: 0 12px 32px rgba(20, 30, 60, 0.12);
+  --shadow-4: 0 24px 60px rgba(20, 30, 60, 0.18);
+  --shadow-glow-aurora: 0 12px 40px rgba(0, 213, 255, 0.35),
+                        0 4px 14px rgba(46, 255, 184, 0.25);
+  --shadow-glow-sun:    0 12px 40px rgba(255, 122, 46, 0.32),
+                        0 4px 14px rgba(107, 47, 230, 0.22);
+  --ring-glass:    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  --ring-glass-soft: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  --ring-focus:    0 0 0 3px rgba(0, 213, 255, 0.45);
+
+  /* =====================================================================
+     MOTION
+     ===================================================================== */
+  --ease-out:      cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:   cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast:      140ms;
+  --dur-base:      220ms;
+  --dur-slow:      420ms;
+
+  /* =====================================================================
+     LAYOUT
+     ===================================================================== */
+  --container-max: 1200px;
+  --container-wide:1440px;
+  --gutter:        24px;
+}
+
+/* =========================================================================
+   Semantic element styles — opt-in via class to avoid global pollution
+   ========================================================================= */
+
+.auralis-type {
+  font-family: var(--font-text);
+  color: var(--fg-2);
+  font-size: var(--t-body);
+  line-height: var(--lh-normal);
+  letter-spacing: var(--tracking-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.h-display-1, .h-display-2, .h1, .h2, .h3, .h4 {
+  font-family: var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-tight);
+  margin: 0;
+  font-weight: 600;
+  text-wrap: balance;
+}
+.h-display-1 { font-size: var(--t-display-1); font-weight: 700; letter-spacing: -0.03em; }
+.h-display-2 { font-size: var(--t-display-2); font-weight: 700; }
+.h1 { font-size: var(--t-h1); }
+.h2 { font-size: var(--t-h2); }
+.h3 { font-size: var(--t-h3); line-height: var(--lh-snug); }
+.h4 { font-size: var(--t-h4); line-height: var(--lh-snug); }
+
+.body-lg { font: 500 var(--t-body-lg)/var(--lh-normal) var(--font-text); color: var(--fg-2); }
+.body    { font: 400 var(--t-body)/var(--lh-normal) var(--font-text); color: var(--fg-2); }
+.body-sm { font: 400 var(--t-body-sm)/var(--lh-normal) var(--font-text); color: var(--fg-3); }
+.caption { font: 500 var(--t-caption)/1.4 var(--font-text); color: var(--fg-3); }
+.overline {
+  font: 600 var(--t-overline)/1 var(--font-text);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.quote-zh {
+  font-family: var(--font-han-quote);
+  font-size: var(--t-h3);
+  line-height: var(--lh-loose);
+  color: var(--fg-1);
+}
+
+/* =========================================================================
+   Backdrop helpers — vibrant gradient washes for full-bleed sections
+   ========================================================================= */
+/* Locale-aware Han fallback overrides — Simplified content uses Noto Sans SC
+   (and LXGW WenKai) ahead of the Traditional variants. */
+:lang(zh-Hans) {
+  --font-display:     'Sora', 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;
+  --font-text:        'Manrope', 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;
+  --font-han-display: 'Noto Sans SC', 'Noto Sans TC', 'Sora', system-ui, sans-serif;
+  --font-han-quote:   'LXGW WenKai', 'LXGW WenKai TC', 'Noto Sans SC', serif;
+}
+
+.bg-aurora { background: var(--gradient-aurora); }
+.bg-sun    { background: var(--gradient-sun); }
+.bg-mist   { background: var(--gradient-mist); }
+
+/* Animated aurora — used behind hero. Reduced-motion safe. */
+.bg-aurora-animated {
+  background:
+    radial-gradient(60% 80% at 20% 30%, rgba(46,255,184,0.85) 0%, transparent 60%),
+    radial-gradient(55% 70% at 80% 20%, rgba(0,213,255,0.85) 0%, transparent 60%),
+    radial-gradient(70% 90% at 60% 90%, rgba(107,47,230,0.6) 0%, transparent 60%),
+    linear-gradient(135deg, #B5F0FF 0%, #E8E2FF 60%, #FFD3A8 100%);
+  background-size: 220% 220%;
+  animation: auroraDrift 18s var(--ease-in-out) infinite;
+}
+@keyframes auroraDrift {
+  0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0% 0%; }
+  50%      { background-position: 30% 20%, 60% 30%, 70% 70%, 100% 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg-aurora-animated { animation: none; }
+}
+
+/* =========================================================================
+   Glass card primitive
+   ========================================================================= */
+.glass {
+  background: var(--glass-strong);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-3), var(--ring-glass);
+  color: var(--fg-on-glass);
+}
+.glass--medium { background: var(--glass-medium); box-shadow: var(--shadow-2), var(--ring-glass-soft); }
+.glass--light  { background: var(--glass-light);  box-shadow: var(--shadow-2), var(--ring-glass-soft); color: #fff; }
+.glass--tint   { background: var(--glass-tint);   box-shadow: var(--ring-glass-soft); color: #fff; }

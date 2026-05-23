@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spacing · Glow</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body { font-family: var(--font-text); color: var(--fg-2); }
+  .card-frame { box-sizing: border-box; padding: 24px; min-height: 200px; }
+  .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .label { font: 600 11px/1 var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+  .hex   { font: 500 12px/1 var(--font-mono, ui-monospace); color: var(--fg-3); }
+  .name  { font: 600 13px/1.2 var(--font-text); color: var(--fg-1); }
+  .desc  { font: 400 13px/1.4 var(--font-text); color: var(--fg-3); }
+  
+</style>
+</head>
+<body><div class="card-frame">
+    <div class="row" style="gap:28px;align-items:center;justify-content:center;padding:20px 0">
+      <div class="col" style="align-items:center;gap:10px">
+        <div style="width:120px;height:60px;border-radius:999px;background:var(--gradient-aurora);box-shadow:var(--shadow-glow-aurora);display:flex;align-items:center;justify-content:center;color:#fff;font:600 14px/1 var(--font-text)">Glow · Aurora</div>
+        <div class="hex">0 12px 40px cyan + green</div>
+      </div>
+      <div class="col" style="align-items:center;gap:10px">
+        <div style="width:120px;height:60px;border-radius:999px;background:var(--gradient-sun);box-shadow:var(--shadow-glow-sun);display:flex;align-items:center;justify-content:center;color:#fff;font:600 14px/1 var(--font-text)">Glow · Sun</div>
+        <div class="hex">0 12px 40px orange + violet</div>
+      </div>
+      <div class="col" style="align-items:center;gap:10px">
+        <div style="width:120px;height:60px;border-radius:14px;background:#fff;box-shadow:var(--ring-glass-soft),0 0 0 3px rgba(0,213,255,0.45);display:flex;align-items:center;justify-content:center;color:var(--fg-1);font:600 14px/1 var(--font-text)">Focus ring</div>
+        <div class="hex">0 0 0 3px cyan @ .45</div>
+      </div>
+    </div></div></body>
+</html>

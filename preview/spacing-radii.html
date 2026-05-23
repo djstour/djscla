@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spacing · Radii</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body { font-family: var(--font-text); color: var(--fg-2); }
+  .card-frame { box-sizing: border-box; padding: 24px; min-height: 170px; }
+  .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .label { font: 600 11px/1 var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+  .hex   { font: 500 12px/1 var(--font-mono, ui-monospace); color: var(--fg-3); }
+  .name  { font: 600 13px/1.2 var(--font-text); color: var(--fg-1); }
+  .desc  { font: 400 13px/1.4 var(--font-text); color: var(--fg-3); }
+  
+</style>
+</head>
+<body><div class="card-frame">
+    <div class="row" style="gap:14px;align-items:flex-end">
+      
+        <div class="col" style="align-items:center;gap:6px;flex:1">
+          <div style="width:70px;height:70px;background:var(--gradient-aurora);border-radius:6px;box-shadow:var(--shadow-2)"></div>
+          <div class="name">--r-xs</div>
+          <div class="hex">6px</div>
+        </div>
+      
+        <div class="col" style="align-items:center;gap:6px;flex:1">
+          <div style="width:70px;height:70px;background:var(--gradient-aurora);border-radius:10px;box-shadow:var(--shadow-2)"></div>
+          <div class="name">--r-sm</div>
+          <div class="hex">10px</div>
+        </div>
+      
+        <div class="col" style="align-items:center;gap:6px;flex:1">
+          <div style="width:70px;height:70px;background:var(--gradient-aurora);border-radius:14px;box-shadow:var(--shadow-2)"></div>
+          <div class="name">--r-md</div>
+          <div class="hex">14px</div>
+        </div>
+      
+        <div class="col" style="align-items:center;gap:6px;flex:1">
+          <div style="width:70px;height:70px;background:var(--gradient-aurora);border-radius:20px;box-shadow:var(--shadow-2)"></div>
+          <div class="name">--r-lg</div>
+          <div class="hex">20px</div>
+        </div>
+      
+        <div class="col" style="align-items:center;gap:6px;flex:1">
+          <div style="width:70px;height:70px;background:var(--gradient-aurora);border-radius:28px;box-shadow:var(--shadow-2)"></div>
+          <div class="name">--r-xl</div>
+          <div class="hex">28px</div>
+        </div>
+      
+        <div class="col" style="align-items:center;gap:6px;flex:1">
+          <div style="width:70px;height:70px;background:var(--gradient-aurora);border-radius:40px;box-shadow:var(--shadow-2)"></div>
+          <div class="name">--r-2xl</div>
+          <div class="hex">40px</div>
+        </div>
+      
+        <div class="col" style="align-items:center;gap:6px;flex:1">
+          <div style="width:70px;height:70px;background:var(--gradient-aurora);border-radius:999px;box-shadow:var(--shadow-2)"></div>
+          <div class="name">--r-pill</div>
+          <div class="hex">999px / pill</div>
+        </div>
+      
+    </div></div></body>
+</html>

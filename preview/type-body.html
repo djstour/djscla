@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Type · Body & Caption</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body { font-family: var(--font-text); color: var(--fg-2); }
+  .card-frame { box-sizing: border-box; padding: 24px; min-height: 240px; }
+  .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .label { font: 600 11px/1 var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+  .hex   { font: 500 12px/1 var(--font-mono, ui-monospace); color: var(--fg-3); }
+  .name  { font: 600 13px/1.2 var(--font-text); color: var(--fg-1); }
+  .desc  { font: 400 13px/1.4 var(--font-text); color: var(--fg-3); }
+  
+</style>
+</head>
+<body><div class="card-frame">
+    <div class="col" style="gap:10px;max-width:600px">
+      <div class="overline" style="color:var(--coral)">Overline · 11 / 600 / 0.08em</div>
+      <div style="font:500 18px/1.5 var(--font-text);color:var(--fg-1)">Body-large — Mix and match 800+ verified local operators into a single itinerary.</div>
+      <div style="font:400 16px/1.55 var(--font-text);color:var(--fg-2)">Body — Auralis aggregates Bókun inventory in real-time, so every supplier you see is live, bookable, and refundable under one transaction.</div>
+      <div style="font:400 14px/1.55 var(--font-text);color:var(--fg-3)">Body-small — Includes pickup, equipment, and the 45-minute glacier briefing.</div>
+      <div style="font:500 12px/1.4 var(--font-text);color:var(--fg-3)">Caption — last updated 5 min ago</div>
+    </div></div></body>
+</html>

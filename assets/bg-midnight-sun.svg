@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <radialGradient id="bg-s1" cx="18%" cy="78%" r="60%">
+      <stop offset="0" stop-color="#6B2FE6" stop-opacity="0.9"></stop>
+      <stop offset="1" stop-color="#6B2FE6" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="bg-s2" cx="82%" cy="30%" r="60%">
+      <stop offset="0" stop-color="#FF7A2E" stop-opacity="0.95"></stop>
+      <stop offset="1" stop-color="#FF7A2E" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="bg-s3" cx="50%" cy="55%" r="50%">
+      <stop offset="0" stop-color="#B331E2" stop-opacity="0.75"></stop>
+      <stop offset="1" stop-color="#B331E2" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="bg-s-base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3A1B7A"></stop>
+      <stop offset="0.5" stop-color="#812A8C"></stop>
+      <stop offset="1" stop-color="#FFB347"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg-s-base)"></rect>
+  <rect width="1600" height="900" fill="url(#bg-s1)"></rect>
+  <rect width="1600" height="900" fill="url(#bg-s2)"></rect>
+  <rect width="1600" height="900" fill="url(#bg-s3)"></rect>
+</svg>
