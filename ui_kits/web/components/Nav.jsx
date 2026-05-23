@@ -201,35 +201,27 @@
     const T = (opts) => pick(lang, opts);
 
     return (
-      <div className="nav-mobile-settings">
-        {onSiteThemeChange && (
-          <div className="nav-mobile-settings__group">
-            <span className="nav-mobile-settings__label">
-              {T({ hant: '主題配色', hans: '主题配色', en: 'Color theme' })}
-            </span>
+      <div
+        className="nav-mobile-settings"
+        role="group"
+        aria-label={T({ hant: '主題、語言與幣別', hans: '主题、语言与币别', en: 'Theme, language and currency' })}
+      >
+        <div className="nav-mobile-settings__bar">
+          {onSiteThemeChange && (
             <ThemePicker
               themeId={siteThemeId || 'aurora'}
               onChange={onSiteThemeChange}
               lang={lang}
-              className="theme-picker--menu"
+              className="theme-picker--compact"
             />
-          </div>
-        )}
-        <div className="nav-mobile-settings__group">
-          <span className="nav-mobile-settings__label">
-            {T({ hant: '語言', hans: '语言', en: 'Language' })}
-          </span>
-          <LangPicker lang={lang} onChange={onLangChange} layout="expanded" />
-        </div>
-        <div className="nav-mobile-settings__group">
-          <span className="nav-mobile-settings__label">
-            {T({ hant: '顯示幣別', hans: '显示币别', en: 'Display currency' })}
-          </span>
+          )}
+          <LangPicker lang={lang} onChange={onLangChange} layout="inline" />
           <CurrencyPicker
             lang={lang}
             value={displayCurrency}
             onChange={onCurrencyChange}
-            layout="expanded"
+            layout="compact"
+            inMobileSheet
           />
         </div>
       </div>
@@ -280,24 +272,23 @@
     };
     const current = LANGS.find((l) => l.id === lang) || LANGS[0];
 
-    if (layout === 'expanded') {
+    if (layout === 'inline') {
       return (
-        <div className="locale-expanded" role="listbox" aria-label={T({ hant: '選擇語言', hans: '选择语言', en: 'Choose language' })}>
+        <div className="locale-inline" role="listbox" aria-label={T({ hant: '語言', hans: '语言', en: 'Language' })}>
           {LANGS.map((l) => {
             const selected = l.id === lang;
-            const name = pick(lang, titles[l.id]);
             return (
               <button
                 key={l.id}
                 type="button"
                 role="option"
                 aria-selected={selected}
-                className={`locale-expanded__btn${selected ? ' is-active' : ''}`}
+                aria-label={pick(lang, titles[l.id])}
+                title={pick(lang, titles[l.id])}
+                className={`locale-inline__btn${selected ? ' is-active' : ''}`}
                 onClick={() => onChange(l.id)}
               >
-                <span className="locale-expanded__code">{l.label}</span>
-                <span className="locale-expanded__name">{name}</span>
-                {selected && <Icon name="check" size={14} color="var(--aurora-deep)" />}
+                {l.label}
               </button>
             );
           })}
@@ -378,7 +369,7 @@
     );
   }
 
-  function CurrencyPicker({ lang, value, onChange, layout = 'compact' }) {
+  function CurrencyPicker({ lang, value, onChange, layout = 'compact', inMobileSheet = false }) {
     const T = (opts) => pick(lang, opts);
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
@@ -396,32 +387,8 @@
 
     const current = DISPLAY_CURRENCIES.find((c) => c.code === value) || DISPLAY_CURRENCIES[0];
 
-    if (layout === 'expanded') {
-      return (
-        <div className="locale-expanded locale-expanded--grid" role="listbox" aria-label={T({ hant: '選擇顯示幣別', hans: '选择显示币别', en: 'Choose display currency' })}>
-          {DISPLAY_CURRENCIES.map((c) => {
-            const selected = c.code === value;
-            return (
-              <button
-                key={c.code}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                aria-label={pick(lang, c.name)}
-                className={`locale-expanded__btn locale-expanded__btn--compact${selected ? ' is-active' : ''}`}
-                onClick={() => onChange(c.code)}
-              >
-                <span className="locale-expanded__code">{c.code}</span>
-                {selected && <Icon name="check" size={12} color="var(--aurora-deep)" />}
-              </button>
-            );
-          })}
-        </div>
-      );
-    }
-
     return (
-      <div ref={rootRef} style={{ position: 'relative' }}>
+      <div ref={rootRef} className={inMobileSheet ? 'locale-picker-root--sheet' : ''} style={{ position: 'relative' }}>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -433,16 +400,16 @@
             en: `Display currency: ${currencyLabel(value, lang)}`,
           })}
           title={pick(lang, current.name)}
-          className="locale-picker-btn locale-currency-btn"
+          className={`locale-picker-btn locale-currency-btn${inMobileSheet ? ' locale-currency-btn--sheet' : ''}`}
           style={{
             ...LOCALE_BTN,
-            marginRight: 2,
+            marginRight: inMobileSheet ? 0 : 2,
             background: open ? 'rgba(255,255,255,0.95)' : 'transparent',
             boxShadow: open ? 'inset 0 0 0 1.5px var(--aurora-cyan)' : 'none',
           }}
         >
           <span>{current.code}</span>
-          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={13} color="var(--fg-3)" />
+          {!inMobileSheet && <Icon name={open ? 'chevron-up' : 'chevron-down'} size={13} color="var(--fg-3)" />}
         </button>
 
         {open && (

@@ -279,8 +279,8 @@ html {
     top: calc(100% + 8px);
     right: var(--page-pad-x);
     left: auto;
-    width: min(300px, calc(100vw - 2 * var(--page-pad-x)));
-    max-height: min(78vh, 640px);
+    width: min(280px, calc(100vw - 2 * var(--page-pad-x)));
+    max-height: min(70vh, 520px);
     overflow-y: auto;
     margin-top: 0;
     padding: 12px;
@@ -293,95 +293,94 @@ html {
   }
 
   .nav-mobile-settings {
-    margin-top: 8px;
-    padding-top: 12px;
+    margin-top: 6px;
+    padding-top: 8px;
     border-top: 1px solid var(--base-200);
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
   }
 
-  .nav-mobile-settings__label {
-    display: block;
-    margin-bottom: 8px;
-    font: 600 11px/1 var(--font-text);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--fg-3);
-  }
-
-  .theme-picker--menu {
-    width: 100%;
-    justify-content: flex-start;
-    padding: 4px;
-    gap: 8px;
-  }
-
-  .theme-picker--menu .theme-picker__btn {
-    width: 36px;
-    height: 36px;
-  }
-
-  .theme-picker--menu .theme-picker__swatch {
-    width: 26px;
-    height: 26px;
-  }
-
-  .locale-expanded {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .locale-expanded--grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-  }
-
-  .locale-expanded__btn {
-    width: 100%;
-    padding: 10px 12px;
-    border: 0;
-    border-radius: 12px;
-    cursor: pointer;
-    background: var(--base-50);
-    box-shadow: inset 0 0 0 1px var(--base-200);
+  .nav-mobile-settings__bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font: 600 14px/1.2 var(--font-text);
-    color: var(--fg-1);
-    text-align: left;
-    transition: background var(--dur-fast) var(--ease-out);
+    gap: 5px;
+    min-height: 28px;
   }
 
-  .locale-expanded__btn--compact {
-    flex-direction: column;
-    justify-content: center;
-    padding: 10px 6px;
-    gap: 4px;
-    font-size: 13px;
+  .nav-mobile-settings__bar .theme-picker--compact {
+    flex-shrink: 0;
+    padding: 2px;
+    gap: 2px;
   }
 
-  .locale-expanded__btn.is-active {
-    background: var(--gradient-aurora-soft);
-    box-shadow: inset 0 0 0 1.5px rgba(0, 213, 255, 0.35);
+  .nav-mobile-settings__bar .theme-picker--compact .theme-picker__btn {
+    width: 22px;
+    height: 22px;
   }
 
-  .locale-expanded__code {
-    font-weight: 700;
+  .nav-mobile-settings__bar .theme-picker--compact .theme-picker__swatch {
+    width: 14px;
+    height: 14px;
   }
 
-  .locale-expanded__name {
+  .nav-mobile-settings__bar .theme-picker--compact .theme-picker__btn.is-active {
+    box-shadow: 0 0 0 1.5px var(--fg-1);
+  }
+
+  .locale-inline {
     flex: 1;
-    font: 500 12px/1.3 var(--font-text);
-    color: var(--fg-2);
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    border-radius: 999px;
+    background: var(--base-100);
+    box-shadow: inset 0 0 0 1px var(--base-200);
   }
 
-  .locale-expanded__btn--compact .locale-expanded__code {
-    font-size: 13px;
+  .locale-inline__btn {
+    flex: 1;
+    min-width: 0;
+    height: 22px;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    background: transparent;
+    font: 700 10px/1 var(--font-text);
+    letter-spacing: 0.02em;
+    color: var(--fg-2);
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+
+  .locale-inline__btn.is-active {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--fg-1);
+    box-shadow: inset 0 0 0 1px rgba(0, 213, 255, 0.35);
+  }
+
+  .nav-mobile-settings .locale-picker-root--sheet {
+    flex-shrink: 0;
+  }
+
+  .nav-mobile-settings .locale-currency-btn--sheet {
+    height: 26px;
+    min-width: 40px;
+    padding: 0 8px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--base-100);
+    box-shadow: inset 0 0 0 1px var(--base-200);
+    font: 700 10px/1 var(--font-text);
+    letter-spacing: 0.02em;
+  }
+
+  .nav-mobile-settings .locale-picker-root--sheet .locale-picker-menu {
+    top: auto;
+    bottom: calc(100% + 4px);
+    right: 0;
+    left: auto;
+    min-width: 88px;
+    max-height: 200px;
+    overflow-y: auto;
   }
 }
 
