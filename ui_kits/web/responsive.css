@@ -104,6 +104,28 @@ html {
     0 2px 14px rgba(255, 255, 255, 0.45);
 }
 
+/* Sun — dark midnight palette; light copy without bright halos */
+html[data-site-theme="sun"] .hero-overline {
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.55);
+}
+
+html[data-site-theme="sun"] .hero-headline {
+  color: var(--brand-headline-1);
+}
+
+html[data-site-theme="sun"] .hero-headline__line {
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+html[data-site-theme="sun"] .hero-headline__line--accent {
+  text-shadow: 0 2px 22px rgba(107, 47, 230, 0.45), 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
+html[data-site-theme="sun"] .hero-lead {
+  color: var(--fg-2);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.45);
+}
+
 .hero-search-dates {
   display: grid;
   grid-template-columns: 1.4fr 1fr;

@@ -248,13 +248,13 @@
     {
       id: 'sun',
       label: { hant: '陽', hans: '阳', en: 'Sun' },
-      swatch: 'linear-gradient(135deg, #6B2FE6 0%, #FF7A2E 100%)',
+      swatch: 'linear-gradient(135deg, #1A1228 0%, #6B2FE6 42%, #FF7A2E 100%)',
       sectionClass: 'bg-sun-animated',
       heroBackground: [
-        'radial-gradient(58% 78% at 20% 30%, rgba(107, 47, 230, 0.72) 0%, transparent 58%)',
-        'radial-gradient(55% 72% at 80% 22%, rgba(255, 122, 46, 0.78) 0%, transparent 58%)',
-        'radial-gradient(68% 88% at 52% 90%, rgba(179, 49, 226, 0.55) 0%, transparent 62%)',
-        'linear-gradient(135deg, #D4C2FF 0%, #FFB88A 48%, #FF7A2E 100%)',
+        'radial-gradient(58% 78% at 20% 30%, rgba(107, 47, 230, 0.55) 0%, transparent 58%)',
+        'radial-gradient(55% 72% at 80% 22%, rgba(255, 122, 46, 0.48) 0%, transparent 58%)',
+        'radial-gradient(68% 88% at 52% 90%, rgba(179, 49, 226, 0.38) 0%, transparent 62%)',
+        'linear-gradient(135deg, #1A1228 0%, #120E1C 48%, #0E0C18 100%)',
       ].join(', '),
     },
   ];
