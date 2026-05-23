@@ -1,5 +1,6 @@
 const { fetchCatalogPage, fetchAllCatalogPages, DEFAULT_ALL_CAP } = require('../../lib/catalog');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
+const { slimActivityForList } = require('../../lib/slimActivity');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,17 +25,21 @@ module.exports = async function handler(req, res) {
   const vendorId = req.query.vendorId;
   const fetchAll = req.query.all === 'true' || req.query.all === '1';
   const maxItems = parseInt(req.query.maxItems || String(DEFAULT_ALL_CAP), 10);
+  const full = req.query.full === 'true' || req.query.full === '1';
 
   try {
     const { activities, meta } = fetchAll
       ? await fetchAllCatalogPages({ uiLang, pageSize: Math.min(pageSize, 100), maxItems, vendorId })
       : await fetchCatalogPage({ uiLang, page, pageSize, vendorId });
 
-    const translations = await loadTranslationsForActivities(activities);
+    const list = full ? activities : activities.map(slimActivityForList);
+    const translations = await loadTranslationsForActivities(list);
+
+    res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
 
     return res.status(200).json({
       source: 'bokun',
-      activities,
+      activities: list,
       translations,
       meta,
     });

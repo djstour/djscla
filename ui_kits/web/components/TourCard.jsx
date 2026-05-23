@@ -1,27 +1,61 @@
 /* TourCard — the atomic product tile.
  * --------------------------------------------------------------------------
  * Consumes a flat TourViewModel produced by bokunAdapter.toViewModel().
- * Components are PURE — no translation logic, no Bókun knowledge.
- *
- * View-model shape (selected fields used here):
- *   {
- *     id, title, titleEn, supplier, supplierRole,
- *     duration, mode, rating, reviews, price, priceCurrency,
- *     badge (localised), badgeKey, photo, tags: [{key, label}],
- *     availability: { capacityRemaining, warning, ... }
- *   }
  */
 
 (function () {
+  const { useState } = React;
   const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick } = window.AuralisUI;
 
-  function TourCard({ tour, onAdd, onView, inTrip, compact = false, lang = 'hant', displayCurrency = 'USD', fxRates = { USD: 1 } }) {
+  function TourCardImage({ src, alt, height, fallbackPhoto, priority }) {
+    const [loaded, setLoaded] = useState(!src);
+    const [failed, setFailed] = useState(false);
+    const showImg = src && !failed;
+
+    return (
+      <div style={{
+        position: 'relative',
+        height,
+        overflow: 'hidden',
+        background: fallbackPhoto || 'var(--base-100)',
+      }}>
+        {!loaded && (
+          <div className="tour-card-image-shimmer" aria-hidden="true" style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(120deg,#E4E9F2 0%,#F1F4FA 50%,#E4E9F2 100%)',
+            backgroundSize: '200% 100%',
+          }} />
+        )}
+        {showImg && (
+          <img
+            src={src}
+            alt={alt}
+            loading={priority ? 'eager' : 'lazy'}
+            decoding="async"
+            fetchPriority={priority ? 'high' : 'auto'}
+            onLoad={() => setLoaded(true)}
+            onError={() => { setFailed(true); setLoaded(true); }}
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center',
+              opacity: loaded ? 1 : 0,
+              transition: 'opacity 0.28s var(--ease-out)',
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  function TourCard({
+    tour, onAdd, onView, inTrip, compact = false, lang = 'hant',
+    displayCurrency = 'USD', fxRates = { USD: 1 }, imagePriority = false,
+  }) {
     const T = (opts) => pick(lang, opts);
     const showSubtitle = lang !== 'en' && tour.titleEn && tour.titleEn !== tour.title;
-
-    // "Only 4 left" urgency line — derived from live availability.
     const capacity = tour.availability && tour.availability.capacityRemaining;
     const showLowCapacity = typeof capacity === 'number' && capacity <= 8;
+    const photoHeight = compact ? 150 : 200;
 
     function openDetail(e) {
       if (onView) onView(tour);
@@ -34,34 +68,28 @@
         onClick={onView ? openDetail : undefined}
         onKeyDown={onView ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(e); } } : undefined}
         style={{
-        background: '#fff',
-        borderRadius: 24,
-        overflow: 'hidden',
-        boxShadow: 'var(--shadow-2)',
-        display: 'flex', flexDirection: 'column',
-        cursor: onView ? 'pointer' : 'default',
-        transition: 'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out)',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-4)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-2)'; }}
-      >
-        {/* Photo area */}
-        <div style={{
-          position: 'relative',
-          height: compact ? 150 : 200,
-          ...(tour.coverImageUrl
-            ? {
-              backgroundImage: `url(${tour.coverImageUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }
-            : { background: fakePhoto(tour.photo) }),
+          background: '#fff',
+          borderRadius: 24,
           overflow: 'hidden',
-        }}>
-          {tour.photo === 'aurora' && <PhotoSparkles density={20} color="#2EFFB8" />}
-          {tour.photo === 'sunset' && <PhotoSparkles density={10} color="#FFD3A8" />}
+          boxShadow: 'var(--shadow-2)',
+          display: 'flex', flexDirection: 'column',
+          cursor: onView ? 'pointer' : 'default',
+          transition: 'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out)',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-4)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-2)'; }}
+      >
+        <div style={{ position: 'relative' }}>
+          <TourCardImage
+            src={tour.coverImageUrl}
+            alt={tour.title}
+            height={photoHeight}
+            fallbackPhoto={tour.coverImageUrl ? null : fakePhoto(tour.photo)}
+            priority={imagePriority}
+          />
+          {!tour.coverImageUrl && tour.photo === 'aurora' && <PhotoSparkles density={12} color="#2EFFB8" />}
+          {!tour.coverImageUrl && tour.photo === 'sunset' && <PhotoSparkles density={6} color="#FFD3A8" />}
 
-          {/* Badge — pre-localised by the adapter */}
           {tour.badge && (
             <span style={{
               position: 'absolute', top: 12, left: 12,
@@ -90,7 +118,6 @@
           }}>{tour.supplier}</span>
         </div>
 
-        {/* Body */}
         <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
           <div>
             <div style={{ font: '600 16px/1.25 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
@@ -131,7 +158,6 @@
             </div>
           )}
 
-          {/* Live availability line */}
           {showLowCapacity && (
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -186,20 +212,16 @@
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Loading skeleton — same dimensions as TourCard so the grid doesn't reflow.
-  // -------------------------------------------------------------------------
   function TourCardSkeleton({ compact = false }) {
     return (
       <article style={{
         background: '#fff', borderRadius: 24, overflow: 'hidden',
         boxShadow: 'var(--shadow-1)', display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{
+        <div className="tour-card-image-shimmer" style={{
           height: compact ? 150 : 200,
           background: 'linear-gradient(120deg,#E4E9F2 0%,#F1F4FA 50%,#E4E9F2 100%)',
           backgroundSize: '200% 100%',
-          animation: 'auralisShimmer 1.4s linear infinite',
         }}/>
         <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Bar w="80%" h={18}/>
@@ -215,17 +237,16 @@
             <Bar w={92} h={36} rounded/>
           </div>
         </div>
-        <style>{`@keyframes auralisShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
       </article>
     );
   }
+
   function Bar({ w, h, rounded }) {
     return (
-      <span style={{
+      <span className="tour-card-image-shimmer" style={{
         display: 'inline-block', width: w, height: h, borderRadius: rounded ? 999 : 6,
         background: 'linear-gradient(120deg,#E4E9F2 0%,#F1F4FA 50%,#E4E9F2 100%)',
         backgroundSize: '200% 100%',
-        animation: 'auralisShimmer 1.4s linear infinite',
       }}/>
     );
   }

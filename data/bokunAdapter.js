@@ -108,7 +108,15 @@
      * @returns {Promise<{ activities: object[], meta: { total?: number, page?: number, pageSize?: number } }>}
      */
     fetchActivities(opts = {}) {
-      const { lang = 'hant', page = 1, pageSize = 50, all = true, vendorId, maxItems = 2000 } = opts;
+      const {
+        lang = 'hant',
+        page = 1,
+        pageSize = 36,
+        all = false,
+        vendorId,
+        maxItems = 2000,
+        append = false,
+      } = opts;
 
       if (typeof fetch === 'undefined') {
         const err = new Error('fetch is not available — use a browser or vercel dev');
@@ -377,37 +385,58 @@
     if (typeof React === 'undefined') return;
     const { useState, useEffect } = React;
 
+    const CATALOG_PAGE_SIZE = 36;
+
+    function mergeRawActivities(existing, incoming) {
+      const byId = new Map();
+      (existing || []).forEach((a) => { if (a && a.id != null) byId.set(String(a.id), a); });
+      (incoming || []).forEach((a) => { if (a && a.id != null) byId.set(String(a.id), a); });
+      return [...byId.values()];
+    }
+
     A.useActivities = function useActivities(lang) {
       const [state, setState] = useState({
-        loading: true, error: null, activities: [], raw: [], meta: { total: 0 },
+        loading: true,
+        loadingMore: false,
+        error: null,
+        activities: [],
+        raw: [],
+        meta: { total: 0, page: 1, pageSize: CATALOG_PAGE_SIZE },
       });
 
       useEffect(() => {
         let cancelled = false;
-        // Don't reset `activities` while refetching for a lang change — we
-        // remap the existing raw data synchronously so the screen never goes
-        // blank during a locale flip. Only show the loading skeleton on the
-        // initial mount.
         setState(s => ({ ...s, loading: s.raw.length === 0, error: null }));
 
-        const remap = (raw, meta, translations) => {
+        const applyPayload = (raw, meta, translations, { append } = {}) => {
           if (cancelled) return;
           if (translations && typeof translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...translations };
           }
-          const viewModels = BokunAdapter.toViewModels(raw, lang);
-          setState({ loading: false, error: null, activities: viewModels, raw, meta: meta || state.meta });
+          setState((s) => {
+            const mergedRaw = append ? mergeRawActivities(s.raw, raw) : raw;
+            return {
+              loading: false,
+              loadingMore: false,
+              error: null,
+              raw: mergedRaw,
+              activities: BokunAdapter.toViewModels(mergedRaw, lang),
+              meta: meta || s.meta,
+            };
+          });
         };
 
         if (state.raw.length > 0) {
-          // Cheap path: lang change. Remap synchronously, no fetch.
-          remap(state.raw, state.meta);
+          applyPayload(state.raw, state.meta, null, { append: false });
         } else {
-          BokunAdapter.fetchActivities({ lang })
-            .then(({ activities: raw, meta, translations }) => remap(raw, meta, translations))
+          BokunAdapter.fetchActivities({ lang, page: 1, pageSize: CATALOG_PAGE_SIZE })
+            .then(({ activities: raw, meta, translations }) => applyPayload(raw, meta, translations))
             .catch((err) => {
               if (!cancelled) {
-                setState({ loading: false, error: err, activities: [], raw: [], meta: { total: 0 } });
+                setState({
+                  loading: false, loadingMore: false, error: err,
+                  activities: [], raw: [], meta: { total: 0 },
+                });
               }
             });
         }
@@ -415,7 +444,35 @@
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [lang]);
 
-      return state;
+      const catalogTotal = state.meta && state.meta.total > 0 ? state.meta.total : state.raw.length;
+      const hasMore = state.raw.length < catalogTotal;
+
+      const loadMore = () => {
+        if (state.loadingMore || state.loading || !hasMore) return;
+        const nextPage = (state.meta.page || 1) + 1;
+        setState((s) => ({ ...s, loadingMore: true }));
+        BokunAdapter.fetchActivities({ lang, page: nextPage, pageSize: CATALOG_PAGE_SIZE })
+          .then(({ activities: raw, meta, translations }) => {
+            setState((s) => {
+              if (translations && typeof translations === 'object') {
+                A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...translations };
+              }
+              const mergedRaw = mergeRawActivities(s.raw, raw);
+              return {
+                ...s,
+                loadingMore: false,
+                raw: mergedRaw,
+                activities: BokunAdapter.toViewModels(mergedRaw, lang),
+                meta: { ...s.meta, ...meta, page: nextPage },
+              };
+            });
+          })
+          .catch((err) => {
+            setState((s) => ({ ...s, loadingMore: false, error: err }));
+          });
+      };
+
+      return { ...state, hasMore, loadMore, catalogTotal };
     };
 
     /**

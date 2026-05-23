@@ -64,8 +64,10 @@
     // --- Bókun activity data ---------------------------------------------------
     // Pulled through the adapter; view-models are re-derived whenever `lang`
     // changes, so all screen copy stays in sync with the toggle automatically.
-    const { loading, error, activities, meta } = useActivities(lang);
-    const catalogTotal = meta && meta.total > 0 ? meta.total : activities.length;
+    const {
+      loading, loadingMore, error, activities, meta, hasMore, loadMore, catalogTotal: hookCatalogTotal,
+    } = useActivities(lang);
+    const catalogTotal = hookCatalogTotal > 0 ? hookCatalogTotal : (meta && meta.total > 0 ? meta.total : activities.length);
 
     // Trip = ARRAY OF BÓKUN IDS (numbers). View-models are looked up from the
     // current `activities` list, so a language flip rehydrates every cart row
@@ -144,12 +146,17 @@
           <ToursScreen
             activities={activities}
             loading={loading}
+            loadingMore={loadingMore}
+            hasMore={hasMore}
+            onLoadMore={loadMore}
             error={error}
             tripIdSet={tripIdSet}
             onAdd={addToTrip}
             onOpenDetail={openActivityDetail}
-            activeSupplier={activeSupplier} onSupplier={setActiveSupplier}
-            activeCats={activeCats} onToggleCat={toggleCat}
+            activeSupplier={activeSupplier}
+            onSupplier={setActiveSupplier}
+            activeCats={activeCats}
+            onToggleCat={toggleCat}
             lang={lang}
             catalogTotal={catalogTotal}
             displayCurrency={displayCurrency}
@@ -268,9 +275,10 @@
         <div className="grid-cards-3">
           {loading
             ? Array.from({ length: 6 }, (_, i) => <TourCardSkeleton key={i} />)
-            : activities.slice(0, 6).map(t => (
+            : activities.slice(0, 6).map((t, i) => (
                 <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
                           inTrip={tripIdSet.has(t.id)} lang={lang}
+                          imagePriority={i < 3}
                           displayCurrency={displayCurrency} fxRates={fxRates} />
               ))}
         </div>
@@ -281,7 +289,10 @@
 
   // ============================================================ TOURS screen ===
 
-  function ToursScreen({ activities, loading, error, tripIdSet, onAdd, onOpenDetail, activeSupplier, onSupplier, activeCats, onToggleCat, lang, catalogTotal, displayCurrency, fxRates }) {
+  function ToursScreen({
+    activities, loading, loadingMore, hasMore, onLoadMore, error, tripIdSet, onAdd, onOpenDetail,
+    activeSupplier, onSupplier, activeCats, onToggleCat, lang, catalogTotal, displayCurrency, fxRates,
+  }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
 
@@ -336,7 +347,11 @@
                 boxShadow: 'var(--shadow-1)', marginBottom: 18,
               }}>
                 <span style={{ font: '500 13px/1 var(--font-text)', color: 'var(--fg-3)' }}>
-                  {T({ hant: `顯示 ${filtered.length} / ${activities.length}`, hans: `显示 ${filtered.length} / ${activities.length}`, en: `Showing ${filtered.length} of ${activities.length}` })}
+                  {T({
+                    hant: `顯示 ${filtered.length} / ${activities.length}${catalogTotal > activities.length ? `（共 ${catalogTotal}）` : ''}`,
+                    hans: `显示 ${filtered.length} / ${activities.length}${catalogTotal > activities.length ? `（共 ${catalogTotal}）` : ''}`,
+                    en: `Showing ${filtered.length} of ${activities.length}${catalogTotal > activities.length ? ` (${catalogTotal} total)` : ''}`,
+                  })}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ font: '500 12px/1 var(--font-text)', color: 'var(--fg-3)' }}>
@@ -364,12 +379,27 @@
                     ? <CatalogErrorState error={error} lang={lang} />
                     : filtered.length === 0
                     ? <EmptyState lang={lang} />
-                    : filtered.map(t => (
+                    : filtered.map((t, i) => (
                         <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
                                   inTrip={tripIdSet.has(t.id)} lang={lang}
+                                  imagePriority={i < 4}
                                   displayCurrency={displayCurrency} fxRates={fxRates} />
                       ))}
               </div>
+
+              {hasMore && !loading && (
+                <div style={{ marginTop: 28, textAlign: 'center' }}>
+                  <button type="button" onClick={onLoadMore} disabled={loadingMore} style={{
+                    height: 48, padding: '0 28px', borderRadius: 999, border: 0, cursor: loadingMore ? 'wait' : 'pointer',
+                    background: 'var(--base-100)', boxShadow: 'inset 0 0 0 1px var(--base-300)',
+                    font: '600 14px/1 var(--font-text)', color: 'var(--fg-1)',
+                  }}>
+                    {loadingMore
+                      ? T({ hant: '載入中…', hans: '加载中…', en: 'Loading…' })
+                      : T({ hant: '載入更多行程', hans: '加载更多行程', en: 'Load more tours' })}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

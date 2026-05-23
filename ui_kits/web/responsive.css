@@ -434,3 +434,19 @@ html {
     display: none;
   }
 }
+
+/* Tour card image shimmer (shared with TourCard.jsx) */
+@keyframes auralisShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.tour-card-image-shimmer {
+  animation: auralisShimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-card-image-shimmer {
+    animation: none;
+  }
+}
