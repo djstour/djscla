@@ -77,7 +77,7 @@ curl -s "https://djscla.vercel.app/api/translations/cron" \
 
 Response includes `summary.catalogSize`, `summary.pendingActivities`, and `summary.activityIds` processed this run.
 
-**Catch-up (123 activities once):** still use `./scripts/sync-all-translations.sh` — cron is for incremental / ongoing, not a one-shot full backfill in a single run (Hobby function timeout).
+**Catch-up (123 activities once):** use `./scripts/sync-all-translations.sh` — it calls sync **multiple times per activity** with `"maxTranslations": 6` so each request finishes within the serverless time limit. If curl times out, lower `CHUNK` or raise `CURL_MAX_TIME` (Pro plan allows longer `maxDuration` on `/api/translations/sync`).
 
 **Later (Phase B):** trigger translation from catalog sync when Bókun `sourceHash` changes; optional Bókun webhook.
 

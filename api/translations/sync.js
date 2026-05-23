@@ -16,7 +16,7 @@ function checkAuth(req) {
   return token === secret;
 }
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   cors(res);
 
   if (req.method === 'OPTIONS') {
@@ -40,6 +40,7 @@ module.exports = async function handler(req, res) {
     const limit = Math.min(Number(body.limit) || 20, 50);
     const langs = Array.isArray(body.langs) ? body.langs : ['hant', 'hans'];
     const force = body.force === true;
+    const maxTranslations = body.maxTranslations != null ? Number(body.maxTranslations) : null;
 
     const summary = await runTranslationSync({
       activityIds: activityIds ? activityIds.map(Number).filter(Number.isFinite) : undefined,
@@ -47,6 +48,7 @@ module.exports = async function handler(req, res) {
       langs,
       force,
       uiLang: body.uiLang || 'hant',
+      maxTranslations: Number.isFinite(maxTranslations) && maxTranslations > 0 ? maxTranslations : null,
     });
 
     return res.status(200).json({
@@ -60,3 +62,8 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
+/** Hobby ≈10s; Pro can raise in project settings. Use maxTranslations to chunk work. */
+handler.config = { maxDuration: 60 };
+
+module.exports = handler;
