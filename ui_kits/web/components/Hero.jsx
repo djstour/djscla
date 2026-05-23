@@ -54,30 +54,21 @@
 
         <div className="hero-inner">
           <div>
-            <span className="overline" style={{ color: 'var(--coral)' }}>
+            <span className="hero-overline overline">
               {T({ hant: '冰島 · 即時庫存', hans: '冰岛 · 即时库存', en: 'Iceland · live inventory' })}
             </span>
-            <h1 style={{
+            <h1 className="hero-headline" style={{
               margin: '14px 0 0',
               font: '700 var(--t-display-1)/0.98 var(--font-display)',
               letterSpacing: '-0.03em',
-              color: 'var(--fg-1)',
               textWrap: 'balance',
             }}>
-              <span style={{
-                display: 'inline-block',
-                background: 'var(--brand-headline-1)',
-                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-              }}>{headlineGrad[0]}</span><br />
-              <span style={{
-                display: 'inline-block',
-                background: 'var(--brand-headline-2)',
-                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-              }}>{headlineGrad[1]}</span>
+              <span className="hero-headline__line">{headlineGrad[0]}</span><br />
+              <span className="hero-headline__line hero-headline__line--accent">{headlineGrad[1]}</span>
             </h1>
-            <p style={{
+            <p className="hero-lead" style={{
               margin: '20px 0 0', maxWidth: 480,
-              font: '500 18px/1.5 var(--font-text)', color: 'var(--fg-2)',
+              font: '500 18px/1.5 var(--font-text)',
             }}>{T({
               hant: '透過 Bókun 即時串接在地供應商 — 一次規劃，多家體驗，一筆結帳。',
               hans: '通过 Bókun 实时串接当地供应商 — 一次规划，多家体验，一笔结账。',

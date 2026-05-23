@@ -70,6 +70,40 @@ html {
   align-items: center;
 }
 
+/* Hero copy — high contrast on bright gradient backdrops */
+.hero-overline {
+  color: var(--brand-overline, var(--fg-1));
+  font-weight: 700;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.92),
+    0 2px 16px rgba(255, 255, 255, 0.55);
+}
+
+.hero-headline {
+  color: var(--fg-1);
+}
+
+.hero-headline__line {
+  display: inline-block;
+  color: var(--brand-headline-1, var(--fg-1));
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95),
+    0 2px 20px rgba(255, 255, 255, 0.6),
+    0 0 1px rgba(17, 21, 31, 0.2);
+}
+
+.hero-headline__line--accent {
+  color: var(--brand-headline-accent, var(--fg-1));
+}
+
+.hero-lead {
+  color: var(--fg-1);
+  opacity: 0.92;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.88),
+    0 2px 14px rgba(255, 255, 255, 0.45);
+}
+
 .hero-search-dates {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
