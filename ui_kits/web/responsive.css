@@ -182,20 +182,36 @@ html {
   }
 
   .nav-header {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
   }
 
-  .locale-bar {
-    order: 3;
-    width: 100%;
-    justify-content: space-between;
-    padding: 8px 10px !important;
-    gap: 10px !important;
+  .nav-actions {
+    gap: 8px;
+  }
+}
+
+.locale-strip {
+  flex-shrink: 0;
+}
+
+.locale-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--base-200);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .locale-strip {
+    height: 30px;
+    padding: 2px;
   }
 
-  .locale-field-label {
-    display: none;
+  .locale-currency-btn {
+    padding: 0 6px 0 7px !important;
+    font-size: 10px !important;
   }
 }
 

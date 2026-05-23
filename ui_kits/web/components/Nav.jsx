@@ -5,14 +5,23 @@
   const { useState, useEffect, useRef } = React;
   const { Icon, LANGS, CURRENCIES, pick, currencyLabel } = window.AuralisUI;
 
-  const PILL_SHELL = {
-    position: 'relative',
+  const LOCALE_STRIP = {
     display: 'inline-flex',
-    height: 36,
-    padding: 3,
+    alignItems: 'center',
+    height: 32,
+    padding: 2,
     borderRadius: 999,
     background: 'var(--base-100)',
     boxShadow: 'inset 0 0 0 1px var(--base-200)',
+    flexShrink: 0,
+  };
+
+  const LANG_SHELL = {
+    position: 'relative',
+    display: 'inline-flex',
+    height: 28,
+    padding: 2,
+    borderRadius: 999,
     alignItems: 'center',
   };
 
@@ -135,57 +144,19 @@
 
     return (
       <div
-        className="locale-bar"
+        className="locale-strip"
         role="group"
         aria-label={T({ hant: '語言與幣別', hans: '语言与币别', en: 'Language and currency' })}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          padding: '6px 12px 6px 10px',
-          borderRadius: 16,
-          background: 'rgba(255,255,255,0.55)',
-          boxShadow: 'inset 0 0 0 1px rgba(20,30,60,0.06)',
-        }}
+        style={LOCALE_STRIP}
       >
-        <LocaleField
-          icon="languages"
-          label={T({ hant: '語言', hans: '语言', en: 'Language' })}
-        >
-          <LangToggle lang={lang} onChange={onLangChange} />
-        </LocaleField>
-
-        <span aria-hidden="true" style={{ width: 1, height: 28, background: 'var(--base-200)', flexShrink: 0 }} />
-
-        <LocaleField
-          icon="coins"
-          label={T({ hant: '幣別', hans: '币别', en: 'Currency' })}
-        >
-          <CurrencyPicker
-            lang={lang}
-            value={displayCurrency}
-            onChange={onCurrencyChange}
-            fxDate={fxDate}
-          />
-        </LocaleField>
-      </div>
-    );
-  }
-
-  function LocaleField({ icon, label, children }) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-        <span className="locale-field-label" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          font: '600 10px/1 var(--font-text)',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          color: 'var(--fg-3)',
-        }}>
-          <Icon name={icon} size={11} color="var(--fg-3)" />
-          {label}
-        </span>
-        {children}
+        <LangToggle lang={lang} onChange={onLangChange} />
+        <span className="locale-divider" aria-hidden="true" />
+        <CurrencyPicker
+          lang={lang}
+          value={displayCurrency}
+          onChange={onCurrencyChange}
+          fxDate={fxDate}
+        />
       </div>
     );
   }
@@ -199,16 +170,16 @@
     };
 
     return (
-      <div role="group" aria-label="Language" style={PILL_SHELL}>
+      <div role="group" aria-label="Language" style={LANG_SHELL}>
         <span aria-hidden="true" style={{
           position: 'absolute',
-          top: 3, bottom: 3,
-          left: 3,
-          width: 'calc((100% - 6px) / 3)',
+          top: 2, bottom: 2,
+          left: 2,
+          width: 'calc((100% - 4px) / 3)',
           transform: `translateX(${activeIdx * 100}%)`,
           background: 'var(--gradient-aurora)',
           borderRadius: 999,
-          boxShadow: '0 4px 12px rgba(0,213,255,0.35)',
+          boxShadow: '0 2px 8px rgba(0,213,255,0.28)',
           transition: 'transform var(--dur-base) var(--ease-out)',
           pointerEvents: 'none',
         }} />
@@ -226,15 +197,15 @@
                 position: 'relative',
                 zIndex: 1,
                 flex: 1,
-                minWidth: 40,
-                padding: '0 12px',
-                height: 30,
+                minWidth: 28,
+                padding: '0 7px',
+                height: 24,
                 border: 0,
                 background: 'transparent',
                 cursor: 'pointer',
-                font: '700 13px/1 var(--font-text)',
+                font: '700 11px/1 var(--font-text)',
                 color: active ? '#062F2A' : 'var(--fg-2)',
-                letterSpacing: l.id === 'en' ? '0.04em' : 0,
+                letterSpacing: l.id === 'en' ? '0.03em' : 0,
                 transition: 'color var(--dur-fast) var(--ease-out)',
               }}
             >
@@ -283,54 +254,43 @@
             hans: `显示币别：${currencyLabel(value, lang)}`,
             en: `Display currency: ${currencyLabel(value, lang)}`,
           })}
+          title={pick(lang, current.name)}
+          className="locale-currency-btn"
           style={{
-            height: 36,
-            minWidth: 132,
-            padding: '0 12px 0 14px',
+            height: 28,
+            padding: '0 8px 0 9px',
+            marginRight: 2,
             borderRadius: 999,
             border: 0,
             cursor: 'pointer',
-            background: open ? '#fff' : 'var(--base-100)',
-            boxShadow: open
-              ? 'inset 0 0 0 2px var(--aurora-cyan), 0 0 0 4px rgba(0,213,255,0.15)'
-              : 'inset 0 0 0 1px var(--base-200)',
+            background: open ? 'rgba(255,255,255,0.95)' : 'transparent',
+            boxShadow: open ? 'inset 0 0 0 1.5px var(--aurora-cyan)' : 'none',
             display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-            font: '600 13px/1 var(--font-text)',
+            gap: 2,
+            font: '700 11px/1 var(--font-text)',
+            letterSpacing: '0.04em',
             color: 'var(--fg-1)',
-            transition: 'box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out)',
+            transition: 'background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out)',
           }}
         >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <span style={{
-              font: '700 11px/1 var(--font-text)',
-              letterSpacing: '0.06em',
-              color: 'var(--fg-3)',
-            }}>{current.code}</span>
-            <span style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: 88,
-            }}>{pick(lang, current.name)}</span>
-          </span>
-          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color="var(--fg-3)" />
+          <span>{current.code}</span>
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={13} color="var(--fg-3)" />
         </button>
 
         {open && (
           <div
             role="listbox"
             aria-label={T({ hant: '選擇顯示幣別', hans: '选择显示币别', en: 'Choose display currency' })}
+            className="locale-currency-menu"
             style={{
               position: 'absolute',
-              top: 'calc(100% + 8px)',
+              top: 'calc(100% + 6px)',
               right: 0,
               zIndex: 60,
-              width: 280,
-              padding: 8,
-              borderRadius: 16,
+              width: 248,
+              padding: 6,
+              borderRadius: 14,
               background: 'rgba(255,255,255,0.96)',
               backdropFilter: 'blur(20px) saturate(1.2)',
               WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
@@ -338,15 +298,15 @@
             }}
           >
             <div style={{
-              padding: '8px 10px 10px',
-              font: '500 11px/1.4 var(--font-text)',
+              padding: '6px 8px 8px',
+              font: '500 10px/1.35 var(--font-text)',
               color: 'var(--fg-3)',
               borderBottom: '1px solid var(--base-200)',
-              marginBottom: 4,
+              marginBottom: 2,
             }}>
               {fxHint}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 320, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 280, overflowY: 'auto' }}>
               {CURRENCIES.map((c) => {
                 const selected = c.code === value;
                 return (
@@ -361,8 +321,8 @@
                     }}
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: 12,
+                      padding: '8px 10px',
+                      borderRadius: 10,
                       border: 0,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -381,15 +341,15 @@
                       if (!selected) e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                      <span style={{ font: '600 14px/1 var(--font-text)', color: 'var(--fg-1)' }}>
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                      <span style={{ font: '700 11px/1 var(--font-text)', color: 'var(--fg-3)', letterSpacing: '0.04em' }}>
+                        {c.code}
+                      </span>
+                      <span style={{ font: '600 13px/1 var(--font-text)', color: 'var(--fg-1)' }}>
                         {pick(lang, c.name)}
                       </span>
-                      <span style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)' }}>
-                        {c.code} · {c.symbol}
-                      </span>
                     </span>
-                    {selected && <Icon name="check" size={16} color="var(--aurora-deep)" />}
+                    {selected && <Icon name="check" size={14} color="var(--aurora-deep)" />}
                   </button>
                 );
               })}
