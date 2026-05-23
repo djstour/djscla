@@ -95,13 +95,14 @@
 
     return (
       <article
+        className="tour-card"
         ref={cardRef}
         role={onView ? 'button' : undefined}
         tabIndex={onView ? 0 : undefined}
         onClick={onView ? openDetail : undefined}
         onKeyDown={onView ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(e); } } : undefined}
         style={{
-          background: '#fff',
+          background: 'var(--surface-card)',
           borderRadius: 24,
           overflow: 'hidden',
           boxShadow: 'var(--shadow-2)',
@@ -141,10 +142,10 @@
             }}>{tour.badge}</span>
           )}
 
-          <button type="button" onClick={(e) => e.stopPropagation()} style={{
+          <button type="button" className="tour-card__icon-btn" onClick={(e) => e.stopPropagation()} style={{
             position: 'absolute', top: 12, right: 12,
             width: 36, height: 36, borderRadius: 999, border: 0, cursor: 'pointer',
-            background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(10px)',
+            background: 'var(--glass-medium)', backdropFilter: 'blur(10px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow-1)',
           }}><Icon name="heart" size={16} color="var(--fg-1)" /></button>
@@ -255,7 +256,7 @@
   function TourCardSkeleton({ compact = false }) {
     return (
       <article style={{
-        background: '#fff', borderRadius: 24, overflow: 'hidden',
+        background: 'var(--surface-card)', borderRadius: 24, overflow: 'hidden',
         boxShadow: 'var(--shadow-1)', display: 'flex', flexDirection: 'column',
       }}>
         <div className="tour-card-image-shimmer" style={{

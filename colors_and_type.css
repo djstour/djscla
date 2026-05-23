@@ -126,6 +126,15 @@
   --bg-card:         var(--base-0);
   --bg-subtle:       var(--base-100);
 
+  /* Elevated surfaces (cards, nav, inputs) — remapped per site theme */
+  --surface-card:    var(--bg-card);
+  --surface-nav:     rgba(255, 255, 255, 0.72);
+  --surface-menu:    rgba(255, 255, 255, 0.96);
+  --surface-field:   var(--base-0);
+  --surface-chrome:  var(--base-0);
+  --border-subtle:   rgba(20, 30, 60, 0.08);
+  --border-field:    var(--base-200);
+
   /* Glass surfaces — used over gradient backdrops.
      ALWAYS pair with backdrop-filter: blur(20-30px) + a 1px inner border. */
   --glass-strong:    rgba(255, 255, 255, 0.72);
@@ -375,39 +384,54 @@ html[data-site-theme="mist"] {
 
 html[data-site-theme="sun"] {
   --gradient-aurora: linear-gradient(120deg, #6B2FE6 0%, #B331E2 45%, #FF7A2E 100%);
-  --gradient-aurora-soft: linear-gradient(120deg, rgba(107, 47, 230, 0.38) 0%, rgba(255, 122, 46, 0.32) 100%);
+  --gradient-aurora-soft: linear-gradient(120deg, rgba(107, 47, 230, 0.42) 0%, rgba(255, 122, 46, 0.36) 100%);
   --shadow-glow-aurora: 0 12px 40px rgba(255, 122, 46, 0.28), 0 4px 14px rgba(107, 47, 230, 0.38);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.42);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-4: 0 24px 60px rgba(0, 0, 0, 0.55);
   --bg-page: #100E18;
   --bg-subtle: #181522;
-  --bg-card: #1C1928;
-  --base-0: #1C1928;
+  --bg-card: #1E1B2C;
+  --base-0: #1E1B2C;
   --base-50: #100E18;
-  --base-100: #221E32;
-  --base-200: #322C48;
-  --base-300: #4A4268;
-  --base-400: #6B6188;
-  --base-500: #9188A8;
-  --base-700: #D4CEE8;
-  --base-900: #F5F2FF;
-  --fg-1: #F5F2FF;
-  --fg-2: #C9C2DC;
-  --fg-3: #9188A8;
-  --fg-4: #6B6188;
-  --fg-on-glass: #F5F2FF;
-  --glass-strong: rgba(28, 25, 40, 0.88);
-  --glass-medium: rgba(28, 25, 40, 0.72);
-  --glass-light: rgba(28, 25, 40, 0.48);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-border-soft: rgba(255, 255, 255, 0.08);
+  --base-100: #262238;
+  --base-200: #3A3452;
+  --base-300: #524C6C;
+  --base-400: #7A7394;
+  --base-500: #A39CBC;
+  --base-700: #E2DCF4;
+  --base-900: #FAF8FF;
+  --fg-1: #FAF8FF;
+  --fg-2: #DDD6F0;
+  --fg-3: #B8B0D4;
+  --fg-4: #948CB8;
+  --fg-on-glass: #FAF8FF;
+  --glass-strong: rgba(30, 27, 44, 0.92);
+  --glass-medium: rgba(30, 27, 44, 0.78);
+  --glass-light: rgba(30, 27, 44, 0.52);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-soft: rgba(255, 255, 255, 0.09);
+  --surface-card: var(--bg-card);
+  --surface-nav: rgba(16, 14, 26, 0.9);
+  --surface-menu: rgba(28, 25, 42, 0.98);
+  --surface-field: #262238;
+  --surface-chrome: #14111F;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-field: rgba(255, 255, 255, 0.14);
+  --success-soft: rgba(22, 198, 131, 0.2);
+  --warning-soft: rgba(255, 179, 71, 0.22);
+  --danger-soft: rgba(255, 77, 94, 0.2);
+  --info-soft: rgba(0, 213, 255, 0.16);
   --brand-surface: linear-gradient(180deg, #100E18 0%, #181522 100%);
   --brand-footer: linear-gradient(180deg, #100E18 0%, #1A1228 100%);
   --brand-panel: linear-gradient(135deg, #1E1630 0%, #2A1820 55%, #1A1428 100%);
   --brand-on-gradient: #FFFFFF;
-  --brand-headline-1: #FFF8F2;
-  --brand-headline-2: #FFF8F2;
-  --brand-headline-accent: #FFAA6B;
-  --brand-overline: #FF9A8A;
-  --brand-selection: rgba(255, 122, 46, 0.4);
+  --brand-headline-1: #FFF9F4;
+  --brand-headline-2: #FFF9F4;
+  --brand-headline-accent: #FFC894;
+  --brand-overline: #FFB8A8;
+  --brand-selection: rgba(255, 160, 90, 0.45);
 }
 
 /* Animated aurora — used behind hero. Reduced-motion safe. */

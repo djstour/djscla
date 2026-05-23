@@ -126,6 +126,79 @@ html[data-site-theme="sun"] .hero-lead {
   text-shadow: 0 1px 14px rgba(0, 0, 0, 0.45);
 }
 
+/* Sun — dark UI surfaces & contrast (readability) */
+html[data-site-theme="sun"] .category-strip {
+  background: var(--surface-chrome);
+  box-shadow: 0 -1px 0 var(--border-subtle), var(--shadow-2);
+}
+
+html[data-site-theme="sun"] .hero-field__control {
+  background: var(--surface-field);
+  box-shadow: inset 0 0 0 1px var(--border-field);
+}
+
+html[data-site-theme="sun"] .hero-field__control:focus-within {
+  box-shadow: 0 0 0 2px var(--aurora-cyan), 0 0 0 5px rgba(107, 47, 230, 0.35);
+}
+
+html[data-site-theme="sun"] .hero-popular-chip {
+  background: var(--base-100);
+  color: var(--fg-1);
+  box-shadow: inset 0 0 0 1px var(--border-field);
+}
+
+html[data-site-theme="sun"] .hero-search-divider {
+  border-top-color: var(--border-subtle);
+}
+
+html[data-site-theme="sun"] .tour-card {
+  background: var(--surface-card);
+}
+
+html[data-site-theme="sun"] .tour-card__icon-btn {
+  background: var(--glass-medium);
+  box-shadow: inset 0 0 0 1px var(--glass-border);
+}
+
+html[data-site-theme="sun"] .panel-card,
+html[data-site-theme="sun"] .checkout-panel {
+  background: var(--surface-card);
+}
+
+html[data-site-theme="sun"] .locale-inline__btn.is-active {
+  background: var(--base-200);
+  color: var(--fg-1);
+  box-shadow: inset 0 0 0 1px rgba(255, 160, 90, 0.45);
+}
+
+html[data-site-theme="sun"] .nav-mobile-sheet.is-open {
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-3), inset 0 0 0 1px var(--glass-border);
+}
+
+html[data-site-theme="sun"] .detail-sticky-book {
+  background: var(--surface-nav);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+}
+
+html[data-site-theme="sun"] .detail-sticky-book > div {
+  background: var(--surface-card) !important;
+}
+
+html[data-site-theme="sun"] .glass {
+  color: var(--fg-on-glass);
+}
+
+html[data-site-theme="sun"] .trip-map-shell path[fill^="rgba(255"] {
+  fill: rgba(30, 27, 44, 0.85);
+  stroke: rgba(255, 255, 255, 0.12);
+}
+
+html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
+  fill: var(--fg-1);
+  stroke: rgba(16, 14, 24, 0.75);
+}
+
 .hero-search-dates {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -161,10 +234,10 @@ html[data-site-theme="sun"] .hero-lead {
   align-items: center;
   gap: clamp(8px, 2vw, 24px);
   padding: 0 var(--page-pad-x);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface-nav);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  box-shadow: inset 0 -1px 0 rgba(20, 30, 60, 0.08);
+  box-shadow: inset 0 -1px 0 var(--border-subtle);
 }
 
 .nav-logo img {
@@ -307,10 +380,10 @@ html[data-site-theme="sun"] .hero-lead {
     margin-top: 0;
     padding: 12px;
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-menu);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    box-shadow: var(--shadow-3), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+    box-shadow: var(--shadow-3), inset 0 0 0 1px var(--glass-border);
     z-index: 60;
   }
 
@@ -374,9 +447,9 @@ html[data-site-theme="sun"] .hero-lead {
   }
 
   .locale-inline__btn.is-active {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--base-0);
     color: var(--fg-1);
-    box-shadow: inset 0 0 0 1px rgba(0, 213, 255, 0.35);
+    box-shadow: inset 0 0 0 1px var(--border-field);
   }
 
   .nav-mobile-settings .locale-picker-root--sheet {
@@ -626,6 +699,18 @@ html[data-site-theme="sun"] .hero-lead {
   }
 }
 
+/* ---- Category strip (home) ----------------------------------------------- */
+.category-strip {
+  background: var(--surface-chrome);
+  box-shadow: var(--shadow-1);
+  padding-top: 20px;
+  padding-bottom: 20px;
+  position: relative;
+  z-index: 1;
+  margin-top: -32px;
+  border-radius: 28px 28px 0 0;
+}
+
 /* ---- Featured / category ------------------------------------------------- */
 .featured-header {
   display: flex;
@@ -735,10 +820,10 @@ html[data-site-theme="sun"] .hero-lead {
     bottom: 0;
     z-index: 40;
     padding: 12px var(--page-pad-x) calc(12px + env(safe-area-inset-bottom, 0px));
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--surface-nav);
     backdrop-filter: blur(16px) saturate(1.15);
     -webkit-backdrop-filter: blur(16px) saturate(1.15);
-    box-shadow: 0 -8px 32px rgba(17, 21, 31, 0.1);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
   }
 
   .detail-sticky-book > div {

@@ -44,7 +44,7 @@
                 <div key={s.id} style={{
                   flex: 1, height: 44, borderRadius: 12,
                   display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
-                  background: active ? '#fff' : done ? 'var(--success-soft)' : 'var(--base-100)',
+                  background: active ? 'var(--surface-card)' : done ? 'var(--success-soft)' : 'var(--base-100)',
                   boxShadow: active ? 'var(--shadow-2), inset 0 0 0 2px var(--aurora-cyan)' : 'none',
                   color: active ? 'var(--fg-1)' : done ? '#0A7B4F' : 'var(--fg-3)',
                 }}>
@@ -83,7 +83,7 @@
     const T = (opts) => pick(lang, opts);
     return (
       <div className="checkout-grid">
-        <div style={{ background: '#fff', borderRadius: 24, padding: 28, boxShadow: 'var(--shadow-2)' }}>
+        <div className="checkout-panel" style={{ background: 'var(--surface-card)', borderRadius: 24, padding: 28, boxShadow: 'var(--shadow-2)' }}>
           <h2 style={{ margin: '0 0 18px', font: '700 26px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
             {T({ hant: '檢視你的行程', hans: '查看你的行程', en: 'Review your trip' })}
           </h2>
@@ -163,7 +163,7 @@
     ];
     return (
       <div className="checkout-grid">
-        <div style={{ background: '#fff', borderRadius: 24, padding: 28, boxShadow: 'var(--shadow-2)' }}>
+        <div className="checkout-panel" style={{ background: 'var(--surface-card)', borderRadius: 24, padding: 28, boxShadow: 'var(--shadow-2)' }}>
           <h2 style={{ margin: '0 0 18px', font: '700 26px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
             {T({ hant: '付款方式', hans: '付款方式', en: 'How would you like to pay?' })}
           </h2>
@@ -174,7 +174,7 @@
               <button key={m.id} onClick={() => setMethod(m.id)}
                       style={{
                         height: 76, borderRadius: 14, cursor: 'pointer',
-                        background: '#fff',
+                        background: 'var(--surface-card)',
                         boxShadow: method === m.id ? 'inset 0 0 0 2px var(--aurora-cyan), 0 0 0 4px rgba(0,213,255,0.2)' : 'inset 0 0 0 1px var(--base-200)',
                         border: 0,
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -246,7 +246,7 @@
         <span style={{ font: '600 11px/1 var(--font-text)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--fg-3)' }}>{label}</span>
         <span style={{
           height: 48, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 10,
-          background: '#fff', borderRadius: 12,
+          background: 'var(--surface-card)', borderRadius: 12,
           boxShadow: 'inset 0 0 0 1px var(--base-200)',
         }}>
           {icon && <Icon name={icon} size={16} color="var(--fg-3)" />}
@@ -300,8 +300,8 @@
           }}>{T({ hant: '回到首頁', hans: '回到首页', en: 'Back to discover' })} <Icon name="arrow-right" size={16} /></button>
           <button style={{
             height: 48, padding: '0 22px', borderRadius: 999, border: 0, cursor: 'pointer',
-            background: 'rgba(255,255,255,0.7)', color: 'var(--fg-1)',
-            font: '600 14px/1 var(--font-text)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.7)',
+            background: 'var(--base-100)', color: 'var(--fg-1)',
+            font: '600 14px/1 var(--font-text)', boxShadow: 'inset 0 0 0 1px var(--border-field)',
             backdropFilter: 'blur(20px)',
           }}>{T({ hant: '下載 PDF', hans: '下载 PDF', en: 'Download PDF' })}</button>
         </div>
@@ -310,7 +310,7 @@
   }
   function Stat({ n, l }) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 14, padding: '12px 18px', minWidth: 110 }}>
+      <div style={{ background: 'var(--base-100)', borderRadius: 14, padding: '12px 18px', minWidth: 110, boxShadow: 'inset 0 0 0 1px var(--border-field)' }}>
         <div style={{ font: '700 24px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>{n}</div>
         <div style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
       </div>
@@ -322,7 +322,7 @@
     const T = (opts) => pick(lang, opts);
     return (
       <div style={{
-        background: '#fff', borderRadius: 24, padding: 24, boxShadow: 'var(--shadow-2)',
+        background: 'var(--surface-card)', borderRadius: 24, padding: 24, boxShadow: 'var(--shadow-2)',
         position: 'sticky', top: 96,
         display: 'flex', flexDirection: 'column', gap: 14,
       }}>

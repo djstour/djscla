@@ -79,7 +79,7 @@
               <input placeholder={T({ hant: '你的 email', hans: '你的 email', en: 'your@email.com' })}
                      style={{
                        flex: 1, height: 52, padding: '0 18px', borderRadius: 16,
-                       background: '#fff', border: 0, outline: 0,
+                       background: 'var(--surface-field)', border: 0, outline: 0,
                        font: '500 15px/1 var(--font-text)', color: 'var(--fg-1)',
                        boxShadow: 'inset 0 0 0 1px var(--base-200)',
                      }} />
@@ -107,8 +107,8 @@
                 {['instagram', 'youtube', 'send'].map(i => (
                   <button key={i} style={{
                     width: 36, height: 36, borderRadius: 999, border: 0, cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)',
-                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.6)',
+                    background: 'var(--glass-medium)', backdropFilter: 'blur(12px)',
+                    boxShadow: 'inset 0 0 0 1px var(--glass-border)',
                     color: 'var(--fg-1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}><Icon name={i} size={16} /></button>
                 ))}

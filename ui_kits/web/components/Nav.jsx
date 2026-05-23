@@ -39,10 +39,10 @@
     minWidth: 0,
     padding: 4,
     borderRadius: 12,
-    background: 'rgba(255,255,255,0.96)',
+    background: 'var(--surface-menu)',
     backdropFilter: 'blur(20px) saturate(1.2)',
     WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
-    boxShadow: 'var(--shadow-4), inset 0 0 0 1px rgba(255,255,255,0.8)',
+    boxShadow: 'var(--shadow-4), inset 0 0 0 1px var(--glass-border)',
   };
 
   const LOCALE_OPTION = {
@@ -313,7 +313,7 @@
           style={{
             ...LOCALE_BTN,
             marginLeft: 2,
-            background: open ? 'rgba(255,255,255,0.95)' : 'transparent',
+            background: open ? 'var(--base-0)' : 'transparent',
             boxShadow: open ? 'inset 0 0 0 1.5px var(--aurora-cyan)' : 'none',
           }}
         >
@@ -404,7 +404,7 @@
           style={{
             ...LOCALE_BTN,
             marginRight: inMobileSheet ? 0 : 2,
-            background: open ? 'rgba(255,255,255,0.95)' : 'transparent',
+            background: open ? 'var(--base-0)' : 'transparent',
             boxShadow: open ? 'inset 0 0 0 1.5px var(--aurora-cyan)' : 'none',
           }}
         >

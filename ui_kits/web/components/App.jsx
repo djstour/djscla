@@ -229,15 +229,7 @@
 
   function CategoryStrip({ onClick, lang }) {
     return (
-      <section className="auralis-section" style={{
-        background: '#fff',
-        boxShadow: 'var(--shadow-1)',
-        paddingTop: 20,
-        paddingBottom: 20,
-        position: 'relative', zIndex: 1,
-        marginTop: -32,
-        borderRadius: '28px 28px 0 0',
-      }}>
+      <section className="auralis-section category-strip">
         <div className="category-strip-inner">
           {CATEGORIES.map(c => (
             <button key={c.id} onClick={onClick}
@@ -449,7 +441,7 @@
     return (
       <div style={{
         gridColumn: '1 / -1', padding: 48, textAlign: 'center',
-        background: '#fff', borderRadius: 24, boxShadow: 'var(--shadow-1)',
+        background: 'var(--surface-card)', borderRadius: 24, boxShadow: 'var(--shadow-1)',
       }}>
         <Icon name="cloud-off" size={36} color="var(--coral)" />
         <div style={{ font: '600 18px/1.3 var(--font-display)', color: 'var(--fg-1)', marginTop: 12 }}>
@@ -468,7 +460,7 @@
       <div style={{
         gridColumn: '1 / -1',
         padding: '64px 24px', textAlign: 'center',
-        background: '#fff', borderRadius: 24,
+        background: 'var(--surface-card)', borderRadius: 24,
         border: '1.5px dashed var(--base-300)',
         color: 'var(--fg-3)',
       }}>

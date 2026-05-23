@@ -177,8 +177,8 @@
                       cursor: 'pointer',
                       background: 'transparent',
                       boxShadow: selected
-                        ? '0 0 0 2px #fff, 0 0 0 4px var(--aurora-cyan)'
-                        : 'inset 0 0 0 2px rgba(255,255,255,0.85)',
+                        ? '0 0 0 2px var(--surface-card), 0 0 0 4px var(--aurora-cyan)'
+                        : 'inset 0 0 0 2px var(--border-field)',
                       overflow: 'hidden',
                       opacity: selected ? 1 : 0.88,
                       transition: 'opacity var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out)',
@@ -278,7 +278,7 @@
                   {tour.stops.filter((stop) => stop.name).map((stop, i) => (
                     <li key={stop.id} style={{
                       display: 'flex', gap: 14, alignItems: 'flex-start',
-                      padding: 14, borderRadius: 14, background: '#fff', boxShadow: 'var(--shadow-1)',
+                      padding: 14, borderRadius: 14, background: 'var(--surface-card)', boxShadow: 'var(--shadow-1)',
                     }}>
                       <span style={{
                         width: 32, height: 32, borderRadius: 999, flexShrink: 0,
@@ -303,7 +303,7 @@
             {tour.meetingPoint && (
               <Section title={T({ hant: '集合地點', hans: '集合地点', en: 'Meeting point' })}>
                 <div style={{
-                  padding: 16, borderRadius: 14, background: '#fff', boxShadow: 'var(--shadow-1)',
+                  padding: 16, borderRadius: 14, background: 'var(--surface-card)', boxShadow: 'var(--shadow-1)',
                   display: 'flex', gap: 12, alignItems: 'flex-start',
                 }}>
                   <Icon name="map-pin" size={20} color="var(--coral)" />
@@ -357,7 +357,7 @@
 
           <aside className="detail-sticky-book">
             <div style={{
-              background: '#fff', borderRadius: 24, padding: 24,
+              background: 'var(--surface-card)', borderRadius: 24, padding: 24,
               boxShadow: 'var(--shadow-3)',
             }}>
               <div className="detail-book-summary">
@@ -437,7 +437,7 @@
     const T = (opts) => pick(lang, opts);
     return (
       <button type="button" onClick={onBack} style={{
-        border: 0, cursor: 'pointer', background: light ? 'rgba(255,255,255,0.85)' : 'var(--base-100)',
+        border: 0, cursor: 'pointer', background: light ? 'var(--surface-card)' : 'var(--base-100)',
         backdropFilter: light ? 'blur(12px)' : 'none',
         height: 40, padding: '0 16px', borderRadius: 999,
         display: 'inline-flex', alignItems: 'center', gap: 8,

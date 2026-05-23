@@ -124,9 +124,9 @@
               })}
             </button>
 
-            <div style={{
+            <div className="hero-search-divider" style={{
               marginTop: 14, display: 'flex', gap: 6, flexWrap: 'wrap',
-              paddingTop: 14, borderTop: '1px solid rgba(20,30,60,0.08)',
+              paddingTop: 14, borderTop: '1px solid var(--border-subtle)',
             }}>
               <span style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', alignSelf: 'center', marginRight: 6 }}>
                 {T({ hant: '熱門：', hans: '热门：', en: 'Popular:' })}
@@ -136,11 +136,11 @@
                 hans: ['极光', '黄金圈', '蓝湖', '自驾'],
                 en:   ['Aurora', 'Golden Circle', 'Blue Lagoon', 'Self-drive'],
               })).map(t => (
-                <span key={t} style={{
+                <span key={t} className="hero-popular-chip" style={{
                   font: '600 12px/1 var(--font-text)', color: 'var(--fg-1)',
                   padding: '6px 10px', borderRadius: 999,
-                  background: 'rgba(255,255,255,0.7)',
-                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.7)',
+                  background: 'var(--base-100)',
+                  boxShadow: 'inset 0 0 0 1px var(--border-field)',
                 }}>{t}</span>
               ))}
             </div>
@@ -160,12 +160,12 @@
     return (
       <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <span style={{ font: '600 11px/1 var(--font-text)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--fg-3)' }}>{label}</span>
-        <span style={{
+        <span className="hero-field__control" style={{
           height: 48, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 10,
-          background: '#fff', borderRadius: 14,
+          background: 'var(--surface-field)', borderRadius: 14,
           boxShadow: focused
             ? '0 0 0 2px var(--aurora-cyan), 0 0 0 5px rgba(0,213,255,0.22)'
-            : 'inset 0 0 0 1px var(--base-200)',
+            : 'inset 0 0 0 1px var(--border-field)',
         }}>
           <Icon name={icon} size={16} color="var(--fg-3)" />
           {children}
