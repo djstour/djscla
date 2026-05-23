@@ -55,7 +55,6 @@
     displayCurrency = 'USD', fxRates = { USD: 1 }, imagePriority = false,
   }) {
     const T = (opts) => pick(lang, opts);
-    const showSubtitle = lang !== 'en' && tour.titleEn && tour.titleEn !== tour.title;
     const capacity = tour.availability && tour.availability.capacityRemaining;
     const showLowCapacity = typeof capacity === 'number' && capacity <= 8;
     const photoHeight = compact ? 150 : 200;
@@ -160,7 +159,7 @@
               {tour.title}
             </div>
             <div style={{ font: '500 13px/1.4 var(--font-text)', color: 'var(--fg-3)', marginTop: 2 }}>
-              {showSubtitle ? tour.titleEn : (tour.supplierRole || '\u00A0')}
+              {tour.supplierRole || '\u00A0'}
             </div>
           </div>
 
