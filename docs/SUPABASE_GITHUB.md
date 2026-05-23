@@ -4,42 +4,40 @@
 
 | | |
 |---|---|
-| **Name** | `auralis-design-system` |
-| **Ref** | `htyjvmkujdgtrlusteoj` |
+| **Name** | `djscla` |
+| **Ref** | `pmdfdkhfkjyuvucsfsoe` |
 | **Region** | Northeast Asia (Tokyo) |
-| **Dashboard** | https://supabase.com/dashboard/project/htyjvmkujdgtrlusteoj |
-| **GitHub repo** | https://github.com/sgc58413/auralis-design-system |
+| **Dashboard** | https://supabase.com/dashboard/project/pmdfdkhfkjyuvucsfsoe |
+| **GitHub repo** | https://github.com/djstour/djscla |
 
 ## Done via CLI
 
-- [x] Supabase project created and linked locally
+- [x] Supabase project `djscla` created and linked locally
 - [x] Migration `translations` table pushed to remote
 - [x] GitHub Actions workflow `.github/workflows/supabase-migrations.yml`
-- [x] GitHub secret `SUPABASE_DB_PASSWORD` (for CI `db push`)
 
 ## Bind GitHub in Dashboard (one-time)
 
 Supabase must install its GitHub App on your account/org. The CLI cannot complete this step.
 
 1. Sign in: https://supabase.com/dashboard/sign-in  
-   (return URL: [Integrations](https://supabase.com/dashboard/project/htyjvmkujdgtrlusteoj/settings/integrations))
+   (return URL: [Integrations](https://supabase.com/dashboard/project/pmdfdkhfkjyuvucsfsoe/settings/integrations))
 
 2. Under **GitHub integration**, click **Connect** / **Authorize**.
 
-3. Select repository: **`sgc58413/auralis-design-system`**.
+3. Select repository: **`djstour/djscla`**.
 
 4. Enable **Deploy to production** (or equivalent) so `main` applies migrations from `supabase/migrations/`.
 
-## CI secret still needed
-
-Add a [Supabase access token](https://supabase.com/dashboard/account/tokens) to GitHub:
+## CI secrets (GitHub repo `djstour/djscla`)
 
 ```bash
-gh secret set SUPABASE_ACCESS_TOKEN --repo sgc58413/auralis-design-system
-# paste token when prompted
+gh secret set SUPABASE_DB_PASSWORD --repo djstour/djscla
+gh secret set SUPABASE_ACCESS_TOKEN --repo djstour/djscla
 ```
 
-Or: GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret** → name `SUPABASE_ACCESS_TOKEN`.
+`SUPABASE_DB_PASSWORD` is the database password set at project creation (see local `.env`).  
+`SUPABASE_ACCESS_TOKEN` from https://supabase.com/dashboard/account/tokens
 
 ## Local env
 
