@@ -27,6 +27,10 @@ Auralis · 極光旅 是為華語旅人打造的冰島 OTA 設計系統。透過
     └── components/          ← Nav、Hero、TourCard、SupplierFilter、TripPanel、Checkout…
 ```
 
+## 待辦（已記錄、尚未實作）
+
+- **ChipIds 快取自動化** — 目錄變更時自動更新分類快取，避免手動 `npm run enrich:chips`。方案與檢查清單見 [`docs/CHIP_IDS_AUTOMATION.md`](docs/CHIP_IDS_AUTOMATION.md)。
+
 ## 跑起來
 
 這個 prototype 用了 `<script type="text/babel">` 即時編譯，**不能直接用 `file://` 開啟**（會因為 CORS 拒絕載入 `data/` 下的 JS 檔）。需要本機起一個 HTTP server：

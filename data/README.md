@@ -80,6 +80,8 @@ npm run enrich:chips          # needs BOKUN_* in .env.local
 npm run enrich:chips:api      # uses deployed /api (no keys)
 ```
 
+**Automation (planned, not implemented):** see [`docs/CHIP_IDS_AUTOMATION.md`](../docs/CHIP_IDS_AUTOMATION.md) — Vercel Cron + Supabase/KV (long-term) or GitHub Actions weekly commit (quick win).
+
 The real `availability` endpoint is a separate `POST /activity.json/{id}/availabilities`. We model the activity-level *summary* on the activity payload (Bókun does this too for the search endpoint) and keep the per-date `availabilities[]` array for the date-picker call.
 
 ## 3 · Translation overlay
