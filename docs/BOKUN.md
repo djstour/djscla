@@ -9,11 +9,13 @@ Browser  →  GET /api/catalog/activities?lang=hant&all=true
               ↓
            normalizeActivity → bokunAdapter.toViewModel → TourCard
 
-Browser  →  GET /api/bokun/activity?id=…&lang=hant
+Browser  →  GET /api/bokun/activity?id=…&lang=hant  (prefetched on card hover; CDN cache 5m)
               ↓
            Bókun GET /activity.json/{id}
               ↓
            ActivityDetail (full description, photos, stops, pricing)
+
+List catalog responses include a truncated `summary` on each activity so English copy can render before the detail fetch completes. Chinese body copy comes from Supabase overlays (`translations` on catalog + detail); run `/api/translations/sync` or cron until `description` rows exist.
 ```
 
 Access key + secret never reach the browser.

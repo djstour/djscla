@@ -40,6 +40,8 @@ module.exports = async function handler(req, res) {
     const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
     const translations = await loadTranslationsForActivities([activity]);
 
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+
     return res.status(200).json({
       source: 'bokun',
       activity,

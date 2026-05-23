@@ -65,9 +65,12 @@
     const coverSrc = tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null;
     const cardRef = useRef(null);
 
-    function prefetchCardImage() {
-      if (!onView || !tour.coverImageUrl) return;
-      prefetchProxiedImage(tour.coverImageUrl, imgProfile.prefetch);
+    function prefetchCardAssets() {
+      if (!onView) return;
+      if (tour.coverImageUrl) prefetchProxiedImage(tour.coverImageUrl, imgProfile.prefetch);
+      if (window.AuralisData && window.AuralisData.BokunAdapter) {
+        window.AuralisData.BokunAdapter.prefetchActivityById(tour.id, { lang });
+      }
     }
 
     useEffect(() => {
@@ -76,7 +79,7 @@
       const obs = new IntersectionObserver(
         (entries) => {
           if (entries.some((e) => e.isIntersecting)) {
-            prefetchCardImage();
+            prefetchCardAssets();
             obs.disconnect();
           }
         },
@@ -109,10 +112,10 @@
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-3px)';
           e.currentTarget.style.boxShadow = 'var(--shadow-4)';
-          prefetchCardImage();
+          prefetchCardAssets();
         }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-2)'; }}
-        onTouchStart={prefetchCardImage}
+        onTouchStart={prefetchCardAssets}
       >
         <div style={{ position: 'relative' }}>
           <TourCardImage

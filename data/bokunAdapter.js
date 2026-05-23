@@ -51,6 +51,28 @@
     return (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
+  const DETAIL_CACHE_TTL_MS = 5 * 60 * 1000;
+  const activityDetailCache = new Map();
+  const activityDetailInflight = new Map();
+
+  function detailCacheKey(id, lang) {
+    return `${id}:${lang}`;
+  }
+
+  function getCachedActivityDetail(id, lang) {
+    const hit = activityDetailCache.get(detailCacheKey(id, lang));
+    if (!hit) return null;
+    if (Date.now() - hit.at > DETAIL_CACHE_TTL_MS) {
+      activityDetailCache.delete(detailCacheKey(id, lang));
+      return null;
+    }
+    return hit.activity;
+  }
+
+  function setCachedActivityDetail(id, lang, activity) {
+    activityDetailCache.set(detailCacheKey(id, lang), { activity, at: Date.now() });
+  }
+
   // Overlay lookup. English may use Bókun source as fallback; zh locales never
   // surface raw English or entry.en when hant/hans is missing.
   function pickFromOverlay(entry, lang, fallback) {
@@ -179,8 +201,16 @@
         return Promise.reject(new Error('Invalid activity id'));
       }
 
+      const cacheKey = detailCacheKey(numId, lang);
+      const cached = getCachedActivityDetail(numId, lang);
+      if (cached) return Promise.resolve(cached);
+
+      if (activityDetailInflight.has(cacheKey)) {
+        return activityDetailInflight.get(cacheKey);
+      }
+
       const qs = new URLSearchParams({ lang, id: String(numId) });
-      return fetch(`/api/bokun/activity?${qs}`)
+      const request = fetch(`/api/bokun/activity?${qs}`)
         .then((res) => res.json().then((data) => ({ res, data })))
         .then(({ res, data }) => {
           if (!res.ok) {
@@ -195,8 +225,26 @@
           if (data.translations && typeof data.translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
           }
+          setCachedActivityDetail(numId, lang, data.activity);
           return data.activity;
+        })
+        .finally(() => {
+          activityDetailInflight.delete(cacheKey);
         });
+
+      activityDetailInflight.set(cacheKey, request);
+      return request;
+    },
+
+    /** Warm detail cache on card hover / intersection (no-op if already cached). */
+    prefetchActivityById(id, opts = {}) {
+      const { lang = 'hant' } = opts;
+      const numId = Number(id);
+      if (!Number.isFinite(numId)) return;
+      if (getCachedActivityDetail(numId, lang) || activityDetailInflight.has(detailCacheKey(numId, lang))) {
+        return;
+      }
+      BokunAdapter.fetchActivityById(numId, { lang }).catch(() => {});
     },
 
     // Bókun expects ISO 639-1 + optional region for the Accept-Language header.
@@ -524,13 +572,20 @@
         }
 
         let cancelled = false;
-        setState((s) => ({
-          ...s,
-          loading: !s.raw,
+        const cachedRaw = getCachedActivityDetail(activityId, lang);
+        const initialRaw = cachedRaw || (previewVm && previewVm.raw) || null;
+        const initialTour = cachedRaw
+          ? BokunAdapter.toViewModel(cachedRaw, lang)
+          : (previewVm || (initialRaw ? BokunAdapter.toViewModel(initialRaw, lang) : null));
+
+        setState({
+          loading: !cachedRaw,
           error: null,
-          tour: previewVm || s.tour,
-          raw: previewVm && previewVm.raw ? previewVm.raw : s.raw,
-        }));
+          tour: initialTour,
+          raw: initialRaw,
+        });
+
+        if (cachedRaw) return () => { cancelled = true; };
 
         BokunAdapter.fetchActivityById(activityId, { lang })
           .then((raw) => {

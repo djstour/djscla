@@ -100,6 +100,9 @@
         tour.coverImageUrl,
         window.AuralisUI.imageProfileForViewport().prefetch,
       );
+      if (window.AuralisData && window.AuralisData.BokunAdapter) {
+        window.AuralisData.BokunAdapter.prefetchActivityById(tour.id, { lang });
+      }
       setTripCache((c) => ({ ...c, [tour.id]: tour }));
       setReturnScreen(screen === 'detail' ? returnScreen : screen);
       setDetailActivityId(tour.id);

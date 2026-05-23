@@ -254,11 +254,21 @@
               </div>
             )}
 
-            {tour.description && (
+            {(tour.description || loading) && (
               <Section title={T({ hant: '體驗介紹', hans: '体验介绍', en: 'About this experience' })}>
-                <p style={{ margin: 0, font: '500 16px/1.65 var(--font-text)', color: 'var(--fg-2)', whiteSpace: 'pre-wrap' }}>
-                  {tour.description}
-                </p>
+                {tour.description ? (
+                  <p style={{ margin: 0, font: '500 16px/1.65 var(--font-text)', color: 'var(--fg-2)', whiteSpace: 'pre-wrap' }}>
+                    {tour.description}
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} aria-hidden="true">
+                    {[0.92, 1, 0.78, 0.55].map((w, i) => (
+                      <div key={i} className="tour-card-image-shimmer" style={{
+                        height: 14, borderRadius: 8, width: `${w * 100}%`,
+                      }} />
+                    ))}
+                  </div>
+                )}
               </Section>
             )}
 
