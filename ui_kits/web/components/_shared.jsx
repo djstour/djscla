@@ -212,6 +212,91 @@
     }
   }
 
+  // ------------------------------------------------------------------
+  // Homepage hero themes — one per tab session (sessionStorage).
+  // ------------------------------------------------------------------
+  const HERO_THEME_STORAGE_KEY = 'auralis:heroTheme:v2';
+  let resolvedHeroTheme = null;
+
+  const HERO_THEMES = [
+    {
+      id: 'aurora',
+      sectionClass: 'bg-aurora-animated',
+      accentGrad: 'var(--gradient-aurora)',
+      accentGlow: 'var(--shadow-glow-aurora)',
+      ctaColor: '#062F2A',
+      headlineLine2Grad: 'var(--gradient-aurora)',
+      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 60%,#6B2FE6 100%)',
+    },
+    {
+      id: 'mist',
+      sectionClass: 'bg-mist-animated',
+      accentGrad: 'var(--gradient-aurora)',
+      accentGlow: 'var(--shadow-glow-aurora)',
+      ctaColor: '#062F2A',
+      headlineLine2Grad: 'linear-gradient(120deg,#2E3647 0%,#6B2FE6 55%,#00A3D1 100%)',
+      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 70%,#485670 100%)',
+    },
+    {
+      id: 'sun',
+      sectionClass: 'bg-sun-animated',
+      accentGrad: 'var(--gradient-sun)',
+      accentGlow: 'var(--shadow-glow-sun)',
+      ctaColor: '#fff',
+      headlineLine2Grad: 'var(--gradient-sun)',
+      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#6B2FE6 50%,#FF7A2E 100%)',
+    },
+  ];
+
+  function randomHeroThemeIndex(len) {
+    if (len <= 1) return 0;
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      return buf[0] % len;
+    }
+    return Math.floor(Math.random() * len);
+  }
+
+  function heroThemeFromQuery() {
+    if (typeof window === 'undefined') return null;
+    try {
+      const forced = new URLSearchParams(window.location.search).get('hero');
+      if (!forced) return null;
+      return HERO_THEMES.find((t) => t.id === forced) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function getOrPickHeroTheme() {
+    if (resolvedHeroTheme) return resolvedHeroTheme;
+
+    const forced = heroThemeFromQuery();
+    if (forced) {
+      resolvedHeroTheme = forced;
+      try { sessionStorage.setItem(HERO_THEME_STORAGE_KEY, forced.id); } catch (_) { /* ignore */ }
+      return resolvedHeroTheme;
+    }
+
+    try {
+      const saved = sessionStorage.getItem(HERO_THEME_STORAGE_KEY);
+      if (saved) {
+        const found = HERO_THEMES.find((t) => t.id === saved);
+        if (found) {
+          resolvedHeroTheme = found;
+          return resolvedHeroTheme;
+        }
+      }
+    } catch (_) { /* private mode */ }
+
+    resolvedHeroTheme = HERO_THEMES[randomHeroThemeIndex(HERO_THEMES.length)];
+    try {
+      sessionStorage.setItem(HERO_THEME_STORAGE_KEY, resolvedHeroTheme.id);
+    } catch (_) { /* ignore */ }
+    return resolvedHeroTheme;
+  }
+
   // Procedural "photo" — gradients tuned to feel like Iceland locations.
   // Returns a CSS background string.
   const PHOTO_PRESETS = {
@@ -318,5 +403,6 @@
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+    HERO_THEMES, getOrPickHeroTheme,
   };
 })();

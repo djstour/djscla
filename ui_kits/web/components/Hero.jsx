@@ -5,62 +5,10 @@
   const { useState, useMemo } = React;
   const { Icon, pick, formatCatalogCount } = window.AuralisUI;
 
-  const HERO_THEME_STORAGE_KEY = 'auralis-hero-theme';
-
-  /** Brand hero backdrops — one random theme per browser tab session (sessionStorage). */
-  const HERO_THEMES = [
-    {
-      id: 'aurora',
-      sectionClass: 'bg-aurora-animated',
-      accentGrad: 'var(--gradient-aurora)',
-      accentGlow: 'var(--shadow-glow-aurora)',
-      ctaColor: '#062F2A',
-      headlineLine2Grad: 'var(--gradient-aurora)',
-      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 60%,#6B2FE6 100%)',
-    },
-    {
-      id: 'mist',
-      sectionClass: 'bg-mist-animated',
-      accentGrad: 'var(--gradient-aurora)',
-      accentGlow: 'var(--shadow-glow-aurora)',
-      ctaColor: '#062F2A',
-      headlineLine2Grad: 'linear-gradient(120deg,#2E3647 0%,#6B2FE6 55%,#00A3D1 100%)',
-      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 70%,#485670 100%)',
-    },
-    {
-      id: 'sun',
-      sectionClass: 'bg-sun-animated',
-      accentGrad: 'var(--gradient-sun)',
-      accentGlow: 'var(--shadow-glow-sun)',
-      ctaColor: '#fff',
-      headlineLine2Grad: 'var(--gradient-sun)',
-      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#6B2FE6 50%,#FF7A2E 100%)',
-    },
-  ];
-
-  function pickHeroTheme() {
-    return HERO_THEMES[Math.floor(Math.random() * HERO_THEMES.length)];
-  }
-
-  function getOrPickHeroTheme() {
-    try {
-      const saved = sessionStorage.getItem(HERO_THEME_STORAGE_KEY);
-      if (saved) {
-        const found = HERO_THEMES.find((t) => t.id === saved);
-        if (found) return found;
-      }
-    } catch (_) { /* private / blocked storage */ }
-    const theme = pickHeroTheme();
-    try {
-      sessionStorage.setItem(HERO_THEME_STORAGE_KEY, theme.id);
-    } catch (_) { /* ignore */ }
-    return theme;
-  }
-
-  function Hero({ onSearch, lang, catalogTotal = 0 }) {
+  function Hero({ onSearch, lang, catalogTotal = 0, theme: themeProp }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
-    const [theme] = useState(getOrPickHeroTheme);
+    const theme = themeProp || window.AuralisUI.getOrPickHeroTheme();
 
     const stars = useMemo(
       () => Array.from({ length: 40 }, (_, i) => ({
@@ -228,8 +176,5 @@
     );
   }
 
-  window.AuralisUI.HERO_THEMES = HERO_THEMES;
-  window.AuralisUI.pickHeroTheme = pickHeroTheme;
-  window.AuralisUI.getOrPickHeroTheme = getOrPickHeroTheme;
   window.AuralisUI.Hero = Hero;
 })();
