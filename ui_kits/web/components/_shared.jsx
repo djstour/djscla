@@ -30,7 +30,7 @@
   }
 
   /** Display / round to whole units after FX (and Bókun ISK/JPY/KRW). */
-  const INTEGER_DISPLAY_CURRENCY_CODES = ['TWD', 'CNY', 'HKD', 'MYR', 'MOP', 'ISK', 'JPY', 'KRW'];
+  const INTEGER_DISPLAY_CURRENCY_CODES = ['TWD', 'CNY', 'HKD', 'MOP', 'ISK', 'JPY', 'KRW'];
 
   function currencyDisplaysAsInteger(code) {
     return INTEGER_DISPLAY_CURRENCY_CODES.includes(String(code || '').toUpperCase());

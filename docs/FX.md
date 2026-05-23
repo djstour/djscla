@@ -23,7 +23,7 @@ Nav picker and `/api/fx/rates`:
 
 `USD`, `TWD`, `CNY`, `HKD`, `SGD`, `MYR`, `MOP`, `CAD`, `AUD`
 
-Whole-number display after conversion: `TWD`, `CNY`, `HKD`, `MYR`, `MOP`. Supplemental FX: `TWD`, `MOP` (not on ECB).
+Whole-number display after conversion: `TWD`, `CNY`, `HKD`, `MOP`. Two decimals: `USD`, `SGD`, `MYR`, `CAD`, `AUD`. Supplemental FX: `TWD`, `MOP` (not on ECB).
 
 ## UI behaviour
 
