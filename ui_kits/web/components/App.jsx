@@ -11,7 +11,10 @@
     CATEGORIES, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount,
     Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail,
   } = window.AuralisUI;
-  const { useActivities, useActivityDetail } = window.AuralisData;
+  const { useActivities } = window.AuralisData;
+  const useActivityDetail = window.AuralisData.useActivityDetail || function useActivityDetailStub(_id, _lang, previewVm) {
+    return { loading: false, error: null, tour: previewVm || null };
+  };
 
   const STORAGE_KEY = 'auralis.lang';
   const CURRENCY_KEY = 'auralis.currency';
@@ -232,6 +235,7 @@
 
   function FeaturedSection({ activities, loading, catalogTotal, onView, onAdd, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
+    const countLabel = formatCatalogCount(catalogTotal, lang);
     return (      <section style={{ padding: '72px 32px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
           <div>

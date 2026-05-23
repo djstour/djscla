@@ -427,5 +427,5 @@
 
   attachReactHook();
   // In case React loads AFTER this file, retry on next macrotask.
-  if (!A.useActivities) setTimeout(attachReactHook, 0);
+  if (!A.useActivities || !A.useActivityDetail) setTimeout(attachReactHook, 0);
 })();
