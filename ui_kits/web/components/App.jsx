@@ -130,7 +130,7 @@
         {screen === 'home' && (
           <>
             <Hero lang={lang} catalogTotal={catalogTotal} onSearch={() => setScreen('tours')} />
-            {error && <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px' }}><BokunErrorBanner error={error} lang={lang} /></div>}
+            {error && <div className="auralis-container"><BokunErrorBanner error={error} lang={lang} /></div>}
             <CategoryStrip onClick={() => setScreen('tours')} lang={lang} />
             <FeaturedSection activities={activities} loading={loading} catalogTotal={catalogTotal}
                              onView={() => setScreen('tours')} onAdd={addToTrip} onOpenDetail={openActivityDetail}
@@ -201,15 +201,16 @@
 
   function CategoryStrip({ onClick, lang }) {
     return (
-      <section style={{
+      <section className="auralis-section" style={{
         background: '#fff',
         boxShadow: 'var(--shadow-1)',
-        padding: '20px 32px',
+        paddingTop: 20,
+        paddingBottom: 20,
         position: 'relative', zIndex: 1,
         marginTop: -32,
         borderRadius: '28px 28px 0 0',
       }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', gap: 16, overflowX: 'auto' }}>
+        <div className="category-strip-inner">
           {CATEGORIES.map(c => (
             <button key={c.id} onClick={onClick}
                     style={{
@@ -236,13 +237,15 @@
   function FeaturedSection({ activities, loading, catalogTotal, onView, onAdd, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
-    return (      <section style={{ padding: '72px 32px', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
+    return (
+      <section className="auralis-section" style={{ paddingTop: 'clamp(48px, 10vw, 72px)', paddingBottom: 'clamp(48px, 10vw, 72px)' }}>
+        <div className="auralis-container">
+        <div className="featured-header">
           <div>
             <span className="overline" style={{ color: 'var(--coral)' }}>
               {T({ hant: '本月精選', hans: '本月精选', en: 'This month' })}
             </span>
-            <h2 style={{ margin: '8px 0 0', font: '700 44px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
+            <h2 className="featured-title" style={{ margin: '8px 0 0', font: '700 44px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
               {T({
                 hant: '在地嚮導，全球精選。',
                 hans: '当地向导，全球精选。',
@@ -262,14 +265,15 @@
           })} <Icon name="arrow-right" size={14} /></button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+        <div className="grid-cards-3">
           {loading
             ? Array.from({ length: 6 }, (_, i) => <TourCardSkeleton key={i} />)
-            : activities.map(t => (
+            : activities.slice(0, 6).map(t => (
                 <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
                           inTrip={tripIdSet.has(t.id)} lang={lang}
                           displayCurrency={displayCurrency} fxRates={fxRates} />
               ))}
+        </div>
         </div>
       </section>
     );
@@ -301,12 +305,12 @@
     }, [activities, activeSupplier, activeCats]);
 
     return (
-      <section style={{ padding: '32px 32px 80px', background: 'var(--bg-page)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <section className="auralis-section" style={{ paddingTop: 'var(--page-pad-y)', paddingBottom: 80, background: 'var(--bg-page)' }}>
+        <div className="auralis-container">
           <div style={{ font: '500 12px/1 var(--font-text)', color: 'var(--fg-3)', marginBottom: 8 }}>
             {T({ hant: '探索 / 雷克雅維克', hans: '探索 / 雷克雅未克', en: 'Discover / Reykjavík' })}
           </div>
-          <h1 style={{ margin: 0, font: '700 40px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
+          <h1 className="tours-page-title" style={{ margin: 0, font: '700 40px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
             {T({
               hant: `${countLabel} 個體驗等你挑選`,
               hans: `${countLabel} 个体验等你挑选`,
@@ -353,7 +357,7 @@
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
+              <div className="grid-cards-2">
                 {loading
                   ? Array.from({ length: 4 }, (_, i) => <TourCardSkeleton key={i} />)
                   : error

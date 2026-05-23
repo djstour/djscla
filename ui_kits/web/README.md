@@ -3,14 +3,14 @@
 A click-thru recreation of the Auralis booking experience. **Not production code** — components prioritise visual fidelity and demonstrate the brand's vocabulary in motion.
 
 ## Run
-Open `index.html` directly. All assets are project-relative; no build step.
+Open `index.html` directly (or via Vercel). Responsive from **640px** (phone) and **900px** (tablet) breakpoints — see `responsive.css`.
 
 ## Screens (use the floating switcher at the bottom)
 
 | Screen | What's there |
 |---|---|
 | **Discover** | Animated aurora hero · category strip · 6 featured tours · "why Auralis" stats · sample 7-day trip block · footer with newsletter capture |
-| **Tours** | Left rail: supplier filter (Bókun list, checkboxes), category chips, price range, guide language · right: sort bar + 2-col tour grid |
+| **Tours** | Left rail: supplier filter (Bókun list, checkboxes), category chips, price range, guide language · right: sort bar + responsive tour grid |
 | **Trip · Map** | Stylized Iceland map with 5 numbered pins · day-by-day glass itinerary panel · stat pills (drive distance, aurora forecast) |
 | **Checkout** | 3-step flow — Review → Payment (card / Apple Pay / LINE Pay) → Confirmation |
 

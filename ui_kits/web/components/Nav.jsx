@@ -29,6 +29,11 @@
 
   function Nav({ currentScreen, onNav, cartCount = 0, lang, onCycleLang, displayCurrency, onCurrencyChange, fxDate }) {
     const T = (opts) => pick(lang, opts);
+    const [menuOpen, setMenuOpen] = useState(false);
+
+    useEffect(() => {
+      setMenuOpen(false);
+    }, [currentScreen]);
 
     const navItems = [
       { id: 'home',    label: { hant: '探索',     hans: '探索',     en: 'Discover' } },
@@ -37,43 +42,59 @@
       { id: 'journal', label: { hant: '旅誌',     hans: '旅志',     en: 'Journal' } },
     ];
 
+    const linkStyle = (active) => ({
+      padding: '10px 14px',
+      borderRadius: 999,
+      font: '600 14px/1 var(--font-text)',
+      color: active ? 'var(--fg-1)' : 'var(--fg-2)',
+      background: active ? 'var(--base-100)' : 'transparent',
+      textDecoration: 'none',
+      transition: 'background var(--dur-fast) var(--ease-out)',
+      display: 'block',
+    });
+
     return (
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 50, height: 72,
-        display: 'flex', alignItems: 'center', gap: 24,
-        padding: '0 32px',
-        background: 'rgba(255,255,255,0.72)',
-        backdropFilter: 'blur(20px) saturate(1.2)',
-        WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
-        boxShadow: 'inset 0 -1px 0 rgba(20,30,60,0.08)',
-      }}>
-        <a href="#" onClick={(e) => { e.preventDefault(); onNav('home'); }}
-           style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <img src="../../assets/logo-wordmark.svg" alt="Auralis · 極光旅" style={{ height: 36, width: 'auto' }} />
+      <header className="nav-header">
+        <a href="#" className="nav-logo" onClick={(e) => { e.preventDefault(); onNav('home'); }}
+           style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
+          <img src="../../assets/logo-wordmark.svg" alt="Auralis · 極光旅" />
         </a>
 
-        <nav style={{ display: 'flex', gap: 4, marginLeft: 24, flex: 1 }}>
-          {navItems.map(item => {
+        <button
+          type="button"
+          className="nav-menu-btn"
+          aria-expanded={menuOpen}
+          aria-label={T({ hant: '選單', hans: '菜单', en: 'Menu' })}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <Icon name={menuOpen ? 'x' : 'menu'} size={22} />
+        </button>
+
+        <nav className="nav-links" aria-label={T({ hant: '主要導覽', hans: '主要导航', en: 'Main' })}>
+          {navItems.map((item) => {
             const active = currentScreen === item.id;
             return (
-              <a key={item.id} href="#"
-                 onClick={(e) => { e.preventDefault(); onNav(item.id); }}
-                 style={{
-                   padding: '8px 14px',
-                   borderRadius: 999,
-                   font: '600 14px/1 var(--font-text)',
-                   color: active ? 'var(--fg-1)' : 'var(--fg-2)',
-                   background: active ? 'var(--base-100)' : 'transparent',
-                   textDecoration: 'none',
-                   transition: 'background var(--dur-fast) var(--ease-out)',
-                 }}>
+              <a key={item.id} href="#" style={linkStyle(active)}
+                 onClick={(e) => { e.preventDefault(); onNav(item.id); }}>
                 {T(item.label)}
               </a>
             );
           })}
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <nav className={`nav-mobile-sheet${menuOpen ? ' is-open' : ''}`} aria-hidden={!menuOpen}>
+          {navItems.map((item) => {
+            const active = currentScreen === item.id;
+            return (
+              <a key={`m-${item.id}`} href="#" style={linkStyle(active)}
+                 onClick={(e) => { e.preventDefault(); onNav(item.id); setMenuOpen(false); }}>
+                {T(item.label)}
+              </a>
+            );
+          })}
+        </nav>
+
+        <div className="nav-actions">
           <LocaleControls
             lang={lang}
             onLangChange={onCycleLang}
@@ -82,7 +103,7 @@
             fxDate={fxDate}
           />
 
-          <button type="button" aria-label={T({ hant: '帳戶', hans: '账户', en: 'Account' })}
+          <button type="button" className="u-hide-sm" aria-label={T({ hant: '帳戶', hans: '账户', en: 'Account' })}
                   style={{
                     width: 40, height: 40, borderRadius: 999, border: 0, cursor: 'pointer',
                     background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -91,7 +112,7 @@
             <Icon name="user" size={20} />
           </button>
 
-          <button type="button" onClick={() => onNav('checkout')}
+          <button type="button" className="nav-cart-btn" onClick={() => onNav('checkout')}
                   style={{
                     height: 40, padding: '0 14px 0 12px', borderRadius: 999,
                     border: 0, cursor: 'pointer',
@@ -102,7 +123,7 @@
                     font: '700 13px/1 var(--font-text)',
                   }}>
             <Icon name="shopping-bag" size={16} />
-            <span>{cartCount} {T({ hant: '個', hans: '个', en: 'in trip' })}</span>
+            <span className="nav-cart-label">{cartCount} {T({ hant: '個', hans: '个', en: 'in trip' })}</span>
           </button>
         </div>
       </header>
@@ -114,6 +135,7 @@
 
     return (
       <div
+        className="locale-bar"
         role="group"
         aria-label={T({ hant: '語言與幣別', hans: '语言与币别', en: 'Language and currency' })}
         style={{
@@ -153,7 +175,7 @@
   function LocaleField({ icon, label, children }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-        <span style={{
+        <span className="locale-field-label" style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           font: '600 10px/1 var(--font-text)',
           letterSpacing: '0.06em',

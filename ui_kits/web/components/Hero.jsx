@@ -24,8 +24,7 @@
     const cityPlaceholder = T({ hant: '雷克雅維克 (KEF)', hans: '雷克雅未克 (KEF)', en: 'Reykjavík (KEF)' });
 
     return (
-      <section style={{ position: 'relative', minHeight: 640, overflow: 'hidden' }}
-               className="bg-aurora-animated">
+      <section className="hero-section bg-aurora-animated">
         <svg viewBox="0 0 1440 640" preserveAspectRatio="none"
              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.6 }}>
           {Array.from({ length: 40 }, (_, i) => (
@@ -34,8 +33,7 @@
           ))}
         </svg>
 
-        <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '96px 32px 48px',
-                      display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 48, alignItems: 'center' }}>
+        <div className="hero-inner">
           <div>
             <span className="overline" style={{ color: 'var(--coral)' }}>
               {T({ hant: '冰島 · 即時庫存', hans: '冰岛 · 即时库存', en: 'Iceland · live inventory' })}
@@ -67,7 +65,7 @@
               en:   'Live operator inventory via Bókun — plan once, book many, pay once.',
             })}</p>
 
-            <div style={{ display: 'flex', gap: 14, marginTop: 32, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 14, marginTop: 32, alignItems: 'center', flexWrap: 'wrap' }}>
               <button type="button" onClick={() => onSearch && onSearch()} style={{
                 height: 54, padding: '0 28px', borderRadius: 999, border: 0, cursor: 'pointer',
                 background: 'var(--gradient-aurora)', color: '#062F2A',
@@ -92,7 +90,7 @@
             <Field label={T({ hant: '出發城市', hans: '出发城市', en: 'Departure' })} icon="search">
               <input value={city} onChange={(e) => setCity(e.target.value)} placeholder={cityPlaceholder} style={inputStyle} />
             </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10, marginTop: 10 }}>
+            <div className="hero-search-dates" style={{ marginTop: 10 }}>
               <Field label={T({ hant: '日期', hans: '日期', en: 'Dates' })} icon="calendar" focused>
                 <input value={dates} onChange={(e) => setDates(e.target.value)} placeholder={datePlaceholder} style={inputStyle} />
               </Field>

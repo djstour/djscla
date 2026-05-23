@@ -242,6 +242,25 @@
   --gutter:        24px;
 }
 
+@media (max-width: 900px) {
+  :root {
+    --t-h1: 32px;
+    --t-h2: 26px;
+    --t-h3: 20px;
+    --gutter: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --t-h1: 28px;
+    --t-h2: 22px;
+    --t-h4: 18px;
+    --t-body-lg: 16px;
+    --gutter: 16px;
+  }
+}
+
 /* =========================================================================
    Semantic element styles — opt-in via class to avoid global pollution
    ========================================================================= */

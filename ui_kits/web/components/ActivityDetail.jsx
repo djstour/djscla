@@ -39,7 +39,7 @@
 
     return (
       <div style={{ background: 'var(--bg-page)', minHeight: '100vh', paddingBottom: 100 }}>
-        <div style={{ position: 'relative', height: 420, overflow: 'hidden' }}>
+        <div className="detail-hero">
           <div style={{
             position: 'absolute', inset: 0,
             ...(heroUrl
@@ -50,7 +50,7 @@
             position: 'absolute', inset: 0,
             background: 'linear-gradient(180deg, rgba(17,21,31,0.15) 0%, rgba(17,21,31,0.55) 100%)',
           }} />
-          <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '24px 32px' }}>
+          <div className="auralis-container" style={{ position: 'relative', paddingTop: 24, paddingBottom: 24 }}>
             <BackButton onBack={onBack} lang={lang} light />
           </div>
           {photos.length > 1 && (
@@ -69,7 +69,7 @@
           )}
         </div>
 
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 32px 0', display: 'grid', gridTemplateColumns: '1fr 340px', gap: 40, alignItems: 'start' }}>
+        <div className="auralis-container detail-layout" style={{ paddingTop: 32, paddingBottom: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
             <header>
               {tour.badge && (
@@ -209,7 +209,7 @@
             )}
           </div>
 
-          <aside style={{ position: 'sticky', top: 96 }}>
+          <aside className="detail-sticky-book">
             <div style={{
               background: '#fff', borderRadius: 24, padding: 24,
               boxShadow: 'var(--shadow-3)',

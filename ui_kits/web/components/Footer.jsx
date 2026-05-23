@@ -46,14 +46,14 @@
     ];
 
     return (
-      <footer style={{
+      <footer className="auralis-section" style={{
         background: 'linear-gradient(180deg, #FAFBFE 0%, #E8E2FF 100%)',
-        padding: '64px 32px 32px',
+        paddingTop: 'clamp(48px, 10vw, 64px)',
+        paddingBottom: 32,
       }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          {/* Newsletter strip */}
-          <div className="glass" style={{
-            padding: '28px 32px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32, alignItems: 'center',
+        <div className="auralis-container">
+          <div className="glass footer-newsletter" style={{
+            padding: 'clamp(20px, 4vw, 28px) clamp(20px, 4vw, 32px)',
             borderRadius: 28,
           }}>
             <div>
@@ -93,7 +93,7 @@
           </div>
 
           {/* Link columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr repeat(4, 1fr)', gap: 32, marginTop: 56 }}>
+          <div className="footer-cols">
             <div>
               <img src="../../assets/logo-wordmark.svg" style={{ height: 44, width: 'auto', display: 'block' }} alt="Auralis · 極光旅" />
               <p style={{ margin: '14px 0 0', font: '400 13px/1.6 var(--font-text)', color: 'var(--fg-3)', maxWidth: 240 }}>

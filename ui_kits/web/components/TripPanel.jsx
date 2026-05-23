@@ -102,7 +102,7 @@
         </svg>
 
         {/* Children (overlay panels) sit on top */}
-        <div style={{ position: 'relative', padding: 32, display: 'flex', gap: 24, minHeight: 720 }}>
+        <div className="trip-map-inner">
           {children}
         </div>
       </div>
@@ -123,10 +123,9 @@
         });
 
     return (
-      <div className="glass" style={{
-        width: 420, padding: 24, borderRadius: 28,
+      <div className="glass trip-panel" style={{
+        padding: 24, borderRadius: 28,
         display: 'flex', flexDirection: 'column', gap: 16,
-        alignSelf: 'flex-start',
       }}>
         <div>
           <span className="overline" style={{ color: 'var(--coral)' }}>

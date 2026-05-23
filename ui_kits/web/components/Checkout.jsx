@@ -18,12 +18,13 @@
     ];
 
     return (
-      <section style={{
+      <section className="auralis-section" style={{
         minHeight: 720,
         background: 'linear-gradient(180deg, #FAFBFE 0%, #F1F4FA 100%)',
-        padding: '40px 32px',
+        paddingTop: 40,
+        paddingBottom: 40,
       }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div className="auralis-container" style={{ maxWidth: 1100 }}>
           <button onClick={onBack} style={{
             background: 'transparent', border: 0, cursor: 'pointer',
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -34,7 +35,7 @@
           </button>
 
           {/* Stepper */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
+          <div className="checkout-stepper">
             {steps.map((s, i) => {
               const stepIdx = step === 'review' ? 0 : step === 'pay' ? 1 : 2;
               const active = i === stepIdx;
@@ -81,7 +82,7 @@
   function ReviewStep({ trip, subtotalUsd, feeUsd, totalUsd, onNext, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'flex-start' }}>
+      <div className="checkout-grid">
         <div style={{ background: '#fff', borderRadius: 24, padding: 28, boxShadow: 'var(--shadow-2)' }}>
           <h2 style={{ margin: '0 0 18px', font: '700 26px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
             {T({ hant: '檢視你的行程', hans: '检视你的行程', en: 'Review your trip' })}
@@ -161,7 +162,7 @@
       { id: 'line',  icon: 'wallet',      label: { hant: 'LINE Pay', hans: '微信支付 · LINE', en: 'LINE Pay' } },
     ];
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'flex-start' }}>
+      <div className="checkout-grid">
         <div style={{ background: '#fff', borderRadius: 24, padding: 28, boxShadow: 'var(--shadow-2)' }}>
           <h2 style={{ margin: '0 0 18px', font: '700 26px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
             {T({ hant: '付款方式', hans: '付款方式', en: 'How would you like to pay?' })}
