@@ -4,8 +4,11 @@
  */
 
 (function () {
-  const { useState } = React;
-  const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage } = window.AuralisUI;
+  const { useState, useEffect, useRef } = React;
+  const {
+    Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage,
+    imageProfileForViewport,
+  } = window.AuralisUI;
 
   function TourCardImage({ src, alt, height, fallbackPhoto, priority }) {
     const [loaded, setLoaded] = useState(!src);
@@ -56,10 +59,33 @@
     const capacity = tour.availability && tour.availability.capacityRemaining;
     const showLowCapacity = typeof capacity === 'number' && capacity <= 8;
     const photoHeight = compact ? 150 : 200;
-    const thumbW = compact ? 400 : 520;
-    const coverSrc = tour.coverImageUrl
-      ? proxyImageUrl(tour.coverImageUrl, { w: thumbW, q: 78 })
-      : null;
+    const imgProfile = imageProfileForViewport();
+    const cardThumb = compact
+      ? { w: Math.min(imgProfile.card.w, 400), q: imgProfile.card.q }
+      : imgProfile.card;
+    const coverSrc = tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null;
+    const cardRef = useRef(null);
+
+    function prefetchCardImage() {
+      if (!onView || !tour.coverImageUrl) return;
+      prefetchProxiedImage(tour.coverImageUrl, imgProfile.prefetch);
+    }
+
+    useEffect(() => {
+      if (!onView || !tour.coverImageUrl || !cardRef.current) return undefined;
+      if (typeof IntersectionObserver === 'undefined') return undefined;
+      const obs = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            prefetchCardImage();
+            obs.disconnect();
+          }
+        },
+        { rootMargin: '80px 0px', threshold: 0.01 },
+      );
+      obs.observe(cardRef.current);
+      return () => obs.disconnect();
+    }, [tour.coverImageUrl, onView]); // eslint-disable-line react-hooks/exhaustive-deps
 
     function openDetail(e) {
       if (onView) onView(tour);
@@ -67,6 +93,7 @@
 
     return (
       <article
+        ref={cardRef}
         role={onView ? 'button' : undefined}
         tabIndex={onView ? 0 : undefined}
         onClick={onView ? openDetail : undefined}
@@ -83,9 +110,10 @@
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-3px)';
           e.currentTarget.style.boxShadow = 'var(--shadow-4)';
-          if (onView && tour.coverImageUrl) prefetchProxiedImage(tour.coverImageUrl, { w: 520, q: 78 });
+          prefetchCardImage();
         }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-2)'; }}
+        onTouchStart={prefetchCardImage}
       >
         <div style={{ position: 'relative' }}>
           <TourCardImage

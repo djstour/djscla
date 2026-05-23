@@ -96,7 +96,10 @@
     );
 
     function openActivityDetail(tour) {
-      window.AuralisUI.prefetchProxiedImage(tour.coverImageUrl, { w: 520, q: 78 });
+      window.AuralisUI.prefetchProxiedImage(
+        tour.coverImageUrl,
+        window.AuralisUI.imageProfileForViewport().prefetch,
+      );
       setTripCache((c) => ({ ...c, [tour.id]: tour }));
       setReturnScreen(screen === 'detail' ? returnScreen : screen);
       setDetailActivityId(tour.id);

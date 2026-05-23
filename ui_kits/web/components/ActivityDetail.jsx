@@ -2,16 +2,19 @@
 
 (function () {
   const { useState, useEffect } = React;
-  const { Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl } = window.AuralisUI;
+  const {
+    Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl, useResponsiveImageProfile,
+  } = window.AuralisUI;
 
-  /** Reuse list-card proxy size (often cached), then fade in a sharper hero. */
+  /** Reuse list-card proxy size (often cached), then fade in a sharper hero on desktop. */
   function DetailHeroImage({ heroUrl, placeholderKey }) {
+    const profile = useResponsiveImageProfile();
     const [fastLoaded, setFastLoaded] = useState(false);
     const [hiLoaded, setHiLoaded] = useState(false);
 
-    const fastSrc = heroUrl ? proxyImageUrl(heroUrl, { w: 520, q: 78 }) : null;
-    const hiSrc = heroUrl ? proxyImageUrl(heroUrl, { w: 960, q: 82 }) : null;
-    const useHiRes = hiSrc && hiSrc !== fastSrc;
+    const fastSrc = heroUrl ? proxyImageUrl(heroUrl, profile.heroFast) : null;
+    const hiSrc = profile.heroHi && heroUrl ? proxyImageUrl(heroUrl, profile.heroHi) : null;
+    const useHiRes = !!(hiSrc && hiSrc !== fastSrc);
 
     useEffect(() => {
       setFastLoaded(false);
@@ -89,6 +92,8 @@
     fxRates = { USD: 1 },
   }) {
     const T = (opts) => pick(lang, opts);
+    const imgProfile = useResponsiveImageProfile();
+    const isMobile = window.AuralisUI.isMobileViewport();
 
     if (!tour && loading) {
       return <DetailSkeleton onBack={onBack} lang={lang} />;
@@ -123,17 +128,22 @@
             <BackButton onBack={onBack} lang={lang} light />
           </div>
           {photos.length > 1 && (
-            <div style={{
-              position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-              display: 'flex', gap: 8, maxWidth: '90%', overflowX: 'auto', padding: '0 8px',
-            }}>
-              {photos.slice(0, 6).map((url, i) => (
+            <div
+              className="detail-photo-strip"
+              style={{
+                position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+                display: 'flex', gap: 8, maxWidth: '90%', overflowX: 'auto', padding: '0 8px',
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              {photos.slice(0, isMobile ? 4 : 6).map((url, i) => (
                 <img
                   key={url + i}
-                  src={proxyImageUrl(url, { w: 160, q: 75 })}
+                  src={proxyImageUrl(url, imgProfile.gallery)}
                   alt=""
-                  loading={i < 2 ? 'eager' : 'lazy'}
+                  loading={i === 0 ? 'eager' : 'lazy'}
                   decoding="async"
+                  className="detail-photo-thumb"
                   style={{
                     width: 72, height: 48, borderRadius: 10, flexShrink: 0,
                     objectFit: 'cover', objectPosition: 'center',
@@ -157,7 +167,7 @@
                   font: '700 10px/1 var(--font-text)', letterSpacing: '0.08em', textTransform: 'uppercase',
                 }}>{tour.badge}</span>
               )}
-              <h1 style={{ margin: 0, font: '700 40px/1.08 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
+              <h1 className="detail-page-title" style={{ margin: 0, color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
                 {tour.title}
               </h1>
               <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', color: 'var(--fg-2)', font: '500 14px/1 var(--font-text)' }}>
@@ -291,15 +301,17 @@
               background: '#fff', borderRadius: 24, padding: 24,
               boxShadow: 'var(--shadow-3)',
             }}>
-              <div style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
-              </div>
-              <div style={{ font: '700 36px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 8 }}>
-                {formatDisplayPrice(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
+              <div className="detail-book-summary">
+                <div style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
+                </div>
+                <div className="detail-book-price" style={{ font: '700 36px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 8 }}>
+                  {formatDisplayPrice(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
+                </div>
               </div>
 
               {tour.priceTable && tour.priceTable.length > 1 && (
-                <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="detail-book-extra" style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ font: '600 12px/1 var(--font-text)', color: 'var(--fg-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     {T({ hant: '票種', hans: '票种', en: 'Ticket types' })}
                   </div>
@@ -315,7 +327,7 @@
               )}
 
               {cancelHrs != null && cancelHrs > 0 && (
-                <div style={{
+                <div className="detail-book-extra" style={{
                   marginTop: 18, padding: 12, borderRadius: 12, background: 'var(--gradient-aurora-soft)',
                   display: 'flex', gap: 10, alignItems: 'flex-start',
                 }}>
@@ -330,7 +342,7 @@
                 </div>
               )}
 
-              <button type="button" onClick={() => onAdd && onAdd(tour)} disabled={inTrip}
+              <button type="button" className="detail-book-cta" onClick={() => onAdd && onAdd(tour)} disabled={inTrip}
                       style={{
                         width: '100%', height: 52, marginTop: 22, borderRadius: 16, border: 0,
                         cursor: inTrip ? 'default' : 'pointer',
@@ -382,9 +394,17 @@
 
   function DetailSkeleton({ onBack, lang }) {
     return (
-      <div style={{ padding: 32 }}>
-        <BackButton onBack={onBack} lang={lang} />
-        <div style={{ marginTop: 24, height: 320, borderRadius: 24, background: 'var(--base-100)' }} />
+      <div className="detail-skeleton">
+        <div className="detail-hero detail-hero--skeleton">
+          <div className="tour-card-image-shimmer" style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(120deg,#E4E9F2 0%,#F1F4FA 50%,#E4E9F2 100%)',
+            backgroundSize: '200% 100%',
+          }} />
+          <div className="auralis-container" style={{ position: 'relative', paddingTop: 24 }}>
+            <BackButton onBack={onBack} lang={lang} light />
+          </div>
+        </div>
       </div>
     );
   }

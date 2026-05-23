@@ -2,7 +2,61 @@
    Exposes window.AuralisUI = { Icon, formatPrice, fakePhoto, ... } */
 
 (function () {
-  const { useEffect, useRef } = React;
+  const { useState, useEffect, useRef } = React;
+
+  const MOBILE_IMAGE_MQ = '(max-width: 640px)';
+
+  function isMobileViewport() {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia(MOBILE_IMAGE_MQ).matches;
+  }
+
+  function prefersReducedData() {
+    const conn = typeof navigator !== 'undefined' && navigator.connection;
+    if (!conn) return false;
+    return conn.saveData === true || conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g';
+  }
+
+  function imageProfileForViewport() {
+    if (isMobileViewport() || prefersReducedData()) {
+      return {
+        card: { w: 400, q: 76 },
+        heroFast: { w: 400, q: 76 },
+        heroHi: null,
+        gallery: { w: 112, q: 72 },
+        prefetch: { w: 400, q: 76 },
+      };
+    }
+    return {
+      card: { w: 520, q: 78 },
+      heroFast: { w: 520, q: 78 },
+      heroHi: { w: 960, q: 82 },
+      gallery: { w: 160, q: 75 },
+      prefetch: { w: 520, q: 78 },
+    };
+  }
+
+  function useResponsiveImageProfile() {
+    const [profile, setProfile] = useState(() => imageProfileForViewport());
+
+    useEffect(() => {
+      if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+      const mq = window.matchMedia(MOBILE_IMAGE_MQ);
+      const update = () => setProfile(imageProfileForViewport());
+      update();
+      if (mq.addEventListener) mq.addEventListener('change', update);
+      else mq.addListener(update);
+      const conn = navigator.connection;
+      if (conn && conn.addEventListener) conn.addEventListener('change', update);
+      return () => {
+        if (mq.removeEventListener) mq.removeEventListener('change', update);
+        else mq.removeListener(update);
+        if (conn && conn.removeEventListener) conn.removeEventListener('change', update);
+      };
+    }, []);
+
+    return profile;
+  }
 
   // Lucide-icon wrapper. Renders <i data-lucide="name"></i> and calls createIcons
   // on every render so dynamic icons attach correctly.
@@ -264,6 +318,8 @@
     Icon, formatPrice, singleCurrency, formatTotalAmount,
     CURRENCIES, DISPLAY_CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
-    fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage, CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+    fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
+    isMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
+    CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
   };
 })();

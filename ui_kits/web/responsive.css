@@ -334,6 +334,10 @@ html {
   top: 88px;
 }
 
+.detail-page-title {
+  font: 700 40px/1.08 var(--font-display);
+}
+
 @media (max-width: 900px) {
   .detail-layout {
     grid-template-columns: 1fr;
@@ -341,6 +345,81 @@ html {
 
   .detail-sticky-book {
     position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-hero {
+    height: clamp(200px, 50vw, 280px);
+  }
+
+  .detail-page-title {
+    font-size: clamp(26px, 7vw, 34px) !important;
+    line-height: 1.12 !important;
+  }
+
+  .detail-photo-strip {
+    bottom: 12px !important;
+    max-width: 94% !important;
+  }
+
+  .detail-photo-thumb {
+    width: 56px !important;
+    height: 40px !important;
+  }
+
+  .detail-layout {
+    padding-top: 20px !important;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .detail-sticky-book {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 12px var(--page-pad-x) calc(12px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px) saturate(1.15);
+    -webkit-backdrop-filter: blur(16px) saturate(1.15);
+    box-shadow: 0 -8px 32px rgba(17, 21, 31, 0.1);
+  }
+
+  .detail-sticky-book > div {
+    border-radius: 20px !important;
+    padding: 14px 16px !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 0 !important;
+  }
+
+  .detail-book-summary {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .detail-book-price {
+    font-size: 26px !important;
+    margin-top: 2px !important;
+  }
+
+  .detail-book-extra {
+    display: none !important;
+  }
+
+  .detail-book-cta {
+    width: auto !important;
+    min-width: 132px;
+    margin-top: 0 !important;
+    min-height: 44px;
+    padding: 0 18px !important;
+  }
+
+  .locale-picker-menu {
+    max-width: min(92vw, 240px);
   }
 }
 
