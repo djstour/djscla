@@ -64,6 +64,6 @@ async function handler(req, res) {
 };
 
 /** Hobby ≈10s; Pro can raise in project settings. Use maxTranslations to chunk work. */
-handler.config = { maxDuration: 60 };
+handler.config = { maxDuration: 300 };
 
 module.exports = handler;

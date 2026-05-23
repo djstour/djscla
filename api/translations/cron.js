@@ -15,7 +15,7 @@ function checkCronAuth(req) {
   return token === secret;
 }
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -28,8 +28,8 @@ module.exports = async function handler(req, res) {
   }
 
   const maxActivities = Math.min(
-    Number(process.env.TRANSLATION_CRON_MAX_ACTIVITIES) || 5,
-    20,
+    Number(process.env.TRANSLATION_CRON_MAX_ACTIVITIES) || 12,
+    30,
   );
 
   try {
@@ -51,4 +51,8 @@ module.exports = async function handler(req, res) {
       code: err.code || 'CRON_SYNC_ERROR',
     });
   }
-};
+}
+
+handler.config = { maxDuration: 300 };
+
+module.exports = handler;
