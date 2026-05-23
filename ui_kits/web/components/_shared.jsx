@@ -213,15 +213,18 @@
   }
 
   // ------------------------------------------------------------------
-  // Site-wide theme (aurora | mist | sun) — random once per tab, fixed in-session.
+  // Site-wide theme (aurora | mist | sun) — user picks via ThemePicker; stored in localStorage.
   // Sets html[data-site-theme] → remaps CSS vars app-wide; hero uses heroBackground.
   // ------------------------------------------------------------------
   const SITE_THEME_STORAGE_KEY = 'auralis:siteTheme:v1';
   const LEGACY_HERO_THEME_KEY = 'auralis:heroTheme:v3';
+  const DEFAULT_SITE_THEME_ID = 'aurora';
 
   const SITE_THEMES = [
     {
       id: 'aurora',
+      label: { hant: '極光', hans: '极光', en: 'Aurora' },
+      swatch: 'linear-gradient(135deg, #2EFFB8 0%, #00D5FF 100%)',
       sectionClass: 'bg-aurora-animated',
       heroBackground: [
         'radial-gradient(58% 75% at 18% 28%, rgba(46, 255, 184, 0.95) 0%, transparent 58%)',
@@ -232,6 +235,8 @@
     },
     {
       id: 'mist',
+      label: { hant: '霧', hans: '雾', en: 'Mist' },
+      swatch: 'linear-gradient(135deg, #E8E2FF 0%, #FFE9D6 50%, #DBF7FF 100%)',
       sectionClass: 'bg-mist-animated',
       heroBackground: [
         'radial-gradient(62% 78% at 18% 28%, rgba(232, 226, 255, 0.92) 0%, transparent 58%)',
@@ -242,6 +247,8 @@
     },
     {
       id: 'sun',
+      label: { hant: '陽', hans: '阳', en: 'Sun' },
+      swatch: 'linear-gradient(135deg, #6B2FE6 0%, #FF7A2E 100%)',
       sectionClass: 'bg-sun-animated',
       heroBackground: [
         'radial-gradient(58% 78% at 20% 30%, rgba(107, 47, 230, 0.72) 0%, transparent 58%)',
@@ -253,16 +260,6 @@
   ];
 
   const HERO_THEMES = SITE_THEMES;
-
-  function randomInt(max) {
-    if (max <= 1) return 0;
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      const buf = new Uint32Array(1);
-      crypto.getRandomValues(buf);
-      return buf[0] % max;
-    }
-    return Math.floor(Math.random() * max);
-  }
 
   function siteThemeFromQuery() {
     if (typeof window === 'undefined') return null;
@@ -281,62 +278,91 @@
     document.documentElement.setAttribute('data-site-theme', theme.id);
   }
 
-  /** Fisher–Yates shuffle, return first theme (uniform random among three). */
-  function pickRandomSiteTheme() {
-    const pool = SITE_THEMES.slice();
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = randomInt(i + 1);
-      const tmp = pool[i];
-      pool[i] = pool[j];
-      pool[j] = tmp;
-    }
-    return pool[0];
+  function getSiteThemeById(id) {
+    return SITE_THEMES.find((t) => t.id === id) || SITE_THEMES[0];
+  }
+
+  function persistSiteThemeId(id) {
+    try {
+      localStorage.setItem(SITE_THEME_STORAGE_KEY, id);
+      sessionStorage.setItem(SITE_THEME_STORAGE_KEY, id);
+    } catch (_) { /* private mode */ }
   }
 
   function readStoredSiteThemeId() {
     try {
-      let saved = sessionStorage.getItem(SITE_THEME_STORAGE_KEY);
+      let saved = localStorage.getItem(SITE_THEME_STORAGE_KEY);
+      if (!saved) saved = sessionStorage.getItem(SITE_THEME_STORAGE_KEY);
       if (!saved) {
         saved = sessionStorage.getItem(LEGACY_HERO_THEME_KEY);
-        if (saved) sessionStorage.setItem(SITE_THEME_STORAGE_KEY, saved);
+        if (saved) persistSiteThemeId(saved);
       }
-      return saved;
-    } catch (_) {
-      return null;
-    }
+      if (saved === 'aurora' || saved === 'mist' || saved === 'sun') return saved;
+    } catch (_) { /* ignore */ }
+    return null;
   }
 
-  function pickSiteThemeForSession() {
+  function getInitialSiteTheme() {
     const forced = siteThemeFromQuery();
     if (forced) {
-      try { sessionStorage.setItem(SITE_THEME_STORAGE_KEY, forced.id); } catch (_) { /* ignore */ }
+      persistSiteThemeId(forced.id);
       applySiteTheme(forced);
       return forced;
     }
 
     const saved = readStoredSiteThemeId();
-    if (saved) {
-      const found = SITE_THEMES.find((t) => t.id === saved);
-      if (found) {
-        applySiteTheme(found);
-        return found;
-      }
-    }
+    const theme = getSiteThemeById(saved || DEFAULT_SITE_THEME_ID);
+    if (!saved) persistSiteThemeId(theme.id);
+    applySiteTheme(theme);
+    return theme;
+  }
 
-    const picked = pickRandomSiteTheme();
-    try {
-      sessionStorage.setItem(SITE_THEME_STORAGE_KEY, picked.id);
-    } catch (_) { /* ignore */ }
-    applySiteTheme(picked);
-    return picked;
+  function setSiteThemeById(id) {
+    const theme = getSiteThemeById(id);
+    persistSiteThemeId(theme.id);
+    applySiteTheme(theme);
+    return theme;
+  }
+
+  function pickSiteThemeForSession() {
+    return getInitialSiteTheme();
   }
 
   function pickHeroThemeForSession() {
-    return pickSiteThemeForSession();
+    return getInitialSiteTheme();
   }
 
   function getOrPickHeroTheme() {
-    return pickSiteThemeForSession();
+    return getInitialSiteTheme();
+  }
+
+  /** Minimal 3-swatch theme picker for the nav bar. */
+  function ThemePicker({ themeId, onChange, lang }) {
+    const T = (opts) => pick(lang, opts);
+    return (
+      <div
+        className="theme-picker"
+        role="group"
+        aria-label={T({ hant: '主題配色', hans: '主题配色', en: 'Color theme' })}
+      >
+        {SITE_THEMES.map((t) => {
+          const active = themeId === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              className={`theme-picker__btn${active ? ' is-active' : ''}`}
+              aria-pressed={active}
+              aria-label={pick(lang, t.label)}
+              title={pick(lang, t.label)}
+              onClick={() => onChange(t.id)}
+            >
+              <span className="theme-picker__swatch" style={{ background: t.swatch }} />
+            </button>
+          );
+        })}
+      </div>
+    );
   }
 
   // Procedural "photo" — gradients tuned to feel like Iceland locations.
@@ -445,7 +471,8 @@
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
-    SITE_THEMES, HERO_THEMES, pickSiteThemeForSession, applySiteTheme,
-    pickHeroThemeForSession, getOrPickHeroTheme,
+    SITE_THEMES, HERO_THEMES, ThemePicker,
+    getInitialSiteTheme, setSiteThemeById, applySiteTheme,
+    pickSiteThemeForSession, pickHeroThemeForSession, getOrPickHeroTheme,
   };
 })();

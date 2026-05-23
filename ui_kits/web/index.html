@@ -11,7 +11,8 @@
 <script>
 (function () {
   try {
-    var t = sessionStorage.getItem('auralis:siteTheme:v1')
+    var t = localStorage.getItem('auralis:siteTheme:v1')
+      || sessionStorage.getItem('auralis:siteTheme:v1')
       || sessionStorage.getItem('auralis:heroTheme:v3');
     if (t === 'aurora' || t === 'mist' || t === 'sun') {
       document.documentElement.setAttribute('data-site-theme', t);

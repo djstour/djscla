@@ -20,11 +20,15 @@
   const CURRENCY_KEY = 'auralis.currency';
 
   function App() {
-    const [siteTheme] = useState(() => window.AuralisUI.pickSiteThemeForSession());
+    const [siteTheme, setSiteTheme] = useState(() => window.AuralisUI.getInitialSiteTheme());
 
     useEffect(() => {
       window.AuralisUI.applySiteTheme(siteTheme);
     }, [siteTheme]);
+
+    function handleSiteThemeChange(themeId) {
+      setSiteTheme(window.AuralisUI.setSiteThemeById(themeId));
+    }
 
     const [screen, setScreen] = useState('home');  // home | tours | detail | trip | checkout
     const [detailActivityId, setDetailActivityId] = useState(null);
@@ -142,7 +146,8 @@
       <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
         <Nav currentScreen={screen} onNav={setScreen}
              cartCount={tripIds.length} lang={lang} onCycleLang={handleLangChange}
-             displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency} />
+             displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency}
+             siteThemeId={siteTheme.id} onSiteThemeChange={handleSiteThemeChange} />
 
         {screen === 'home' && (
           <>

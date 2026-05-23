@@ -3,7 +3,7 @@
 
 (function () {
   const { useState, useEffect, useRef } = React;
-  const { Icon, LANGS, DISPLAY_CURRENCIES, pick, currencyLabel } = window.AuralisUI;
+  const { Icon, LANGS, DISPLAY_CURRENCIES, pick, currencyLabel, ThemePicker } = window.AuralisUI;
 
   const LOCALE_STRIP = {
     display: 'inline-flex',
@@ -72,7 +72,10 @@
     }, [enabled, onClose]);
   }
 
-  function Nav({ currentScreen, onNav, cartCount = 0, lang, onCycleLang, displayCurrency, onCurrencyChange }) {
+  function Nav({
+    currentScreen, onNav, cartCount = 0, lang, onCycleLang,
+    displayCurrency, onCurrencyChange, siteThemeId, onSiteThemeChange,
+  }) {
     const T = (opts) => pick(lang, opts);
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -140,6 +143,14 @@
         </nav>
 
         <div className="nav-actions">
+          {onSiteThemeChange && (
+            <ThemePicker
+              themeId={siteThemeId || 'aurora'}
+              onChange={onSiteThemeChange}
+              lang={lang}
+            />
+          )}
+
           <LocaleControls
             lang={lang}
             onLangChange={onCycleLang}

@@ -132,6 +132,47 @@ html {
   flex-shrink: 0;
 }
 
+/* Theme picker — three gradient swatches in the nav */
+.theme-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--base-100);
+  box-shadow: inset 0 0 0 1px var(--base-200);
+  flex-shrink: 0;
+}
+
+.theme-picker__btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.theme-picker__btn:hover {
+  transform: scale(1.08);
+}
+
+.theme-picker__btn.is-active {
+  box-shadow: 0 0 0 2px var(--fg-1);
+}
+
+.theme-picker__swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
 .nav-menu-btn {
   display: none;
   width: 44px;
