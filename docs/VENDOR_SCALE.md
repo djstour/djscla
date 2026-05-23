@@ -10,7 +10,7 @@
 | 對外 API | `GET /api/catalog/activities`（穩定契約；內部仍打 Bókun） |
 | 小型目錄 | `?all=true` 在伺服器串頁拉齊（上限 `maxItems`，預設 2000）— **僅適合總 SKU 在數千以內** |
 | 前台載入 | `bokunAdapter` 預設 `all=true`，顯示正確 `meta.total`（如 123） |
-| 翻譯 | 逐 `activityId` 呼叫 `/api/translations/sync`；批次腳本見 `scripts/sync-all-translations.sh` |
+| 翻譯 | Vercel Cron 每 6h 自動補齊缺漏；首次全量用 `scripts/sync-all-translations.sh` |
 | 供應商篩選 | UI 依 `vendor.id` 客戶端篩選（資料須先載入該頁/全量） |
 
 **已知限制：** Bókun search 未保證依 `vendorId` 伺服器端篩選；多供應商全庫很大時，不可長期依賴 `all=true`。

@@ -51,6 +51,35 @@ Apply migration in Supabase SQL editor or `supabase db push` if using CLI.
 | `OPENAI_API_KEY` | Yes (sync) | `gpt-4o-mini` by default |
 | `OPENAI_TRANSLATION_MODEL` | No | Override model |
 | `TRANSLATION_SYNC_SECRET` | Prod recommended | Bearer token for `POST /api/translations/sync` |
+| `CRON_SECRET` | Auto cron | Vercel Cron `Authorization` bearer (can match `TRANSLATION_SYNC_SECRET`) |
+| `TRANSLATION_CRON_MAX_ACTIVITIES` | No | Activities per cron run (default `5`, max `20`) |
+
+## Automatic translation (Vercel Cron)
+
+**You do not need to run curl by hand for steady-state.** `vercel.json` schedules:
+
+| Schedule | Endpoint | Behaviour |
+|----------|----------|-------------|
+| Every 6 hours | `GET /api/translations/cron` | Scan full catalog; translate up to `TRANSLATION_CRON_MAX_ACTIVITIES` activities that are missing or stale |
+
+Setup after deploy:
+
+1. Vercel → **djscla** → Settings → Environment Variables → add **`CRON_SECRET`** (random string; can equal `TRANSLATION_SYNC_SECRET`).
+2. Redeploy production (crons register on deploy).
+3. Optional: **Cron Jobs** tab in Vercel to confirm the schedule and logs.
+
+Manual test:
+
+```bash
+curl -s "https://djscla.vercel.app/api/translations/cron" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Response includes `summary.catalogSize`, `summary.pendingActivities`, and `summary.activityIds` processed this run.
+
+**Catch-up (123 activities once):** still use `./scripts/sync-all-translations.sh` — cron is for incremental / ongoing, not a one-shot full backfill in a single run (Hobby function timeout).
+
+**Later (Phase B):** trigger translation from catalog sync when Bókun `sourceHash` changes; optional Bókun webhook.
 
 ## First sync
 
