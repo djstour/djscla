@@ -39,6 +39,11 @@
 
     const [fxRates, setFxRates] = useState({ USD: 1 });
 
+    function handleLangChange(nextLang) {
+      setLang(nextLang);
+      setDisplayCurrency(defaultCurrencyForLang(nextLang));
+    }
+
     useEffect(() => {
       applyHtmlLang(lang);
       try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) {}
@@ -123,7 +128,7 @@
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
         <Nav currentScreen={screen} onNav={setScreen}
-             cartCount={tripIds.length} lang={lang} onCycleLang={setLang}
+             cartCount={tripIds.length} lang={lang} onCycleLang={handleLangChange}
              displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency} />
 
         {screen === 'home' && (
