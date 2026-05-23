@@ -13,9 +13,9 @@
  */
 
 (function () {
-  const { Icon, formatPrice, fakePhoto, PhotoSparkles, pick } = window.AuralisUI;
+  const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick } = window.AuralisUI;
 
-  function TourCard({ tour, onAdd, inTrip, compact = false, lang = 'hant' }) {
+  function TourCard({ tour, onAdd, inTrip, compact = false, lang = 'hant', displayCurrency = 'USD', fxRates = { USD: 1 } }) {
     const T = (opts) => pick(lang, opts);
     const showSubtitle = lang !== 'en' && tour.titleEn && tour.titleEn !== tour.title;
 
@@ -151,7 +151,7 @@
                 {T({ hant: '起', hans: '起', en: 'from' })}
               </div>
               <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 4 }}>
-                {formatPrice(tour.price, tour.priceCurrency)}
+                {formatDisplayPrice(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
               </div>
             </div>
             <button onClick={() => onAdd && onAdd(tour)}

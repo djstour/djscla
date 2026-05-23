@@ -1,7 +1,7 @@
 /* TripPanel — fixed right-side itinerary panel and full-bleed map view. */
 
 (function () {
-  const { Icon, formatPrice, formatTotalAmount, pick } = window.AuralisUI;
+  const { Icon, formatDisplayPrice, formatTotalDisplay, tripTotalUsd, pick } = window.AuralisUI;
 
   // --- Iceland silhouette + pins -------------------------------------------------
   const ICELAND_PATH = "M120 320 Q 100 250 160 200 Q 200 160 280 170 Q 340 130 420 145 Q 510 110 600 150 Q 690 130 770 180 Q 850 200 890 260 Q 920 320 870 380 Q 830 430 740 440 Q 670 470 580 450 Q 500 480 420 470 Q 340 490 260 460 Q 180 440 140 390 Z";
@@ -111,9 +111,9 @@
 
   // --- Itinerary side panel -----------------------------------------------------
   // `trip` is an array of TourViewModel objects (already localised by the adapter).
-  function TripPanel({ trip, onRemove, onCheckout, lang }) {
+  function TripPanel({ trip, onRemove, onCheckout, lang, displayCurrency = 'USD', fxRates = { USD: 1 } }) {
     const T = (opts) => pick(lang, opts);
-    const total = trip.reduce((s, t) => s + t.price, 0);
+    const totalUsd = tripTotalUsd(trip);
 
     return (
       <div className="glass" style={{
@@ -182,7 +182,9 @@
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                    <span style={{ font: '700 13px/1 var(--font-display)', color: 'var(--fg-1)' }}>{formatPrice(t.price, t.priceCurrency)}</span>
+                    <span style={{ font: '700 13px/1 var(--font-display)', color: 'var(--fg-1)' }}>
+                      {formatDisplayPrice(t.priceUsd ?? t.price, displayCurrency, fxRates)}
+                    </span>
                     <button onClick={() => onRemove(t.id)}
                             style={{ border: 0, background: 'transparent', color: 'var(--fg-4)', cursor: 'pointer', font: '500 11px/1 var(--font-text)', display: 'inline-flex', gap: 3, alignItems: 'center' }}>
                       <Icon name="x" size={11} />{T({ hant: '移除', hans: '移除', en: 'remove' })}
@@ -200,7 +202,9 @@
             <span style={{ font: '500 13px/1 var(--font-text)', color: 'var(--fg-3)' }}>
               {T({ hant: '總計', hans: '总计', en: 'Total' })}
             </span>
-            <span style={{ font: '700 28px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>{formatTotalAmount(trip, total, lang)}</span>
+            <span style={{ font: '700 28px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
+              {formatTotalDisplay(totalUsd, displayCurrency, fxRates)}
+            </span>
           </div>
           <button onClick={onCheckout} disabled={trip.length === 0}
                   style={{

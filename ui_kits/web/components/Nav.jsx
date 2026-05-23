@@ -2,9 +2,9 @@
    Logo · primary nav · language toggle (繁 ↔ 简 ↔ EN) · account · cart. */
 
 (function () {
-  const { Icon, LANGS, pick } = window.AuralisUI;
+  const { Icon, LANGS, CURRENCIES, pick } = window.AuralisUI;
 
-  function Nav({ currentScreen, onNav, cartCount = 0, lang, onCycleLang }) {
+  function Nav({ currentScreen, onNav, cartCount = 0, lang, onCycleLang, displayCurrency, onCurrencyChange, fxDate }) {
     const T = (opts) => pick(lang, opts);
 
     const navItems = [
@@ -51,7 +51,7 @@
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* Three-way segmented language toggle */}
+          <CurrencySelect value={displayCurrency} onChange={onCurrencyChange} fxDate={fxDate} />
           <LangToggle lang={lang} onCycle={onCycleLang} />
 
           <button style={{
@@ -132,6 +132,34 @@
           );
         })}
       </div>
+    );
+  }
+
+  function CurrencySelect({ value, onChange, fxDate }) {
+    return (
+      <label style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label="Display currency"
+          title={fxDate ? `FX as of ${fxDate} (Frankfurter / ECB)` : 'Loading exchange rates…'}
+          style={{
+            height: 36,
+            padding: '0 10px',
+            borderRadius: 999,
+            border: 0,
+            background: 'var(--base-100)',
+            boxShadow: 'inset 0 0 0 1px var(--base-200)',
+            font: '600 12px/1 var(--font-text)',
+            color: 'var(--fg-1)',
+            cursor: 'pointer',
+          }}
+        >
+          {CURRENCIES.map((c) => (
+            <option key={c.code} value={c.code}>{c.label}</option>
+          ))}
+        </select>
+      </label>
     );
   }
 

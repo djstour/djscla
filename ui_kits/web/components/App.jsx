@@ -7,13 +7,14 @@
 (function () {
   const { useState, useMemo, useEffect } = React;
   const {
-    Icon, formatPrice, fakePhoto, PhotoSparkles,
-    CATEGORIES, LANGS, pick, applyHtmlLang,
+    Icon, fakePhoto, PhotoSparkles,
+    CATEGORIES, LANGS, pick, applyHtmlLang, defaultCurrencyForLang,
     Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer,
   } = window.AuralisUI;
   const { useActivities } = window.AuralisData;
 
   const STORAGE_KEY = 'auralis.lang';
+  const CURRENCY_KEY = 'auralis.currency';
 
   function App() {
     const [screen, setScreen] = useState('home');  // home | tours | trip | checkout
@@ -23,10 +24,37 @@
       return LANGS.find(l => l.id === saved) ? saved : 'hant';
     });
 
+    const [displayCurrency, setDisplayCurrency] = useState(() => {
+      const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(CURRENCY_KEY)) || '';
+      const codes = window.AuralisUI.CURRENCIES.map(c => c.code);
+      if (codes.includes(saved)) return saved;
+      const initialLang = LANGS.find(l => l.id === (localStorage.getItem(STORAGE_KEY) || 'hant'))?.id || 'hant';
+      return defaultCurrencyForLang(initialLang);
+    });
+
+    const [fxRates, setFxRates] = useState({ USD: 1 });
+    const [fxDate, setFxDate] = useState(null);
+
     useEffect(() => {
       applyHtmlLang(lang);
       try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) {}
     }, [lang]);
+
+    useEffect(() => {
+      try { localStorage.setItem(CURRENCY_KEY, displayCurrency); } catch (e) {}
+    }, [displayCurrency]);
+
+    useEffect(() => {
+      fetch('/api/fx/rates')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.rates) {
+            setFxRates({ USD: 1, ...data.rates });
+            setFxDate(data.date || null);
+          }
+        })
+        .catch((err) => console.warn('[Auralis] FX rates unavailable:', err.message));
+    }, []);
 
     // --- Bókun activity data ---------------------------------------------------
     // Pulled through the adapter; view-models are re-derived whenever `lang`
@@ -71,7 +99,9 @@
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
         <Nav currentScreen={screen} onNav={setScreen}
-             cartCount={tripIds.length} lang={lang} onCycleLang={setLang} />
+             cartCount={tripIds.length} lang={lang} onCycleLang={setLang}
+             displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency}
+             fxDate={fxDate} />
 
         {screen === 'home' && (
           <>
@@ -79,7 +109,8 @@
             <CategoryStrip onClick={() => setScreen('tours')} lang={lang} />
             <FeaturedSection activities={activities} loading={loading}
                              onView={() => setScreen('tours')} onAdd={addToTrip}
-                             tripIdSet={tripIdSet} lang={lang} />
+                             tripIdSet={tripIdSet} lang={lang}
+                             displayCurrency={displayCurrency} fxRates={fxRates} />
             <BookunBanner lang={lang} />
             <SampleTrip activities={activities}
                         onAdd={(t) => { addToTrip(t); setScreen('trip'); }}
@@ -98,6 +129,8 @@
             activeSupplier={activeSupplier} onSupplier={setActiveSupplier}
             activeCats={activeCats} onToggleCat={toggleCat}
             lang={lang}
+            displayCurrency={displayCurrency}
+            fxRates={fxRates}
           />
         )}
 
@@ -107,6 +140,8 @@
             onRemove={removeFromTrip}
             onCheckout={() => setScreen('checkout')}
             lang={lang}
+            displayCurrency={displayCurrency}
+            fxRates={fxRates}
           />
         )}
 
@@ -114,8 +149,10 @@
           <Checkout
             trip={trip}
             onBack={() => setScreen('trip')}
-            onPaid={() => { setTrip([]); setScreen('home'); }}
+            onPaid={() => { setTripIds([]); setScreen('home'); }}
             lang={lang}
+            displayCurrency={displayCurrency}
+            fxRates={fxRates}
           />
         )}
 
@@ -161,7 +198,7 @@
     );
   }
 
-  function FeaturedSection({ activities, loading, onView, onAdd, tripIdSet, lang }) {
+  function FeaturedSection({ activities, loading, onView, onAdd, tripIdSet, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     return (      <section style={{ padding: '72px 32px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
@@ -188,7 +225,10 @@
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
           {loading
             ? Array.from({ length: 6 }, (_, i) => <TourCardSkeleton key={i} />)
-            : activities.map(t => <TourCard key={t.id} tour={t} onAdd={onAdd} inTrip={tripIdSet.has(t.id)} lang={lang} />)}
+            : activities.map(t => (
+                <TourCard key={t.id} tour={t} onAdd={onAdd} inTrip={tripIdSet.has(t.id)} lang={lang}
+                          displayCurrency={displayCurrency} fxRates={fxRates} />
+              ))}
         </div>
       </section>
     );
@@ -353,7 +393,7 @@
 
   // ============================================================ TOURS screen ===
 
-  function ToursScreen({ activities, loading, error, tripIdSet, onAdd, activeSupplier, onSupplier, activeCats, onToggleCat, lang }) {
+  function ToursScreen({ activities, loading, error, tripIdSet, onAdd, activeSupplier, onSupplier, activeCats, onToggleCat, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
 
     // Filter activities by supplier (numeric Bókun vendor id or 'all') + categories.
@@ -433,7 +473,10 @@
                   ? Array.from({ length: 4 }, (_, i) => <TourCardSkeleton key={i} />)
                   : filtered.length === 0
                     ? <EmptyState lang={lang} />
-                    : filtered.map(t => <TourCard key={t.id} tour={t} onAdd={onAdd} inTrip={tripIdSet.has(t.id)} lang={lang} />)}
+                    : filtered.map(t => (
+                        <TourCard key={t.id} tour={t} onAdd={onAdd} inTrip={tripIdSet.has(t.id)} lang={lang}
+                                  displayCurrency={displayCurrency} fxRates={fxRates} />
+                      ))}
               </div>
             </div>
           </div>
@@ -444,11 +487,12 @@
 
   // ============================================================== TRIP screen ===
 
-  function TripScreen({ trip, onRemove, onCheckout, lang }) {
+  function TripScreen({ trip, onRemove, onCheckout, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     return (
       <MapPanel lang={lang} trip={trip}>
-        <TripPanel trip={trip} onRemove={onRemove} onCheckout={onCheckout} lang={lang} />
+        <TripPanel trip={trip} onRemove={onRemove} onCheckout={onCheckout} lang={lang}
+                   displayCurrency={displayCurrency} fxRates={fxRates} />
         {/* Stat pills */}
         <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 12, alignSelf: 'flex-start' }}>
           {[

@@ -61,6 +61,58 @@
   }
 
   // ------------------------------------------------------------------
+  // FX — USD anchor (Bókun) → display currency via Frankfurter (/api/fx/rates)
+  // ------------------------------------------------------------------
+  const CURRENCIES = [
+    { code: 'USD', label: 'USD $' },
+    { code: 'TWD', label: 'TWD NT$' },
+    { code: 'CNY', label: 'CNY ¥' },
+    { code: 'HKD', label: 'HKD HK$' },
+    { code: 'SGD', label: 'SGD S$' },
+    { code: 'MYR', label: 'MYR RM' },
+    { code: 'MOP', label: 'MOP MOP$' },
+    { code: 'CAD', label: 'CAD $' },
+    { code: 'AUD', label: 'AUD $' },
+  ];
+
+  const FX_BASE = 'USD';
+
+  function defaultCurrencyForLang(lang) {
+    return ({ hant: 'TWD', hans: 'CNY', en: 'USD' }[lang] || 'USD');
+  }
+
+  function convertFromUsd(amountUsd, targetCurrency, rates) {
+    const amount = Number(amountUsd);
+    if (!Number.isFinite(amount)) return 0;
+    const code = (targetCurrency || FX_BASE).toUpperCase();
+    if (code === FX_BASE) return amount;
+    const rate = rates && rates[code];
+    if (!rate || !Number.isFinite(rate)) return amount;
+    return amount * rate;
+  }
+
+  function roundForCurrency(amount, code) {
+    const c = (code || FX_BASE).toUpperCase();
+    const zeroDec = ['TWD', 'CNY', 'HKD', 'JPY', 'KRW', 'ISK', 'MOP', 'MYR'].includes(c);
+    return zeroDec ? Math.round(amount) : Math.round(amount * 100) / 100;
+  }
+
+  /** Bókun USD amount → user-selected display currency (no hardcoded rates). */
+  function formatDisplayPrice(amountUsd, displayCurrency, rates) {
+    const code = (displayCurrency || FX_BASE).toUpperCase();
+    const converted = roundForCurrency(convertFromUsd(amountUsd, code, rates), code);
+    return formatPrice(converted, code);
+  }
+
+  function formatTotalDisplay(totalUsd, displayCurrency, rates) {
+    return formatDisplayPrice(totalUsd, displayCurrency, rates);
+  }
+
+  function tripTotalUsd(trip) {
+    return (trip || []).reduce((s, t) => s + (Number(t.priceUsd ?? t.price) || 0), 0);
+  }
+
+  // ------------------------------------------------------------------
   // i18n helper.
   // `lang` is one of: 'hant' (繁體) | 'hans' (简体) | 'en'.
   // Pass an object { hant, hans, en } to pick(); if a translation is
@@ -160,5 +212,10 @@
     return [all, ...Object.values(vendors).map(v => ({ id: v.id, label: v.title }))];
   }
 
-  window.AuralisUI = { Icon, formatPrice, singleCurrency, formatTotalAmount, fakePhoto, PhotoSparkles, CATEGORIES, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang };
+  window.AuralisUI = {
+    Icon, formatPrice, singleCurrency, formatTotalAmount,
+    CURRENCIES, FX_BASE, defaultCurrencyForLang,
+    convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
+    fakePhoto, PhotoSparkles, CATEGORIES, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+  };
 })();

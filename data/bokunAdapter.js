@@ -204,11 +204,12 @@
         mode,
         rating: activity.averageRating,
         reviews: activity.reviewCount,
+        priceUsd: defaultRow ? defaultRow.amount : 0,
         price: defaultRow ? defaultRow.amount : 0,
         priceCurrency: (defaultRow && defaultRow.currency)
           || activity.currency
           || activity.defaultCurrency
-          || 'ISK',
+          || 'USD',
         priceTable,
         badge,
         badgeKey,
