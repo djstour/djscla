@@ -1,4 +1,4 @@
-const { searchActivities } = require('../lib/bokun');
+const { searchActivities, getQuoteCurrency, applyQuoteCurrency } = require('../lib/bokun');
 const { normalizeSearchResponse } = require('../lib/normalizeActivity');
 
 function cors(res) {
@@ -24,12 +24,14 @@ module.exports = async function handler(req, res) {
 
   try {
     const raw = await searchActivities({ uiLang, page, pageSize });
-    const { activities, meta } = normalizeSearchResponse(raw);
+    const { activities: normalized, meta } = normalizeSearchResponse(raw);
+    const quoteCurrency = getQuoteCurrency();
+    const activities = applyQuoteCurrency(normalized, quoteCurrency);
 
     return res.status(200).json({
       source: 'bokun',
       activities,
-      meta,
+      meta: { ...meta, quoteCurrency },
     });
   } catch (err) {
     const status = err.code === 'BOKUN_CONFIG' ? 503 : err.status >= 400 && err.status < 600 ? err.status : 502;

@@ -99,9 +99,29 @@ async function getActivityById(id, { uiLang } = {}) {
   return bokunRequest({ method: 'GET', path });
 }
 
+/** Bókun often leaves `currency: ISK` on items even when search used `currency=USD`. */
+function getQuoteCurrency() {
+  return (process.env.BOKUN_CURRENCY || 'ISK').trim().toUpperCase();
+}
+
+function applyQuoteCurrency(activities, quoteCurrency = getQuoteCurrency()) {
+  const code = (quoteCurrency || 'ISK').toUpperCase();
+  return activities.map((a) => ({
+    ...a,
+    currency: code,
+    defaultCurrency: code,
+    pricing: (a.pricing || []).map((row) => ({ ...row, currency: code })),
+    nextDefaultPrice: a.nextDefaultPrice
+      ? { ...a.nextDefaultPrice, currency: code }
+      : null,
+  }));
+}
+
 module.exports = {
   bokunRequest,
   searchActivities,
   getActivityById,
   uiLangToBokunLang,
+  getQuoteCurrency,
+  applyQuoteCurrency,
 };

@@ -20,7 +20,7 @@ Access key + secret never reach the browser.
 | `BOKUN_SECRET_KEY` | Yes | Same key pair |
 | `BOKUN_API_HOST` | No | `https://api.bokun.io` (prod) or `https://api.bokuntest.com` (sandbox) |
 | `BOKUN_LANG` | No | `EN` — product copy from Bókun; TC/SC from `bokunTranslations.js` |
-| `BOKUN_CURRENCY` | No | `ISK` — must match booking channel checkout currency |
+| `BOKUN_CURRENCY` | No | `ISK` or `USD` — passed to `activity.json/search?currency=`. Bókun may still label rows `ISK` in JSON; the proxy rewrites display currency to match this env. |
 
 Set these in https://vercel.com/djstours-projects/djscla/settings/environment-variables then redeploy.
 
