@@ -406,7 +406,7 @@
                         width: '100%', height: 52, marginTop: 22, borderRadius: 16, border: 0,
                         cursor: inTrip ? 'default' : 'pointer',
                         background: inTrip ? 'var(--success-soft)' : 'var(--gradient-aurora)',
-                        color: inTrip ? '#0A7B4F' : '#062F2A',
+                        color: inTrip ? '#0A7B4F' : 'var(--brand-on-gradient)',
                         font: '700 15px/1 var(--font-text)',
                         boxShadow: inTrip ? 'none' : 'var(--shadow-glow-aurora)',
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,

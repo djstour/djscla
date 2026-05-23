@@ -20,7 +20,11 @@
   const CURRENCY_KEY = 'auralis.currency';
 
   function App() {
-    const [heroTheme] = useState(() => window.AuralisUI.getOrPickHeroTheme());
+    const [siteTheme] = useState(() => window.AuralisUI.pickSiteThemeForSession());
+
+    useEffect(() => {
+      window.AuralisUI.applySiteTheme(siteTheme);
+    }, [siteTheme]);
 
     const [screen, setScreen] = useState('home');  // home | tours | detail | trip | checkout
     const [detailActivityId, setDetailActivityId] = useState(null);
@@ -142,7 +146,7 @@
 
         {screen === 'home' && (
           <>
-            <Hero lang={lang} catalogTotal={catalogTotal} theme={heroTheme}
+            <Hero lang={lang} catalogTotal={catalogTotal} theme={siteTheme}
                   onSearch={() => setScreen('tours')} />
             {error && <div className="auralis-container"><BokunErrorBanner error={error} lang={lang} /></div>}
             <CategoryStrip onClick={() => setScreen('tours')} lang={lang} />

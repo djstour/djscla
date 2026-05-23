@@ -51,7 +51,7 @@
           'radial-gradient(60% 80% at 20% 30%, rgba(46,255,184,0.4) 0%, transparent 60%),' +
           'radial-gradient(55% 70% at 80% 20%, rgba(0,213,255,0.4) 0%, transparent 60%),' +
           'radial-gradient(70% 90% at 60% 90%, rgba(107,47,230,0.3) 0%, transparent 60%),' +
-          'linear-gradient(135deg, #DBF7FF 0%, #E8E2FF 60%, #FFD3A8 100%)',
+          'var(--brand-panel)',
       }}>
         {/* SVG map */}
         <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
@@ -217,7 +217,7 @@
                     width: '100%', height: 52, borderRadius: 16, border: 0,
                     cursor: trip.length === 0 ? 'not-allowed' : 'pointer',
                     background: trip.length === 0 ? 'var(--base-200)' : 'var(--gradient-aurora)',
-                    color: trip.length === 0 ? 'var(--fg-4)' : '#062F2A',
+                    color: trip.length === 0 ? 'var(--fg-4)' : 'var(--brand-on-gradient)',
                     boxShadow: trip.length === 0 ? 'none' : 'var(--shadow-glow-aurora)',
                     font: '700 15px/1 var(--font-text)',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,

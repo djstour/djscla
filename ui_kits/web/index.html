@@ -7,7 +7,18 @@
 <base href="/ui_kits/web/">
 <title>Auralis · 極光旅 — UI Kit</title>
 <link rel="icon" href="../../assets/logo-mark.svg">
-<link rel="stylesheet" href="../../colors_and_type.css">
+<link rel="stylesheet" href="../../colors_and_type.css?v=site1">
+<script>
+(function () {
+  try {
+    var t = sessionStorage.getItem('auralis:siteTheme:v1')
+      || sessionStorage.getItem('auralis:heroTheme:v3');
+    if (t === 'aurora' || t === 'mist' || t === 'sun') {
+      document.documentElement.setAttribute('data-site-theme', t);
+    }
+  } catch (e) { /* ignore */ }
+})();
+</script>
 <link rel="stylesheet" href="responsive.css">
 <link rel="preconnect" href="https://bokun.s3.amazonaws.com" crossorigin>
 <link rel="dns-prefetch" href="https://bokun.s3.amazonaws.com">
@@ -27,7 +38,7 @@
   *, *::before, *::after { box-sizing: border-box; }
   button { font-family: var(--font-text); }
   input { font-family: var(--font-text); }
-  ::selection { background: rgba(46,255,184,0.4); color: var(--fg-1); }
+  ::selection { background: var(--brand-selection); color: var(--fg-1); }
 </style>
 </head>
 <body data-screen-label="Auralis Web · 極光旅">

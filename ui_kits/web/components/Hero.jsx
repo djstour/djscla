@@ -5,10 +5,10 @@
   const { useState, useMemo } = React;
   const { Icon, pick, formatCatalogCount } = window.AuralisUI;
 
-  function Hero({ onSearch, lang, catalogTotal = 0, theme: themeProp }) {
+  function Hero({ onSearch, lang, catalogTotal = 0, theme }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
-    const theme = themeProp || window.AuralisUI.getOrPickHeroTheme();
+    if (!theme) return null;
 
     const stars = useMemo(
       () => Array.from({ length: 40 }, (_, i) => ({
@@ -36,7 +36,14 @@
     const cityPlaceholder = T({ hant: '雷克雅維克 (KEF)', hans: '雷克雅未克 (KEF)', en: 'Reykjavík (KEF)' });
 
     return (
-      <section className={`hero-section ${theme.sectionClass}`} data-hero-theme={theme.id}>
+      <section
+        className={`hero-section ${theme.sectionClass}`}
+        data-hero-theme={theme.id}
+        style={{
+          background: theme.heroBackground,
+          backgroundSize: '220% 220%',
+        }}
+      >
         <svg viewBox="0 0 1440 640" preserveAspectRatio="none"
              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.6 }}
              aria-hidden="true">
@@ -59,12 +66,12 @@
             }}>
               <span style={{
                 display: 'inline-block',
-                background: theme.headlineLine1Grad,
+                background: 'var(--brand-headline-1)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{headlineGrad[0]}</span><br />
               <span style={{
                 display: 'inline-block',
-                background: theme.headlineLine2Grad,
+                background: 'var(--brand-headline-2)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{headlineGrad[1]}</span>
             </h1>
@@ -80,9 +87,9 @@
             <div style={{ display: 'flex', gap: 14, marginTop: 32, alignItems: 'center', flexWrap: 'wrap' }}>
               <button type="button" onClick={() => onSearch && onSearch()} style={{
                 height: 54, padding: '0 28px', borderRadius: 999, border: 0, cursor: 'pointer',
-                background: theme.accentGrad, color: theme.ctaColor,
+                background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
                 font: '700 15px/1 var(--font-text)',
-                boxShadow: theme.accentGlow,
+                boxShadow: 'var(--shadow-glow-aurora)',
                 display: 'inline-flex', alignItems: 'center', gap: 10,
               }}>
                 {T({ hant: '開始規劃', hans: '开始规划', en: 'Start your itinerary' })}
@@ -113,9 +120,9 @@
 
             <button type="button" onClick={() => onSearch && onSearch()} style={{
               marginTop: 16, width: '100%', height: 52, borderRadius: 16, border: 0, cursor: 'pointer',
-              background: theme.accentGrad, color: theme.ctaColor,
+              background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
               font: '700 15px/1 var(--font-text)',
-              boxShadow: theme.accentGlow,
+              boxShadow: 'var(--shadow-glow-aurora)',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
               <Icon name="search" size={18} />

@@ -162,7 +162,7 @@
                     border: 0, cursor: 'pointer',
                     background: 'var(--gradient-aurora)',
                     boxShadow: 'var(--shadow-glow-aurora)',
-                    color: '#062F2A',
+                    color: 'var(--brand-on-gradient)',
                     display: 'flex', alignItems: 'center', gap: 8,
                     font: '700 13px/1 var(--font-text)',
                   }}>

@@ -47,7 +47,7 @@
 
     return (
       <footer className="auralis-section" style={{
-        background: 'linear-gradient(180deg, #FAFBFE 0%, #E8E2FF 100%)',
+        background: 'var(--brand-footer)',
         paddingTop: 'clamp(48px, 10vw, 64px)',
         paddingBottom: 32,
       }}>
@@ -85,7 +85,7 @@
                      }} />
               <button style={{
                 height: 52, padding: '0 22px', borderRadius: 16, border: 0, cursor: 'pointer',
-                background: 'var(--gradient-aurora)', color: '#062F2A',
+                background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
                 font: '700 14px/1 var(--font-text)', boxShadow: 'var(--shadow-glow-aurora)',
                 display: 'inline-flex', alignItems: 'center', gap: 8,
               }}>{T({ hant: '訂閱', hans: '订阅', en: 'Subscribe' })} <Icon name="arrow-right" size={16} /></button>

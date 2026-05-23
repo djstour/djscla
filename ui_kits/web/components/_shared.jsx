@@ -213,88 +213,130 @@
   }
 
   // ------------------------------------------------------------------
-  // Homepage hero themes — one per tab session (sessionStorage).
+  // Site-wide theme (aurora | mist | sun) — random once per tab, fixed in-session.
+  // Sets html[data-site-theme] → remaps CSS vars app-wide; hero uses heroBackground.
   // ------------------------------------------------------------------
-  const HERO_THEME_STORAGE_KEY = 'auralis:heroTheme:v2';
-  let resolvedHeroTheme = null;
+  const SITE_THEME_STORAGE_KEY = 'auralis:siteTheme:v1';
+  const LEGACY_HERO_THEME_KEY = 'auralis:heroTheme:v3';
 
-  const HERO_THEMES = [
+  const SITE_THEMES = [
     {
       id: 'aurora',
       sectionClass: 'bg-aurora-animated',
-      accentGrad: 'var(--gradient-aurora)',
-      accentGlow: 'var(--shadow-glow-aurora)',
-      ctaColor: '#062F2A',
-      headlineLine2Grad: 'var(--gradient-aurora)',
-      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 60%,#6B2FE6 100%)',
+      heroBackground: [
+        'radial-gradient(58% 75% at 18% 28%, rgba(46, 255, 184, 0.95) 0%, transparent 58%)',
+        'radial-gradient(52% 68% at 82% 18%, rgba(0, 213, 255, 0.9) 0%, transparent 58%)',
+        'radial-gradient(65% 85% at 55% 92%, rgba(0, 163, 209, 0.45) 0%, transparent 62%)',
+        'linear-gradient(135deg, #8FFFE0 0%, #B5F0FF 42%, #7AD4FF 100%)',
+      ].join(', '),
     },
     {
       id: 'mist',
       sectionClass: 'bg-mist-animated',
-      accentGrad: 'var(--gradient-aurora)',
-      accentGlow: 'var(--shadow-glow-aurora)',
-      ctaColor: '#062F2A',
-      headlineLine2Grad: 'linear-gradient(120deg,#2E3647 0%,#6B2FE6 55%,#00A3D1 100%)',
-      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 70%,#485670 100%)',
+      heroBackground: [
+        'radial-gradient(62% 78% at 18% 28%, rgba(232, 226, 255, 0.92) 0%, transparent 58%)',
+        'radial-gradient(58% 72% at 82% 22%, rgba(255, 233, 214, 0.88) 0%, transparent 58%)',
+        'radial-gradient(72% 88% at 52% 92%, rgba(219, 247, 255, 0.9) 0%, transparent 62%)',
+        'linear-gradient(135deg, #E8E2FF 0%, #FFE9D6 50%, #DBF7FF 100%)',
+      ].join(', '),
     },
     {
       id: 'sun',
       sectionClass: 'bg-sun-animated',
-      accentGrad: 'var(--gradient-sun)',
-      accentGlow: 'var(--shadow-glow-sun)',
-      ctaColor: '#fff',
-      headlineLine2Grad: 'var(--gradient-sun)',
-      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#6B2FE6 50%,#FF7A2E 100%)',
+      heroBackground: [
+        'radial-gradient(58% 78% at 20% 30%, rgba(107, 47, 230, 0.72) 0%, transparent 58%)',
+        'radial-gradient(55% 72% at 80% 22%, rgba(255, 122, 46, 0.78) 0%, transparent 58%)',
+        'radial-gradient(68% 88% at 52% 90%, rgba(179, 49, 226, 0.55) 0%, transparent 62%)',
+        'linear-gradient(135deg, #D4C2FF 0%, #FFB88A 48%, #FF7A2E 100%)',
+      ].join(', '),
     },
   ];
 
-  function randomHeroThemeIndex(len) {
-    if (len <= 1) return 0;
+  const HERO_THEMES = SITE_THEMES;
+
+  function randomInt(max) {
+    if (max <= 1) return 0;
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
       const buf = new Uint32Array(1);
       crypto.getRandomValues(buf);
-      return buf[0] % len;
+      return buf[0] % max;
     }
-    return Math.floor(Math.random() * len);
+    return Math.floor(Math.random() * max);
   }
 
-  function heroThemeFromQuery() {
+  function siteThemeFromQuery() {
     if (typeof window === 'undefined') return null;
     try {
-      const forced = new URLSearchParams(window.location.search).get('hero');
+      const params = new URLSearchParams(window.location.search);
+      const forced = params.get('theme') || params.get('hero');
       if (!forced) return null;
-      return HERO_THEMES.find((t) => t.id === forced) || null;
+      return SITE_THEMES.find((t) => t.id === forced) || null;
     } catch {
       return null;
     }
   }
 
-  function getOrPickHeroTheme() {
-    if (resolvedHeroTheme) return resolvedHeroTheme;
+  function applySiteTheme(theme) {
+    if (!theme || typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-site-theme', theme.id);
+  }
 
-    const forced = heroThemeFromQuery();
+  /** Fisher–Yates shuffle, return first theme (uniform random among three). */
+  function pickRandomSiteTheme() {
+    const pool = SITE_THEMES.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      const tmp = pool[i];
+      pool[i] = pool[j];
+      pool[j] = tmp;
+    }
+    return pool[0];
+  }
+
+  function readStoredSiteThemeId() {
+    try {
+      let saved = sessionStorage.getItem(SITE_THEME_STORAGE_KEY);
+      if (!saved) {
+        saved = sessionStorage.getItem(LEGACY_HERO_THEME_KEY);
+        if (saved) sessionStorage.setItem(SITE_THEME_STORAGE_KEY, saved);
+      }
+      return saved;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function pickSiteThemeForSession() {
+    const forced = siteThemeFromQuery();
     if (forced) {
-      resolvedHeroTheme = forced;
-      try { sessionStorage.setItem(HERO_THEME_STORAGE_KEY, forced.id); } catch (_) { /* ignore */ }
-      return resolvedHeroTheme;
+      try { sessionStorage.setItem(SITE_THEME_STORAGE_KEY, forced.id); } catch (_) { /* ignore */ }
+      applySiteTheme(forced);
+      return forced;
     }
 
-    try {
-      const saved = sessionStorage.getItem(HERO_THEME_STORAGE_KEY);
-      if (saved) {
-        const found = HERO_THEMES.find((t) => t.id === saved);
-        if (found) {
-          resolvedHeroTheme = found;
-          return resolvedHeroTheme;
-        }
+    const saved = readStoredSiteThemeId();
+    if (saved) {
+      const found = SITE_THEMES.find((t) => t.id === saved);
+      if (found) {
+        applySiteTheme(found);
+        return found;
       }
-    } catch (_) { /* private mode */ }
+    }
 
-    resolvedHeroTheme = HERO_THEMES[randomHeroThemeIndex(HERO_THEMES.length)];
+    const picked = pickRandomSiteTheme();
     try {
-      sessionStorage.setItem(HERO_THEME_STORAGE_KEY, resolvedHeroTheme.id);
+      sessionStorage.setItem(SITE_THEME_STORAGE_KEY, picked.id);
     } catch (_) { /* ignore */ }
-    return resolvedHeroTheme;
+    applySiteTheme(picked);
+    return picked;
+  }
+
+  function pickHeroThemeForSession() {
+    return pickSiteThemeForSession();
+  }
+
+  function getOrPickHeroTheme() {
+    return pickSiteThemeForSession();
   }
 
   // Procedural "photo" — gradients tuned to feel like Iceland locations.
@@ -403,6 +445,7 @@
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
-    HERO_THEMES, getOrPickHeroTheme,
+    SITE_THEMES, HERO_THEMES, pickSiteThemeForSession, applySiteTheme,
+    pickHeroThemeForSession, getOrPickHeroTheme,
   };
 })();

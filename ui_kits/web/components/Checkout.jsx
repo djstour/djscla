@@ -20,7 +20,7 @@
     return (
       <section className="auralis-section" style={{
         minHeight: 720,
-        background: 'linear-gradient(180deg, #FAFBFE 0%, #F1F4FA 100%)',
+        background: 'var(--brand-surface)',
         paddingTop: 40,
         paddingBottom: 40,
       }}>
@@ -273,7 +273,7 @@
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: 'var(--shadow-glow-aurora)',
         }}>
-          <Icon name="check" size={32} color="#062F2A" strokeWidth={2.5} />
+          <Icon name="check" size={32} color="var(--brand-on-gradient)" strokeWidth={2.5} />
         </div>
         <h2 style={{ margin: 0, font: '700 36px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
           {T({ hant: '預訂完成。', hans: '预订完成。', en: 'Booked.' })}
@@ -294,7 +294,7 @@
         <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
           <button onClick={onClose} style={{
             height: 48, padding: '0 24px', borderRadius: 999, border: 0, cursor: 'pointer',
-            background: 'var(--gradient-aurora)', color: '#062F2A',
+            background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
             font: '700 14px/1 var(--font-text)', boxShadow: 'var(--shadow-glow-aurora)',
             display: 'inline-flex', alignItems: 'center', gap: 8,
           }}>{T({ hant: '回到首頁', hans: '回到首页', en: 'Back to discover' })} <Icon name="arrow-right" size={16} /></button>
@@ -346,7 +346,7 @@
         </div>
         <button onClick={onNext} style={{
           width: '100%', height: 52, borderRadius: 16, border: 0, cursor: 'pointer',
-          background: 'var(--gradient-aurora)', color: '#062F2A',
+          background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
           font: '700 15px/1 var(--font-text)', boxShadow: 'var(--shadow-glow-aurora)',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>

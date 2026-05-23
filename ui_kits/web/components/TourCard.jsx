@@ -236,7 +236,7 @@
                       height: 38, padding: inTrip ? '0 12px' : '0 16px', borderRadius: 999, border: 0,
                       cursor: inTrip ? 'default' : 'pointer',
                       background: inTrip ? 'var(--success-soft)' : 'var(--gradient-aurora)',
-                      color: inTrip ? '#0A7B4F' : '#062F2A',
+                      color: inTrip ? '#0A7B4F' : 'var(--brand-on-gradient)',
                       boxShadow: inTrip ? 'none' : 'var(--shadow-glow-aurora)',
                       font: '700 13px/1 var(--font-text)',
                       display: 'inline-flex', alignItems: 'center', gap: 6,
