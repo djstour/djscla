@@ -217,6 +217,15 @@
     return num.toLocaleString(locale);
   }
 
+  /** Same-origin WebP thumb for Bókun S3 covers (see /api/media/thumb). */
+  function proxyImageUrl(url, opts = {}) {
+    const { w = 480, q = 80 } = opts;
+    if (!url || typeof url !== 'string') return url;
+    if (!/^https:\/\/bokun\.s3\.amazonaws\.com\//i.test(url)) return url;
+    const params = new URLSearchParams({ url, w: String(w), q: String(q) });
+    return `/api/media/thumb?${params.toString()}`;
+  }
+
   /** Supplier filter options derived from live Bókun activities. */
   function getSupplierOptions(lang, activities = []) {
     const all = { id: 'all', label: pick(lang, { hant: '全部供應商', hans: '全部供应商', en: 'All suppliers' }) };
@@ -234,6 +243,6 @@
     Icon, formatPrice, singleCurrency, formatTotalAmount,
     CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
-    fakePhoto, PhotoSparkles, CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+    fakePhoto, PhotoSparkles, proxyImageUrl, CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
   };
 })();

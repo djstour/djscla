@@ -5,7 +5,7 @@
 
 (function () {
   const { useState } = React;
-  const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick } = window.AuralisUI;
+  const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick, proxyImageUrl } = window.AuralisUI;
 
   function TourCardImage({ src, alt, height, fallbackPhoto, priority }) {
     const [loaded, setLoaded] = useState(!src);
@@ -56,6 +56,10 @@
     const capacity = tour.availability && tour.availability.capacityRemaining;
     const showLowCapacity = typeof capacity === 'number' && capacity <= 8;
     const photoHeight = compact ? 150 : 200;
+    const thumbW = compact ? 400 : 520;
+    const coverSrc = tour.coverImageUrl
+      ? proxyImageUrl(tour.coverImageUrl, { w: thumbW, q: 78 })
+      : null;
 
     function openDetail(e) {
       if (onView) onView(tour);
@@ -81,7 +85,7 @@
       >
         <div style={{ position: 'relative' }}>
           <TourCardImage
-            src={tour.coverImageUrl}
+            src={coverSrc}
             alt={tour.title}
             height={photoHeight}
             fallbackPhoto={tour.coverImageUrl ? null : fakePhoto(tour.photo)}

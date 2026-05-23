@@ -1,7 +1,7 @@
 /* ActivityDetail — full product page from Bókun GET /activity.json/{id}. */
 
 (function () {
-  const { Icon, formatDisplayPrice, fakePhoto, pick } = window.AuralisUI;
+  const { Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl } = window.AuralisUI;
 
   function ActivityDetail({
     tour,
@@ -33,6 +33,7 @@
 
     const photos = (tour.photoUrls && tour.photoUrls.length) ? tour.photoUrls : [];
     const heroUrl = photos[0] || tour.coverImageUrl;
+    const heroThumb = heroUrl ? proxyImageUrl(heroUrl, { w: 1200, q: 82 }) : null;
     const cancelHrs = tour.availability && tour.cancellationCutoffMinutes != null
       ? Math.round(tour.cancellationCutoffMinutes / 60)
       : null;
@@ -61,7 +62,8 @@
               {photos.slice(0, 6).map((url, i) => (
                 <div key={url + i} style={{
                   width: 72, height: 48, borderRadius: 10, flexShrink: 0,
-                  backgroundImage: `url(${url})`, backgroundSize: 'cover', backgroundPosition: 'center',
+                  backgroundImage: `url(${proxyImageUrl(url, { w: 160, q: 75 })})`,
+                  backgroundSize: 'cover', backgroundPosition: 'center',
                   boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.8)',
                 }} />
               ))}
