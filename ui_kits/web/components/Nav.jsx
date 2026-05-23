@@ -108,16 +108,6 @@
           <img src="../../assets/logo-wordmark.svg" alt="Auralis · 極光旅" />
         </a>
 
-        <button
-          type="button"
-          className="nav-menu-btn"
-          aria-expanded={menuOpen}
-          aria-label={T({ hant: '選單', hans: '菜单', en: 'Menu' })}
-          onClick={() => setMenuOpen((v) => !v)}
-        >
-          <Icon name={menuOpen ? 'x' : 'menu'} size={22} />
-        </button>
-
         <nav className="nav-links" aria-label={T({ hant: '主要導覽', hans: '主要导航', en: 'Main' })}>
           {navItems.map((item) => {
             const active = currentScreen === item.id;
@@ -179,6 +169,16 @@
                   }}>
             <Icon name="shopping-bag" size={16} />
             <span className="nav-cart-label">{cartCount} {T({ hant: '個', hans: '个', en: 'in trip' })}</span>
+          </button>
+
+          <button
+            type="button"
+            className="nav-menu-btn"
+            aria-expanded={menuOpen}
+            aria-label={T({ hant: '選單', hans: '菜单', en: 'Menu' })}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <Icon name={menuOpen ? 'x' : 'menu'} size={22} />
           </button>
         </div>
       </header>
