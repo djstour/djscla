@@ -11,8 +11,8 @@ Static hosting for the Auralis design system and UI kit. No build step.
 
 | Path | Content |
 |------|---------|
-| `/` | → UI kit (`/ui_kits/web/index.html`) |
-| `/ui_kits/web/index.html` | 4-screen prototype |
+| `/` or `/index.html` | UI kit (rewritten to `ui_kits/web/index.html`, URL stays at root) |
+| `/ui_kits/web/index.html` | 301 → `/` |
 | `/preview/*.html` | Design system cards |
 
 ## Import from GitHub

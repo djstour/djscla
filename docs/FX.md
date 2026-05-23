@@ -27,7 +27,7 @@ Browser  →  GET /api/fx/rates
 |---------|-----------|
 | Nav currency dropdown | Persists to `localStorage` key `auralis.currency` |
 | Default on first visit | `TWD` (hant), `CNY` (hans), `USD` (en) |
-| Tooltip on select | `FX as of YYYY-MM-DD (Frankfurter / ECB)` when rates loaded |
+| Nav currency menu | ISO code list only; full name on `title` / `aria-label` |
 | Prices on cards / trip / checkout | `tour.priceUsd` converted with live rates |
 
 ## Local preview

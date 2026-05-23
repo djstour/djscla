@@ -36,7 +36,7 @@
     }, [enabled, onClose]);
   }
 
-  function Nav({ currentScreen, onNav, cartCount = 0, lang, onCycleLang, displayCurrency, onCurrencyChange, fxDate }) {
+  function Nav({ currentScreen, onNav, cartCount = 0, lang, onCycleLang, displayCurrency, onCurrencyChange }) {
     const T = (opts) => pick(lang, opts);
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -109,7 +109,6 @@
             onLangChange={onCycleLang}
             displayCurrency={displayCurrency}
             onCurrencyChange={onCurrencyChange}
-            fxDate={fxDate}
           />
 
           <button type="button" className="u-hide-sm" aria-label={T({ hant: '帳戶', hans: '账户', en: 'Account' })}
@@ -139,7 +138,7 @@
     );
   }
 
-  function LocaleControls({ lang, onLangChange, displayCurrency, onCurrencyChange, fxDate }) {
+  function LocaleControls({ lang, onLangChange, displayCurrency, onCurrencyChange }) {
     const T = (opts) => pick(lang, opts);
 
     return (
@@ -155,7 +154,6 @@
           lang={lang}
           value={displayCurrency}
           onChange={onCurrencyChange}
-          fxDate={fxDate}
         />
       </div>
     );
@@ -217,7 +215,7 @@
     );
   }
 
-  function CurrencyPicker({ lang, value, onChange, fxDate }) {
+  function CurrencyPicker({ lang, value, onChange }) {
     const T = (opts) => pick(lang, opts);
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
@@ -234,13 +232,6 @@
     }, [open]);
 
     const current = CURRENCIES.find((c) => c.code === value) || CURRENCIES[0];
-    const fxHint = fxDate
-      ? T({
-          hant: `匯率基準日 ${fxDate}（ECB 參考）`,
-          hans: `汇率基准日 ${fxDate}（ECB 参考）`,
-          en: `Rates as of ${fxDate} (ECB reference)`,
-        })
-      : T({ hant: '匯率載入中…', hans: '汇率加载中…', en: 'Loading exchange rates…' });
 
     return (
       <div ref={rootRef} style={{ position: 'relative' }}>
@@ -288,25 +279,17 @@
               top: 'calc(100% + 6px)',
               right: 0,
               zIndex: 60,
-              width: 248,
-              padding: 6,
-              borderRadius: 14,
+              width: 'max-content',
+              minWidth: 0,
+              padding: 4,
+              borderRadius: 12,
               background: 'rgba(255,255,255,0.96)',
               backdropFilter: 'blur(20px) saturate(1.2)',
               WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
               boxShadow: 'var(--shadow-4), inset 0 0 0 1px rgba(255,255,255,0.8)',
             }}
           >
-            <div style={{
-              padding: '6px 8px 8px',
-              font: '500 10px/1.35 var(--font-text)',
-              color: 'var(--fg-3)',
-              borderBottom: '1px solid var(--base-200)',
-              marginBottom: 2,
-            }}>
-              {fxHint}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 280, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {CURRENCIES.map((c) => {
                 const selected = c.code === value;
                 return (
@@ -315,14 +298,16 @@
                     type="button"
                     role="option"
                     aria-selected={selected}
+                    aria-label={pick(lang, c.name)}
+                    title={pick(lang, c.name)}
                     onClick={() => {
                       onChange(c.code);
                       setOpen(false);
                     }}
                     style={{
                       width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 10,
+                      padding: '6px 8px',
+                      borderRadius: 8,
                       border: 0,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -331,7 +316,10 @@
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      gap: 12,
+                      gap: 6,
+                      font: '700 11px/1 var(--font-text)',
+                      letterSpacing: '0.04em',
+                      color: selected ? 'var(--fg-1)' : 'var(--fg-2)',
                       transition: 'background var(--dur-fast) var(--ease-out)',
                     }}
                     onMouseEnter={(e) => {
@@ -341,15 +329,8 @@
                       if (!selected) e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-                      <span style={{ font: '700 11px/1 var(--font-text)', color: 'var(--fg-3)', letterSpacing: '0.04em' }}>
-                        {c.code}
-                      </span>
-                      <span style={{ font: '600 13px/1 var(--font-text)', color: 'var(--fg-1)' }}>
-                        {pick(lang, c.name)}
-                      </span>
-                    </span>
-                    {selected && <Icon name="check" size={14} color="var(--aurora-deep)" />}
+                    <span>{c.code}</span>
+                    {selected && <Icon name="check" size={12} color="var(--aurora-deep)" />}
                   </button>
                 );
               })}

@@ -10,17 +10,25 @@
     {
       "source": "/api/bokun/activities",
       "destination": "/api/catalog/activities"
+    },
+    {
+      "source": "/",
+      "destination": "/ui_kits/web/index.html"
+    },
+    {
+      "source": "/index.html",
+      "destination": "/ui_kits/web/index.html"
     }
   ],
   "redirects": [
     {
-      "source": "/",
-      "destination": "/ui_kits/web/index.html",
-      "permanent": false
+      "source": "/ui_kits/web/index.html",
+      "destination": "/",
+      "permanent": true
     },
     {
       "source": "/kit",
-      "destination": "/ui_kits/web/index.html",
+      "destination": "/",
       "permanent": false
     }
   ],

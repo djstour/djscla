@@ -38,7 +38,6 @@
     });
 
     const [fxRates, setFxRates] = useState({ USD: 1 });
-    const [fxDate, setFxDate] = useState(null);
 
     useEffect(() => {
       applyHtmlLang(lang);
@@ -55,7 +54,6 @@
         .then((data) => {
           if (data.rates) {
             setFxRates({ USD: 1, ...data.rates });
-            setFxDate(data.date || null);
           }
         })
         .catch((err) => console.warn('[Auralis] FX rates unavailable:', err.message));
@@ -126,8 +124,7 @@
       <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
         <Nav currentScreen={screen} onNav={setScreen}
              cartCount={tripIds.length} lang={lang} onCycleLang={setLang}
-             displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency}
-             fxDate={fxDate} />
+             displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency} />
 
         {screen === 'home' && (
           <>

@@ -41,7 +41,7 @@ npx vercel dev
 # open http://localhost:3000/ui_kits/web/index.html
 ```
 
-Production: https://djscla.vercel.app/ui_kits/web/index.html
+Production: https://djscla.vercel.app/
 
 ## Troubleshooting `401 Invalid API key`
 
