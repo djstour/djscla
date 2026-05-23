@@ -16,13 +16,49 @@
     flexShrink: 0,
   };
 
-  const LANG_SHELL = {
-    position: 'relative',
-    display: 'inline-flex',
+  const LOCALE_BTN = {
     height: 28,
-    padding: 2,
+    padding: '0 8px 0 9px',
     borderRadius: 999,
+    border: 0,
+    cursor: 'pointer',
+    display: 'inline-flex',
     alignItems: 'center',
+    gap: 2,
+    font: '700 11px/1 var(--font-text)',
+    letterSpacing: '0.04em',
+    color: 'var(--fg-1)',
+    transition: 'background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out)',
+  };
+
+  const LOCALE_MENU = {
+    position: 'absolute',
+    top: 'calc(100% + 6px)',
+    zIndex: 60,
+    width: 'max-content',
+    minWidth: 0,
+    padding: 4,
+    borderRadius: 12,
+    background: 'rgba(255,255,255,0.96)',
+    backdropFilter: 'blur(20px) saturate(1.2)',
+    WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
+    boxShadow: 'var(--shadow-4), inset 0 0 0 1px rgba(255,255,255,0.8)',
+  };
+
+  const LOCALE_OPTION = {
+    width: '100%',
+    padding: '6px 8px',
+    borderRadius: 8,
+    border: 0,
+    cursor: 'pointer',
+    textAlign: 'left',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    font: '700 11px/1 var(--font-text)',
+    letterSpacing: '0.04em',
+    transition: 'background var(--dur-fast) var(--ease-out)',
   };
 
   function useClickOutside(ref, onClose, enabled) {
@@ -148,7 +184,7 @@
         aria-label={T({ hant: '語言與幣別', hans: '语言与币别', en: 'Language and currency' })}
         style={LOCALE_STRIP}
       >
-        <LangToggle lang={lang} onChange={onLangChange} />
+        <LangPicker lang={lang} onChange={onLangChange} />
         <span className="locale-divider" aria-hidden="true" />
         <CurrencyPicker
           lang={lang}
@@ -159,58 +195,98 @@
     );
   }
 
-  function LangToggle({ lang, onChange }) {
-    const activeIdx = Math.max(0, LANGS.findIndex((l) => l.id === lang));
+  function LangPicker({ lang, onChange }) {
+    const T = (opts) => pick(lang, opts);
+    const [open, setOpen] = useState(false);
+    const rootRef = useRef(null);
+
+    useClickOutside(rootRef, () => setOpen(false), open);
+
+    useEffect(() => {
+      if (!open) return undefined;
+      function onKey(e) {
+        if (e.key === 'Escape') setOpen(false);
+      }
+      document.addEventListener('keydown', onKey);
+      return () => document.removeEventListener('keydown', onKey);
+    }, [open]);
+
     const titles = {
       hant: { hant: '繁體中文', hans: '繁体中文', en: 'Traditional Chinese' },
       hans: { hant: '簡體中文', hans: '简体中文', en: 'Simplified Chinese' },
       en:   { hant: 'English',  hans: 'English',  en: 'English' },
     };
+    const current = LANGS.find((l) => l.id === lang) || LANGS[0];
 
     return (
-      <div role="group" aria-label="Language" style={LANG_SHELL}>
-        <span aria-hidden="true" style={{
-          position: 'absolute',
-          top: 2, bottom: 2,
-          left: 2,
-          width: 'calc((100% - 4px) / 3)',
-          transform: `translateX(${activeIdx * 100}%)`,
-          background: 'var(--gradient-aurora)',
-          borderRadius: 999,
-          boxShadow: '0 2px 8px rgba(0,213,255,0.28)',
-          transition: 'transform var(--dur-base) var(--ease-out)',
-          pointerEvents: 'none',
-        }} />
-        {LANGS.map((l) => {
-          const active = lang === l.id;
-          return (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => onChange(l.id)}
-              aria-pressed={active}
-              aria-label={pick(lang, titles[l.id])}
-              title={pick(lang, titles[l.id])}
-              style={{
-                position: 'relative',
-                zIndex: 1,
-                flex: 1,
-                minWidth: 28,
-                padding: '0 7px',
-                height: 24,
-                border: 0,
-                background: 'transparent',
-                cursor: 'pointer',
-                font: '700 11px/1 var(--font-text)',
-                color: active ? '#062F2A' : 'var(--fg-2)',
-                letterSpacing: l.id === 'en' ? '0.03em' : 0,
-                transition: 'color var(--dur-fast) var(--ease-out)',
-              }}
-            >
-              {l.label}
-            </button>
-          );
-        })}
+      <div ref={rootRef} style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={T({
+            hant: `語言：${pick(lang, titles[current.id])}`,
+            hans: `语言：${pick(lang, titles[current.id])}`,
+            en: `Language: ${pick(lang, titles[current.id])}`,
+          })}
+          title={pick(lang, titles[current.id])}
+          className="locale-picker-btn locale-lang-btn"
+          style={{
+            ...LOCALE_BTN,
+            marginLeft: 2,
+            background: open ? 'rgba(255,255,255,0.95)' : 'transparent',
+            boxShadow: open ? 'inset 0 0 0 1.5px var(--aurora-cyan)' : 'none',
+          }}
+        >
+          <span>{current.label}</span>
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={13} color="var(--fg-3)" />
+        </button>
+
+        {open && (
+          <div
+            role="listbox"
+            aria-label={T({ hant: '選擇語言', hans: '选择语言', en: 'Choose language' })}
+            className="locale-picker-menu locale-lang-menu"
+            style={{ ...LOCALE_MENU, left: 0 }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {LANGS.map((l) => {
+                const selected = l.id === lang;
+                const name = pick(lang, titles[l.id]);
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    aria-label={name}
+                    title={name}
+                    onClick={() => {
+                      onChange(l.id);
+                      setOpen(false);
+                    }}
+                    style={{
+                      ...LOCALE_OPTION,
+                      color: selected ? 'var(--fg-1)' : 'var(--fg-2)',
+                      background: selected ? 'var(--gradient-aurora-soft)' : 'transparent',
+                      boxShadow: selected ? 'inset 0 0 0 1px rgba(0,213,255,0.35)' : 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selected) e.currentTarget.style.background = 'var(--base-50)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!selected) e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span>{l.label}</span>
+                    {selected && <Icon name="check" size={12} color="var(--aurora-deep)" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -246,23 +322,12 @@
             en: `Display currency: ${currencyLabel(value, lang)}`,
           })}
           title={pick(lang, current.name)}
-          className="locale-currency-btn"
+          className="locale-picker-btn locale-currency-btn"
           style={{
-            height: 28,
-            padding: '0 8px 0 9px',
+            ...LOCALE_BTN,
             marginRight: 2,
-            borderRadius: 999,
-            border: 0,
-            cursor: 'pointer',
             background: open ? 'rgba(255,255,255,0.95)' : 'transparent',
             boxShadow: open ? 'inset 0 0 0 1.5px var(--aurora-cyan)' : 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 2,
-            font: '700 11px/1 var(--font-text)',
-            letterSpacing: '0.04em',
-            color: 'var(--fg-1)',
-            transition: 'background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out)',
           }}
         >
           <span>{current.code}</span>
@@ -273,21 +338,8 @@
           <div
             role="listbox"
             aria-label={T({ hant: '選擇顯示幣別', hans: '选择显示币别', en: 'Choose display currency' })}
-            className="locale-currency-menu"
-            style={{
-              position: 'absolute',
-              top: 'calc(100% + 6px)',
-              right: 0,
-              zIndex: 60,
-              width: 'max-content',
-              minWidth: 0,
-              padding: 4,
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.96)',
-              backdropFilter: 'blur(20px) saturate(1.2)',
-              WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
-              boxShadow: 'var(--shadow-4), inset 0 0 0 1px rgba(255,255,255,0.8)',
-            }}
+            className="locale-picker-menu locale-currency-menu"
+            style={{ ...LOCALE_MENU, right: 0 }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {CURRENCIES.map((c) => {
@@ -305,22 +357,10 @@
                       setOpen(false);
                     }}
                     style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      borderRadius: 8,
-                      border: 0,
-                      cursor: 'pointer',
-                      textAlign: 'left',
+                      ...LOCALE_OPTION,
+                      color: selected ? 'var(--fg-1)' : 'var(--fg-2)',
                       background: selected ? 'var(--gradient-aurora-soft)' : 'transparent',
                       boxShadow: selected ? 'inset 0 0 0 1px rgba(0,213,255,0.35)' : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 6,
-                      font: '700 11px/1 var(--font-text)',
-                      letterSpacing: '0.04em',
-                      color: selected ? 'var(--fg-1)' : 'var(--fg-2)',
-                      transition: 'background var(--dur-fast) var(--ease-out)',
                     }}
                     onMouseEnter={(e) => {
                       if (!selected) e.currentTarget.style.background = 'var(--base-50)';

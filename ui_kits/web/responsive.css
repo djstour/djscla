@@ -203,7 +203,7 @@ html {
   flex-shrink: 0;
 }
 
-.locale-currency-menu {
+.locale-picker-menu {
   width: max-content !important;
 }
 
@@ -213,7 +213,7 @@ html {
     padding: 2px;
   }
 
-  .locale-currency-btn {
+  .locale-picker-btn {
     padding: 0 6px 0 7px !important;
     font-size: 10px !important;
   }
