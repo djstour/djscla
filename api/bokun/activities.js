@@ -33,9 +33,19 @@ module.exports = async function handler(req, res) {
     });
   } catch (err) {
     const status = err.code === 'BOKUN_CONFIG' ? 503 : err.status >= 400 && err.status < 600 ? err.status : 502;
+    const hints = [];
+    if (status === 401) {
+      hints.push('Check Vercel env: BOKUN_ACCESS_KEY + BOKUN_SECRET_KEY (pair from Bókun → Settings → API keys).');
+      hints.push('Sandbox keys need BOKUN_API_HOST=https://api.bokuntest.com — production keys use https://api.bokun.io');
+      hints.push('Redeploy after changing environment variables.');
+    }
+    if (err.code === 'BOKUN_CONFIG') {
+      hints.push('Set BOKUN_ACCESS_KEY and BOKUN_SECRET_KEY on the Vercel project, then redeploy.');
+    }
     return res.status(status).json({
       error: err.message,
       code: err.code || 'BOKUN_ERROR',
+      hints,
     });
   }
 };

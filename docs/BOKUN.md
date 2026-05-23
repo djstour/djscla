@@ -41,6 +41,20 @@ Production: https://djscla.vercel.app/ui_kits/web/index.html
 
 If the proxy fails (missing keys, bad signature, rate limit), the UI falls back to `mockBokunData.js` and logs a console warning.
 
+## Troubleshooting `401 Invalid API key`
+
+Console: `[Auralis] Bókun API unavailable — showing mocks` and `/api/bokun/activities` returns 401.
+
+| Check | Action |
+|-------|--------|
+| Both keys set | Vercel → **djscla** → Settings → Environment Variables: `BOKUN_ACCESS_KEY` **and** `BOKUN_SECRET_KEY` (same row in Bókun API key UI) |
+| No typos | Re-paste keys; no spaces or quotes; redeploy **Production** |
+| Host matches keys | **Sandbox** key → `BOKUN_API_HOST=https://api.bokuntest.com` · **Live** key → `https://api.bokun.io` |
+| Booking channel | API key must belong to a booking channel with products to sell |
+| Permissions | Key needs access to activity search / booking API |
+
+Verify: open `https://djscla.vercel.app/api/bokun/activities?lang=hant` — should return `"source":"bokun"` and an `activities` array (not `Invalid API key`).
+
 ## Files
 
 | File | Role |

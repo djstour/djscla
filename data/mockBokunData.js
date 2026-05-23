@@ -162,7 +162,7 @@
       keywords: ['South Coast', 'Jökulsárlón', 'Diamond Beach', 'Reynisfjara'],
       languages: ['en', 'zh', 'ja'],
 
-      coverImageUrl: '/assets/photos/lagoon-hero.jpg',
+      coverImageUrl: null,
       coverImagePlaceholder: 'lagoon',
       photos: [],
 
@@ -222,7 +222,7 @@
       keywords: ['Aurora', 'Northern Lights', 'Þingvellir'],
       languages: ['en', 'zh'],
 
-      coverImageUrl: '/assets/photos/aurora-hero.jpg',
+      coverImageUrl: null,
       coverImagePlaceholder: 'aurora',
       photos: [],
 
@@ -282,7 +282,7 @@
       keywords: ['Blue Lagoon', 'spa', 'hot spring'],
       languages: ['en'],
 
-      coverImageUrl: '/assets/photos/bluelagoon-hero.jpg',
+      coverImageUrl: null,
       coverImagePlaceholder: 'bluelagoon',
       photos: [],
 
@@ -343,7 +343,7 @@
       keywords: ['Golden Circle', 'Geysir', 'Gullfoss', 'Þingvellir'],
       languages: ['en', 'zh', 'ja', 'ko'],
 
-      coverImageUrl: '/assets/photos/geyser-hero.jpg',
+      coverImageUrl: null,
       coverImagePlaceholder: 'geyser',
       photos: [],
 
@@ -401,7 +401,7 @@
       keywords: ['Vatnajökull', 'ice cave', 'glacier hike'],
       languages: ['en'],
 
-      coverImageUrl: '/assets/photos/glacier-hero.jpg',
+      coverImageUrl: null,
       coverImagePlaceholder: 'glacier',
       photos: [],
 
@@ -460,7 +460,7 @@
       keywords: ['helicopter', 'Reykjanes', 'volcano'],
       languages: ['en'],
 
-      coverImageUrl: '/assets/photos/sunset-hero.jpg',
+      coverImageUrl: null,
       coverImagePlaceholder: 'sunset',
       photos: [],
 

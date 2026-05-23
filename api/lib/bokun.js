@@ -16,8 +16,8 @@ function buildSignature({ date, accessKey, method, path, secretKey }) {
 }
 
 function getConfig() {
-  const accessKey = process.env.BOKUN_ACCESS_KEY;
-  const secretKey = process.env.BOKUN_SECRET_KEY;
+  const accessKey = (process.env.BOKUN_ACCESS_KEY || '').trim();
+  const secretKey = (process.env.BOKUN_SECRET_KEY || process.env.BOKUN_SECRET || '').trim();
   const host = (process.env.BOKUN_API_HOST || 'https://api.bokun.io').replace(/\/$/, '');
   const lang = process.env.BOKUN_LANG || 'EN';
   const currency = process.env.BOKUN_CURRENCY || 'ISK';
