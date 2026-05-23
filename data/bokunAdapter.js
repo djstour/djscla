@@ -66,6 +66,38 @@
     return fallback;
   }
 
+  /** Merge static bokunTranslations.js with Supabase overlays from API. */
+  function mergeActivityOverlay(staticOverlay, runtimeOverlay) {
+    if (!staticOverlay || !Object.keys(staticOverlay).length) {
+      return runtimeOverlay ? JSON.parse(JSON.stringify(runtimeOverlay)) : {};
+    }
+    if (!runtimeOverlay || !Object.keys(runtimeOverlay).length) {
+      return JSON.parse(JSON.stringify(staticOverlay));
+    }
+    const out = JSON.parse(JSON.stringify(staticOverlay));
+    Object.keys(runtimeOverlay).forEach((key) => {
+      const val = runtimeOverlay[key];
+      if (key === 'stops' && val && typeof val === 'object') {
+        out.stops = out.stops || {};
+        Object.keys(val).forEach((stopId) => {
+          out.stops[stopId] = { ...(out.stops[stopId] || {}), ...val[stopId] };
+        });
+      } else if (val && typeof val === 'object') {
+        out[key] = { ...(out[key] || {}), ...val };
+      } else {
+        out[key] = val;
+      }
+    });
+    return out;
+  }
+
+  function getActivityOverlay(activityId) {
+    const T = A.BOKUN_TRANSLATIONS || {};
+    const staticO = (T.ACTIVITIES && T.ACTIVITIES[activityId]) || {};
+    const runtime = (A._runtimeTranslations && A._runtimeTranslations[String(activityId)]) || {};
+    return mergeActivityOverlay(staticO, runtime);
+  }
+
   // ---------------------------------------------------- public surface --
 
   const BokunAdapter = {
@@ -103,9 +135,13 @@
           if (!Array.isArray(list)) {
             throw new Error('Invalid response from /api/bokun/activities');
           }
+          if (data.translations && typeof data.translations === 'object') {
+            A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
+          }
           return {
             activities: list,
             meta: data.meta || { total: list.length, page, pageSize },
+            translations: data.translations || {},
           };
         });
     },
@@ -130,6 +166,9 @@
           if (!data.activity || data.activity.id == null) {
             throw new Error('Invalid response from /api/bokun/activity');
           }
+          if (data.translations && typeof data.translations === 'object') {
+            A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
+          }
           return data.activity;
         });
     },
@@ -147,7 +186,7 @@
      */
     toViewModel(activity, lang = 'hant') {
       const T = A.BOKUN_TRANSLATIONS || { ACTIVITIES: {}, VENDOR: {}, TAG: {}, PRICING_CATEGORY: {}, WARNING: {} };
-      const overlay = T.ACTIVITIES[activity.id] || {};
+      const overlay = getActivityOverlay(activity.id);
 
       // ---- core text ----
       const title = pickFromOverlay(overlay.title, lang, activity.title);
@@ -189,7 +228,7 @@
       // ---- stops (for the trip-with-map screen) ----
       const stops = (activity.stops || []).map(stop => ({
         id: stop.id,
-        name: pickFromOverlay(overlay.stops && overlay.stops[stop.id], lang, stop.title),
+        name: pickFromOverlay(overlay.stops && overlay.stops[String(stop.id)], lang, stop.title),
         geo: stop.geoPoint,
         durationMinutes: stop.durationMinutes,
       }));
@@ -323,6 +362,8 @@
   }
 
   A.BokunAdapter = BokunAdapter;
+  A._runtimeTranslations = A._runtimeTranslations || {};
+  A.getActivityOverlay = getActivityOverlay;
 
   // ----------------------------------- React hook (registered if React loaded)
   // Components import this via `window.AuralisData.useActivities(lang)`.
@@ -345,8 +386,11 @@
         // initial mount.
         setState(s => ({ ...s, loading: s.raw.length === 0, error: null }));
 
-        const remap = (raw, meta) => {
+        const remap = (raw, meta, translations) => {
           if (cancelled) return;
+          if (translations && typeof translations === 'object') {
+            A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...translations };
+          }
           const viewModels = BokunAdapter.toViewModels(raw, lang);
           setState({ loading: false, error: null, activities: viewModels, raw, meta: meta || state.meta });
         };
@@ -356,7 +400,7 @@
           remap(state.raw, state.meta);
         } else {
           BokunAdapter.fetchActivities({ lang })
-            .then(({ activities: raw, meta }) => remap(raw, meta))
+            .then(({ activities: raw, meta, translations }) => remap(raw, meta, translations))
             .catch((err) => {
               if (!cancelled) {
                 setState({ loading: false, error: err, activities: [], raw: [], meta: { total: 0 } });

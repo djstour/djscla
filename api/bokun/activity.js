@@ -1,5 +1,6 @@
 const { getActivityById, getQuoteCurrency, applyQuoteCurrency } = require('../lib/bokun');
 const { normalizeActivity } = require('../lib/normalizeActivity');
+const { loadTranslationsForActivities } = require('../lib/attachTranslations');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -37,10 +38,12 @@ module.exports = async function handler(req, res) {
     const raw = unwrapActivity(rawPayload);
     const quoteCurrency = getQuoteCurrency();
     const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
+    const translations = await loadTranslationsForActivities([activity]);
 
     return res.status(200).json({
       source: 'bokun',
       activity,
+      translations,
       meta: { quoteCurrency },
     });
   } catch (err) {

@@ -93,6 +93,8 @@ Other examples in the current overlay:
 
 ## 4 · OpenAI translation pipeline
 
+**Implemented** — operational guide: [docs/TRANSLATIONS.md](../docs/TRANSLATIONS.md).
+
 When a new Bókun activity lands (initial sync or upstream edit), we run this pipeline:
 
 ```
