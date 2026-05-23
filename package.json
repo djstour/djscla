@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "name": "djscla",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}

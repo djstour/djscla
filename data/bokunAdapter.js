@@ -78,13 +78,39 @@
      * short delay so the UI has a chance to render its skeleton state.
      */
     fetchActivities(opts = {}) {
-      const { delayMs = 280 } = opts;
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          // Defensive copy so callers can't accidentally mutate our mocks.
-          resolve(JSON.parse(JSON.stringify(A.MOCK_BOKUN_ACTIVITIES)));
-        }, delayMs);
+      const { lang = 'hant', page = 1, pageSize = 50, useMockOnError = true } = opts;
+
+      if (typeof fetch === 'undefined') {
+        return Promise.resolve(JSON.parse(JSON.stringify(A.MOCK_BOKUN_ACTIVITIES)));
+      }
+
+      const qs = new URLSearchParams({
+        lang,
+        page: String(page),
+        pageSize: String(pageSize),
       });
+
+      return fetch(`/api/bokun/activities?${qs}`)
+        .then((res) => res.json().then((data) => ({ res, data })))
+        .then(({ res, data }) => {
+          if (!res.ok) {
+            const err = new Error(data.error || `Bókun proxy HTTP ${res.status}`);
+            err.status = res.status;
+            throw err;
+          }
+          const list = data.activities;
+          if (!Array.isArray(list)) {
+            throw new Error('Invalid response from /api/bokun/activities');
+          }
+          return list;
+        })
+        .catch((err) => {
+          if (useMockOnError && A.MOCK_BOKUN_ACTIVITIES && A.MOCK_BOKUN_ACTIVITIES.length) {
+            console.warn('[Auralis] Bókun API unavailable — showing mocks:', err.message);
+            return JSON.parse(JSON.stringify(A.MOCK_BOKUN_ACTIVITIES));
+          }
+          throw err;
+        });
     },
 
     fetchActivityById(id) {
@@ -293,7 +319,7 @@
           // Cheap path: lang change. Remap synchronously, no fetch.
           remap(state.raw);
         } else {
-          BokunAdapter.fetchActivities()
+          BokunAdapter.fetchActivities({ lang })
             .then(remap)
             .catch(err => { if (!cancelled) setState({ loading: false, error: err, activities: [], raw: [] }); });
         }

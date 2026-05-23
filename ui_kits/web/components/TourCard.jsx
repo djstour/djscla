@@ -39,7 +39,13 @@
         <div style={{
           position: 'relative',
           height: compact ? 150 : 200,
-          background: fakePhoto(tour.photo),
+          ...(tour.coverImageUrl
+            ? {
+              backgroundImage: `url(${tour.coverImageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }
+            : { background: fakePhoto(tour.photo) }),
           overflow: 'hidden',
         }}>
           {tour.photo === 'aurora' && <PhotoSparkles density={20} color="#2EFFB8" />}
