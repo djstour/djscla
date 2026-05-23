@@ -1,4 +1,4 @@
-const { runTranslationSync } = require('../lib/translationSync');
+const { runTranslationSync } = require('../../lib/translationSync');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

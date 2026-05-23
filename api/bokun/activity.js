@@ -1,6 +1,6 @@
-const { getActivityById, getQuoteCurrency, applyQuoteCurrency } = require('../lib/bokun');
-const { normalizeActivity } = require('../lib/normalizeActivity');
-const { loadTranslationsForActivities } = require('../lib/attachTranslations');
+const { getActivityById, getQuoteCurrency, applyQuoteCurrency } = require('../../lib/bokun');
+const { normalizeActivity } = require('../../lib/normalizeActivity');
+const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

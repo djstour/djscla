@@ -61,7 +61,7 @@ Verify: open `https://djscla.vercel.app/api/bokun/activities?lang=hant` — shou
 
 | File | Role |
 |------|------|
-| `api/lib/bokun.js` | HMAC signing + search |
-| `api/lib/normalizeActivity.js` | Bókun → catalog shape |
+| `lib/bokun.js` | HMAC signing + search |
+| `lib/normalizeActivity.js` | Bókun → catalog shape |
 | `api/bokun/activities.js` | Vercel handler |
 | `data/bokunAdapter.js` | `fetch('/api/bokun/activities')` + view models |

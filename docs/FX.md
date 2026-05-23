@@ -54,7 +54,7 @@ Production: https://djscla.vercel.app/api/fx/rates
 
 | Path | Role |
 |------|------|
-| `api/lib/fx.js` | Fetch, cache, `convertFromUsd`, rounding |
+| `lib/fx.js` | Fetch, cache, `convertFromUsd`, rounding |
 | `api/fx/rates.js` | HTTP handler |
 | `ui_kits/web/components/_shared.jsx` | `formatDisplayPrice`, `CURRENCIES`, `tripTotalUsd` |
 | `data/bokunAdapter.js` | Sets `priceUsd` on each view-model |

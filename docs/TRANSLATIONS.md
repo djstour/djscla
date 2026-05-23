@@ -119,7 +119,7 @@ Changing UI language remaps cached raw activities without refetching Bókun.
 
 ## Related files
 
-- `api/lib/translationSync.js` — orchestration
-- `api/lib/openaiTranslate.js` — prompts + glossary
-- `api/lib/glossary.js` — Taiwan vs Mainland terms
-- `api/lib/attachTranslations.js` — attach overlays to Bókun responses
+- `lib/translationSync.js` — orchestration
+- `lib/openaiTranslate.js` — prompts + glossary
+- `lib/glossary.js` — Taiwan vs Mainland terms
+- `lib/attachTranslations.js` — attach overlays to Bókun responses

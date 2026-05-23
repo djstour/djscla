@@ -1,4 +1,4 @@
-const { getFxSnapshot, SUPPORTED, BASE } = require('../lib/fx');
+const { getFxSnapshot, SUPPORTED, BASE } = require('../../lib/fx');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
