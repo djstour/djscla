@@ -205,7 +205,10 @@
         rating: activity.averageRating,
         reviews: activity.reviewCount,
         price: defaultRow ? defaultRow.amount : 0,
-        priceCurrency: defaultRow ? defaultRow.currency : 'TWD',
+        priceCurrency: (defaultRow && defaultRow.currency)
+          || activity.currency
+          || activity.defaultCurrency
+          || 'ISK',
         priceTable,
         badge,
         badgeKey,

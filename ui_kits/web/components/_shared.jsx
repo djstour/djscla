@@ -29,9 +29,35 @@
     );
   }
 
-  // NT$ formatter
-  function formatPrice(n) {
-    return 'NT$ ' + new Intl.NumberFormat('en-US').format(n);
+  /** Format amount using Bókun ISO currency (ISK, EUR, USD, …). */
+  function formatPrice(n, currency) {
+    const amount = Number(n);
+    if (!Number.isFinite(amount)) return '—';
+    const code = (currency || 'ISK').toUpperCase();
+    const noDecimals = ['ISK', 'JPY', 'KRW'].includes(code);
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        currencyDisplay: 'narrowSymbol',
+        minimumFractionDigits: noDecimals ? 0 : undefined,
+        maximumFractionDigits: noDecimals ? 0 : 2,
+      }).format(amount);
+    } catch {
+      return `${code} ${new Intl.NumberFormat('en-US', { maximumFractionDigits: noDecimals ? 0 : 2 }).format(amount)}`;
+    }
+  }
+
+  /** Single currency if all rows match; otherwise null (mixed cart). */
+  function singleCurrency(items) {
+    const codes = [...new Set((items || []).map((t) => t.priceCurrency).filter(Boolean))];
+    return codes.length === 1 ? codes[0] : null;
+  }
+
+  function formatTotalAmount(trip, total, lang) {
+    const code = singleCurrency(trip);
+    if (code) return formatPrice(total, code);
+    return pick(lang, { hant: '多種幣別', hans: '多种币别', en: 'Multiple currencies' });
   }
 
   // ------------------------------------------------------------------
@@ -134,5 +160,5 @@
     return [all, ...Object.values(vendors).map(v => ({ id: v.id, label: v.title }))];
   }
 
-  window.AuralisUI = { Icon, formatPrice, fakePhoto, PhotoSparkles, CATEGORIES, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang };
+  window.AuralisUI = { Icon, formatPrice, singleCurrency, formatTotalAmount, fakePhoto, PhotoSparkles, CATEGORIES, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang };
 })();

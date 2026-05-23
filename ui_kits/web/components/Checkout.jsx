@@ -1,14 +1,15 @@
 /* Checkout — 3-step flow. Review → Payment → Done. */
 
 (function () {
-  const { Icon, formatPrice, pick } = window.AuralisUI;
+  const { Icon, formatPrice, formatTotalAmount, singleCurrency, pick } = window.AuralisUI;
   const { useState } = React;
 
   function Checkout({ trip, onBack, onPaid, lang }) {
     const T = (opts) => pick(lang, opts);
     const [step, setStep] = useState('review'); // review | pay | done
+    const tripCurrency = singleCurrency(trip);
     const subtotal = trip.reduce((s, t) => s + t.price, 0);
-    const fee = Math.round(subtotal * 0.02);
+    const fee = tripCurrency ? Math.round(subtotal * 0.02) : 0;
     const total = subtotal + fee;
 
     const steps = [
@@ -105,7 +106,7 @@
                       {t.supplier} · {t.duration} · {T({ hant: '第', hans: '第', en: 'Day' })} {i + 1}
                     </div>
                   </div>
-                  <span style={{ font: '700 15px/1 var(--font-display)', color: 'var(--fg-1)' }}>{formatPrice(t.price)}</span>
+                  <span style={{ font: '700 15px/1 var(--font-display)', color: 'var(--fg-1)' }}>{formatPrice(t.price, t.priceCurrency)}</span>
                 </div>
               );
             })}
@@ -135,7 +136,7 @@
         </div>
 
         <Summary
-          subtotal={subtotal} fee={fee} total={total}
+          subtotal={subtotal} fee={fee} total={total} trip={trip}
           cta={T({ hant: '前往付款', hans: '前往付款', en: 'Continue to payment' })}
           onNext={onNext}
           lang={lang}
@@ -217,8 +218,12 @@
         </div>
 
         <Summary
-          total={total}
-          cta={T({ hant: `付款 ${formatPrice(total)}`, hans: `付款 ${formatPrice(total)}`, en: `Pay ${formatPrice(total)}` })}
+          total={total} trip={trip}
+          cta={T({
+            hant: `付款 ${formatTotalAmount(trip, total, 'hant')}`,
+            hans: `付款 ${formatTotalAmount(trip, total, 'hans')}`,
+            en: `Pay ${formatTotalAmount(trip, total, 'en')}`,
+          })}
           onNext={onPaid}
           lang={lang}
         />
@@ -275,7 +280,7 @@
         <div style={{ display: 'flex', gap: 18, marginTop: 14 }}>
           <Stat n={trip.length} l={T({ hant: '個體驗', hans: '个体验', en: 'experiences' })} />
           <Stat n="7" l={T({ hant: '天', hans: '天', en: 'days' })} />
-          <Stat n={formatPrice(total)} l={T({ hant: '已支付', hans: '已支付', en: 'paid' })} />
+          <Stat n={formatTotalAmount(trip, total, lang)} l={T({ hant: '已支付', hans: '已支付', en: 'paid' })} />
         </div>
 
         <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
@@ -305,8 +310,9 @@
   }
 
   // --- shared summary -----------------------------------------------------------
-  function Summary({ subtotal, fee, total, cta, onNext, lang }) {
+  function Summary({ subtotal, fee, total, trip, cta, onNext, lang }) {
     const T = (opts) => pick(lang, opts);
+    const tripCurrency = singleCurrency(trip || []);
     return (
       <div style={{
         background: '#fff', borderRadius: 24, padding: 24, boxShadow: 'var(--shadow-2)',
@@ -318,8 +324,8 @@
         </h3>
         {subtotal != null && (
           <>
-            <Row label={T({ hant: '小計', hans: '小计', en: 'Subtotal' })} value={formatPrice(subtotal)} />
-            <Row label={T({ hant: '服務費', hans: '服务费', en: 'Service fee' })} value={formatPrice(fee)} />
+            <Row label={T({ hant: '小計', hans: '小计', en: 'Subtotal' })} value={formatPrice(subtotal, tripCurrency)} />
+            <Row label={T({ hant: '服務費', hans: '服务费', en: 'Service fee' })} value={formatPrice(fee, tripCurrency)} />
             <div style={{ height: 1, background: 'var(--base-200)' }}/>
           </>
         )}
@@ -327,7 +333,7 @@
           <span style={{ font: '600 14px/1 var(--font-text)', color: 'var(--fg-2)' }}>
             {T({ hant: '總計', hans: '总计', en: 'Total' })}
           </span>
-          <span style={{ font: '700 28px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>{formatPrice(total)}</span>
+          <span style={{ font: '700 28px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>{formatTotalAmount(trip || [], total, lang)}</span>
         </div>
         <button onClick={onNext} style={{
           width: '100%', height: 52, borderRadius: 16, border: 0, cursor: 'pointer',

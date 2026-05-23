@@ -151,7 +151,7 @@
                 {T({ hant: '起', hans: '起', en: 'from' })}
               </div>
               <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 4 }}>
-                {formatPrice(tour.price)}
+                {formatPrice(tour.price, tour.priceCurrency)}
               </div>
             </div>
             <button onClick={() => onAdd && onAdd(tour)}

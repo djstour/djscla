@@ -41,26 +41,68 @@ function durationMinutes(item) {
   return 0;
 }
 
+function readCurrency(obj, fallback) {
+  if (!obj || typeof obj !== 'object') return fallback;
+  return obj.currency || obj.currencyCode || obj.isoCurrency || fallback;
+}
+
+function productCurrency(item) {
+  return (
+    item.currency
+    || item.defaultCurrency
+    || item.currencyCode
+    || readCurrency(item.defaultPrice, null)
+    || readCurrency(item.nextDefaultPrice, null)
+    || readCurrency(item.fromPrice, null)
+    || 'ISK'
+  );
+}
+
 function buildPricing(item) {
-  if (Array.isArray(item.pricing) && item.pricing.length) return item.pricing;
+  const base = productCurrency(item);
+
+  if (Array.isArray(item.pricing) && item.pricing.length) {
+    return item.pricing.map((row) => ({
+      ...row,
+      amount: num(row.amount),
+      currency: row.currency || row.currencyCode || base,
+    }));
+  }
 
   const rows = [];
   const push = (amount, currency, pricingCategoryId = 5001) => {
     if (amount == null) return;
-    rows.push({ pricingCategoryId, amount: num(amount), currency: currency || item.currency || 'ISK' });
+    rows.push({
+      pricingCategoryId,
+      amount: num(amount),
+      currency: currency || base,
+    });
   };
 
   if (item.defaultPrice) {
-    push(item.defaultPrice.amount, item.defaultPrice.currency, item.defaultPrice.pricingCategoryId);
+    push(
+      item.defaultPrice.amount,
+      readCurrency(item.defaultPrice, base),
+      item.defaultPrice.pricingCategoryId,
+    );
   }
   if (item.nextDefaultPrice) {
-    push(item.nextDefaultPrice.amount, item.nextDefaultPrice.currency, item.nextDefaultPrice.pricingCategoryId);
+    push(
+      item.nextDefaultPrice.amount,
+      readCurrency(item.nextDefaultPrice, base),
+      item.nextDefaultPrice.pricingCategoryId,
+    );
   }
   if (item.fromPrice) {
-    push(item.fromPrice.amount ?? item.fromPrice, item.fromPrice.currency ?? item.currency);
+    const fp = item.fromPrice;
+    if (typeof fp === 'object') {
+      push(fp.amount, readCurrency(fp, base));
+    } else {
+      push(fp, base);
+    }
   }
   if (item.price != null && rows.length === 0) {
-    push(item.price, item.currency);
+    push(item.price, item.currency || item.currencyCode || base);
   }
 
   return rows;
@@ -134,8 +176,8 @@ function normalizeActivity(item) {
     durationText: item.durationText || item.duration || '',
     durationMinutes: durationMinutes(item),
     bookingType: item.bookingType || 'DATE_AND_TIME',
-    currency: item.currency || item.defaultCurrency || 'ISK',
-    defaultCurrency: item.defaultCurrency || item.currency || 'ISK',
+    currency: productCurrency(item),
+    defaultCurrency: productCurrency(item),
     vendor: buildVendor(item),
     pricingCategories: buildPricingCategories(item),
     pricing: buildPricing(item),
