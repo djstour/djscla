@@ -111,7 +111,27 @@
     },
 
     fetchActivityById(id, opts = {}) {
-      return BokunAdapter.fetchActivities(opts).then(({ activities }) => activities.find((a) => a.id === id));
+      const { lang = 'hant' } = opts;
+      const numId = Number(id);
+      if (!Number.isFinite(numId)) {
+        return Promise.reject(new Error('Invalid activity id'));
+      }
+
+      const qs = new URLSearchParams({ lang, id: String(numId) });
+      return fetch(`/api/bokun/activity?${qs}`)
+        .then((res) => res.json().then((data) => ({ res, data })))
+        .then(({ res, data }) => {
+          if (!res.ok) {
+            const err = new Error(data.error || `Bókun activity HTTP ${res.status}`);
+            err.status = res.status;
+            err.hints = data.hints;
+            throw err;
+          }
+          if (!data.activity || data.activity.id == null) {
+            throw new Error('Invalid response from /api/bokun/activity');
+          }
+          return data.activity;
+        });
     },
 
     // Bókun expects ISO 639-1 + optional region for the Accept-Language header.
@@ -132,6 +152,11 @@
       // ---- core text ----
       const title = pickFromOverlay(overlay.title, lang, activity.title);
       const summary = pickFromOverlay(overlay.summary, lang, stripHtml(activity.summary || activity.description));
+      const description = pickFromOverlay(
+        overlay.description,
+        lang,
+        stripHtml(activity.description || activity.summary || ''),
+      );
       const mode = pickFromOverlay(overlay.mode, lang, activity.categories && activity.categories[0]);
 
       // ---- vendor ----
@@ -195,6 +220,7 @@
         title,
         titleEn: activity.title,
         summary,
+        description,
         supplier,
         supplierRole,
         duration,
@@ -212,6 +238,13 @@
         badgeKey,
         photo: activity.coverImagePlaceholder || 'aurora',
         coverImageUrl: activity.coverImageUrl,
+        photoUrls: (activity.photoUrls && activity.photoUrls.length)
+          ? activity.photoUrls
+          : (activity.coverImageUrl ? [activity.coverImageUrl] : []),
+        meetingPoint: activity.meetingPoint || null,
+        meetingType: activity.meetingType || null,
+        startTimes: activity.startTimes || [],
+        categories: activity.categories || [],
         stops,
         tags,
         availability,
@@ -336,7 +369,62 @@
 
       return state;
     };
+
+    /**
+     * Detail page: show list preview immediately, then refresh from GET /activity.json/{id}.
+     */
+    A.useActivityDetail = function useActivityDetail(activityId, lang, previewVm) {
+      const [state, setState] = useState({
+        loading: !!activityId,
+        error: null,
+        tour: previewVm || null,
+        raw: previewVm && previewVm.raw ? previewVm.raw : null,
+      });
+
+      useEffect(() => {
+        if (!activityId) {
+          setState({ loading: false, error: null, tour: null, raw: null });
+          return undefined;
+        }
+
+        let cancelled = false;
+        setState((s) => ({
+          ...s,
+          loading: !s.raw,
+          error: null,
+          tour: previewVm || s.tour,
+          raw: previewVm && previewVm.raw ? previewVm.raw : s.raw,
+        }));
+
+        BokunAdapter.fetchActivityById(activityId, { lang })
+          .then((raw) => {
+            if (cancelled) return;
+            const tour = BokunAdapter.toViewModel(raw, lang);
+            setState({ loading: false, error: null, tour, raw });
+          })
+          .catch((err) => {
+            if (cancelled) return;
+            setState((s) => ({
+              loading: false,
+              error: err,
+              tour: s.tour || previewVm || null,
+              raw: s.raw,
+            }));
+          });
+
+        return () => { cancelled = true; };
+      }, [activityId, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+
+      useEffect(() => {
+        if (!state.raw) return;
+        const tour = BokunAdapter.toViewModel(state.raw, lang);
+        setState((s) => ({ ...s, tour }));
+      }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
+
+      return state;
+    };
   }
+
   attachReactHook();
   // In case React loads AFTER this file, retry on next macrotask.
   if (!A.useActivities) setTimeout(attachReactHook, 0);

@@ -32,6 +32,21 @@ function imageUrl(item) {
   return photo.originalUrl || photo.url || photo.thumbnailUrl || photo.largeUrl || null;
 }
 
+function buildPhotoUrls(item) {
+  const urls = [];
+  const add = (u) => {
+    if (u && typeof u === 'string' && !urls.includes(u)) urls.push(u);
+  };
+  add(imageUrl(item));
+  if (Array.isArray(item.photos)) {
+    item.photos.forEach((p) => {
+      if (typeof p === 'string') add(p);
+      else add(p.originalUrl || p.url || p.thumbnailUrl || p.largeUrl);
+    });
+  }
+  return urls;
+}
+
 function durationMinutes(item) {
   if (item.durationMinutes) return num(item.durationMinutes);
   if (item.duration && item.duration.minutes) return num(item.duration.minutes);
@@ -201,6 +216,7 @@ function normalizeActivity(item) {
     coverImageUrl,
     coverImagePlaceholder: item.coverImagePlaceholder || pickPhotoKey(id),
     photos: item.photos || [],
+    photoUrls: buildPhotoUrls(item),
     averageRating: num(item.averageRating ?? item.reviewRating ?? item.rating, 0),
     reviewCount: num(item.reviewCount ?? item.reviewsCount, 0),
     cancellationCutoffMinutes: item.cancellationCutoffMinutes ?? null,

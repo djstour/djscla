@@ -15,7 +15,7 @@
 (function () {
   const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick } = window.AuralisUI;
 
-  function TourCard({ tour, onAdd, inTrip, compact = false, lang = 'hant', displayCurrency = 'USD', fxRates = { USD: 1 } }) {
+  function TourCard({ tour, onAdd, onView, inTrip, compact = false, lang = 'hant', displayCurrency = 'USD', fxRates = { USD: 1 } }) {
     const T = (opts) => pick(lang, opts);
     const showSubtitle = lang !== 'en' && tour.titleEn && tour.titleEn !== tour.title;
 
@@ -23,13 +23,23 @@
     const capacity = tour.availability && tour.availability.capacityRemaining;
     const showLowCapacity = typeof capacity === 'number' && capacity <= 8;
 
+    function openDetail(e) {
+      if (onView) onView(tour);
+    }
+
     return (
-      <article style={{
+      <article
+        role={onView ? 'button' : undefined}
+        tabIndex={onView ? 0 : undefined}
+        onClick={onView ? openDetail : undefined}
+        onKeyDown={onView ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(e); } } : undefined}
+        style={{
         background: '#fff',
         borderRadius: 24,
         overflow: 'hidden',
         boxShadow: 'var(--shadow-2)',
         display: 'flex', flexDirection: 'column',
+        cursor: onView ? 'pointer' : 'default',
         transition: 'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out)',
       }}
       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-4)'; }}
@@ -65,7 +75,7 @@
             }}>{tour.badge}</span>
           )}
 
-          <button style={{
+          <button type="button" onClick={(e) => e.stopPropagation()} style={{
             position: 'absolute', top: 12, right: 12,
             width: 36, height: 36, borderRadius: 999, border: 0, cursor: 'pointer',
             background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(10px)',
@@ -154,7 +164,7 @@
                 {formatDisplayPrice(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
               </div>
             </div>
-            <button onClick={() => onAdd && onAdd(tour)}
+            <button type="button" onClick={(e) => { e.stopPropagation(); onAdd && onAdd(tour); }}
                     disabled={inTrip}
                     style={{
                       height: 38, padding: inTrip ? '0 12px' : '0 16px', borderRadius: 999, border: 0,

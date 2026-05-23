@@ -8,6 +8,12 @@ Browser  →  GET /api/bokun/activities?lang=hant
            Bókun POST /activity.json/search
               ↓
            normalizeActivity → bokunAdapter.toViewModel → TourCard
+
+Browser  →  GET /api/bokun/activity?id=…&lang=hant
+              ↓
+           Bókun GET /activity.json/{id}
+              ↓
+           ActivityDetail (full description, photos, stops, pricing)
 ```
 
 Access key + secret never reach the browser.

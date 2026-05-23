@@ -1,5 +1,5 @@
 /* App — multi-screen prototype.
-   Discover · Tours · Trip (with map) · Checkout
+   Discover · Tours · Activity detail · Trip · Checkout
 
    Language state: 'hant' | 'hans' | 'en'.
    Persisted to localStorage so refresh keeps the choice. */
@@ -9,15 +9,17 @@
   const {
     Icon,
     CATEGORIES, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount,
-    Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer,
+    Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail,
   } = window.AuralisUI;
-  const { useActivities } = window.AuralisData;
+  const { useActivities, useActivityDetail } = window.AuralisData;
 
   const STORAGE_KEY = 'auralis.lang';
   const CURRENCY_KEY = 'auralis.currency';
 
   function App() {
-    const [screen, setScreen] = useState('home');  // home | tours | trip | checkout
+    const [screen, setScreen] = useState('home');  // home | tours | detail | trip | checkout
+    const [detailActivityId, setDetailActivityId] = useState(null);
+    const [returnScreen, setReturnScreen] = useState('tours');
 
     const [lang, setLang] = useState(() => {
       const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
@@ -66,11 +68,38 @@
     // current `activities` list, so a language flip rehydrates every cart row
     // without us touching trip state.
     const [tripIds, setTripIds] = useState([]);
+    const [tripCache, setTripCache] = useState({});
 
     const trip = useMemo(
-      () => tripIds.map(id => activities.find(a => a.id === id)).filter(Boolean),
-      [tripIds, activities]
+      () => tripIds.map((id) => activities.find((a) => a.id === id) || tripCache[id]).filter(Boolean),
+      [tripIds, activities, tripCache]
     );
+
+    const detailPreview = useMemo(
+      () => (detailActivityId != null
+        ? activities.find((a) => a.id === detailActivityId) || tripCache[detailActivityId]
+        : null),
+      [detailActivityId, activities, tripCache],
+    );
+    const { loading: detailLoading, error: detailError, tour: detailTour } = useActivityDetail(
+      detailActivityId,
+      lang,
+      detailPreview,
+    );
+
+    function openActivityDetail(tour) {
+      setTripCache((c) => ({ ...c, [tour.id]: tour }));
+      setReturnScreen(screen === 'detail' ? returnScreen : screen);
+      setDetailActivityId(tour.id);
+      setScreen('detail');
+      window.scrollTo(0, 0);
+    }
+
+    function closeActivityDetail() {
+      setDetailActivityId(null);
+      setScreen(returnScreen || 'tours');
+      window.scrollTo(0, 0);
+    }
     const tripIdSet = useMemo(() => new Set(tripIds), [tripIds]);
 
     const [activeSupplier, setActiveSupplier] = useState('all');
@@ -78,6 +107,7 @@
 
     function addToTrip(vm) {
       if (tripIdSet.has(vm.id)) return;
+      setTripCache((c) => ({ ...c, [vm.id]: vm }));
       setTripIds(ids => [...ids, vm.id]);
     }
     function removeFromTrip(id) {
@@ -100,7 +130,7 @@
             {error && <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px' }}><BokunErrorBanner error={error} lang={lang} /></div>}
             <CategoryStrip onClick={() => setScreen('tours')} lang={lang} />
             <FeaturedSection activities={activities} loading={loading} catalogTotal={catalogTotal}
-                             onView={() => setScreen('tours')} onAdd={addToTrip}
+                             onView={() => setScreen('tours')} onAdd={addToTrip} onOpenDetail={openActivityDetail}
                              tripIdSet={tripIdSet} lang={lang}
                              displayCurrency={displayCurrency} fxRates={fxRates} />
             <Footer lang={lang} />
@@ -114,10 +144,25 @@
             error={error}
             tripIdSet={tripIdSet}
             onAdd={addToTrip}
+            onOpenDetail={openActivityDetail}
             activeSupplier={activeSupplier} onSupplier={setActiveSupplier}
             activeCats={activeCats} onToggleCat={toggleCat}
             lang={lang}
             catalogTotal={catalogTotal}
+            displayCurrency={displayCurrency}
+            fxRates={fxRates}
+          />
+        )}
+
+        {screen === 'detail' && (
+          <ActivityDetail
+            tour={detailTour}
+            loading={detailLoading}
+            error={detailError}
+            onBack={closeActivityDetail}
+            onAdd={addToTrip}
+            inTrip={detailActivityId != null && tripIdSet.has(detailActivityId)}
+            lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
           />
@@ -185,7 +230,7 @@
     );
   }
 
-  function FeaturedSection({ activities, loading, onView, onAdd, tripIdSet, lang, displayCurrency, fxRates }) {
+  function FeaturedSection({ activities, loading, catalogTotal, onView, onAdd, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     return (      <section style={{ padding: '72px 32px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
@@ -217,7 +262,8 @@
           {loading
             ? Array.from({ length: 6 }, (_, i) => <TourCardSkeleton key={i} />)
             : activities.map(t => (
-                <TourCard key={t.id} tour={t} onAdd={onAdd} inTrip={tripIdSet.has(t.id)} lang={lang}
+                <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
+                          inTrip={tripIdSet.has(t.id)} lang={lang}
                           displayCurrency={displayCurrency} fxRates={fxRates} />
               ))}
         </div>
@@ -227,7 +273,7 @@
 
   // ============================================================ TOURS screen ===
 
-  function ToursScreen({ activities, loading, error, tripIdSet, onAdd, activeSupplier, onSupplier, activeCats, onToggleCat, lang, catalogTotal, displayCurrency, fxRates }) {
+  function ToursScreen({ activities, loading, error, tripIdSet, onAdd, onOpenDetail, activeSupplier, onSupplier, activeCats, onToggleCat, lang, catalogTotal, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
 
@@ -311,7 +357,8 @@
                     : filtered.length === 0
                     ? <EmptyState lang={lang} />
                     : filtered.map(t => (
-                        <TourCard key={t.id} tour={t} onAdd={onAdd} inTrip={tripIdSet.has(t.id)} lang={lang}
+                        <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
+                                  inTrip={tripIdSet.has(t.id)} lang={lang}
                                   displayCurrency={displayCurrency} fxRates={fxRates} />
                       ))}
               </div>
