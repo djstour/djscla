@@ -325,12 +325,12 @@
           if (vid == null || String(vid) !== String(activeSupplier)) return false;
         }
         if (activeCats.length > 0) {
-          // Map our chip ids to Bókun categories via the translation table.
-          const T2 = window.AuralisData.BOKUN_TRANSLATIONS.CATEGORY || {};
-          const chipIdsForActivity = (vm.raw.categories || [])
-            .map(c => T2[c] && T2[c].chipId)
-            .filter(Boolean);
-          if (!activeCats.some(c => chipIdsForActivity.includes(c))) return false;
+          const chipIdsForActivity = vm.chipIds?.length
+            ? vm.chipIds
+            : (vm.raw && vm.raw.chipIds) || [];
+          if (!chipIdsForActivity.length || !activeCats.some((c) => chipIdsForActivity.includes(c))) {
+            return false;
+          }
         }
         return true;
       });

@@ -3,7 +3,9 @@
   "name": "djscla",
   "scripts": {
     "dev": "vercel dev",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "enrich:chips": "node scripts/enrich-chip-ids.js",
+    "enrich:chips:api": "node scripts/enrich-chip-ids-from-api.js"
   },
   "dependencies": {
     "sharp": "^0.33.5"

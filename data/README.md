@@ -63,6 +63,22 @@ data/
 | `cancellationCutoffMinutes` | number | "Free cancellation up to N h" |
 | `availability` | `{ type, bookableNow, capacityRemaining, nextAvailableDates, lastChecked, warning }` | "Selling fast" badge, date picker |
 | `tags` | string[] (`top_pick`, `selling_fast`, `premium`, `mandarin_guide`) | Card badge, marketing flags |
+| `categoryLabels` | string[] | Flattened Bókun category leaves (detail API) |
+| `chipIds` | string[] | UI filter chips: `aurora`, `glacier`, `hotspring`, `day`, `self-drive`, `premium` |
+
+### Category chips (hybrid rules + detail cache)
+
+Bókun **search** often omits categories; **detail** returns a nested tree. We:
+
+1. **Rules** — `lib/chipIds.js` maps title / keywords / flattened labels → `chipIds` on every `normalizeActivity()`.
+2. **Cache** — `data/chipIdsCache.json` stores detail-enriched chips; merged in `lib/catalog.js` via `applyChipCache()`.
+
+Refresh cache after catalog changes:
+
+```bash
+npm run enrich:chips          # needs BOKUN_* in .env.local
+npm run enrich:chips:api      # uses deployed /api (no keys)
+```
 
 The real `availability` endpoint is a separate `POST /activity.json/{id}/availabilities`. We model the activity-level *summary* on the activity payload (Bókun does this too for the search endpoint) and keep the per-date `availabilities[]` array for the date-picker call.
 

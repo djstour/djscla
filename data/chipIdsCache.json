@@ -1,0 +1,1021 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-23T16:46:16.968Z",
+  "source": "https://djscla.vercel.app",
+  "byId": {
+    "207": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Glacier Hiking",
+        "Ice Climbing",
+        "Glacier Tours",
+        "Glacier hiking",
+        "Ice climbing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:14.941Z"
+    },
+    "208": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [
+        "Snorkeling"
+      ],
+      "enrichedAt": "2026-05-23T16:46:06.516Z"
+    },
+    "209": {
+      "chipIds": [
+        "aurora",
+        "day"
+      ],
+      "categoryLabels": [
+        "Super Jeep Tours",
+        "Northern Lights Tours",
+        "Super Jeeps",
+        "Northern Lights",
+        "Northern lights",
+        "Super jeeps"
+      ],
+      "enrichedAt": "2026-05-23T16:45:55.384Z"
+    },
+    "268": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Golden Circle",
+        "Caving",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:12.841Z"
+    },
+    "273": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Snorkeling",
+        "Caving"
+      ],
+      "enrichedAt": "2026-05-23T16:46:10.584Z"
+    },
+    "292": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "ATVs",
+        "Caving",
+        "ATV / Quads"
+      ],
+      "enrichedAt": "2026-05-23T16:45:59.534Z"
+    },
+    "298": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [
+        "Diving"
+      ],
+      "enrichedAt": "2026-05-23T16:46:01.524Z"
+    },
+    "378": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Horse Riding",
+        "Caving",
+        "Horseback riding"
+      ],
+      "enrichedAt": "2026-05-23T16:45:58.419Z"
+    },
+    "379": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Snorkeling",
+        "Horse Riding",
+        "Horseback riding"
+      ],
+      "enrichedAt": "2026-05-23T16:45:57.314Z"
+    },
+    "380": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Horse Riding",
+        "ATVs",
+        "ATV / Quads",
+        "Horseback riding"
+      ],
+      "enrichedAt": "2026-05-23T16:46:16.248Z"
+    },
+    "2874": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Glacier Tours",
+        "Snowmobile"
+      ],
+      "enrichedAt": "2026-05-23T16:46:09.758Z"
+    },
+    "5198": {
+      "chipIds": [
+        "day",
+        "hotspring"
+      ],
+      "categoryLabels": [
+        "Hiking",
+        "Trekking"
+      ],
+      "enrichedAt": "2026-05-23T16:46:05.382Z"
+    },
+    "5821": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Glacier Hiking",
+        "South Coast Tours",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:06.976Z"
+    },
+    "6131": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [
+        "South Coast Tours",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:15.097Z"
+    },
+    "6179": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [
+        "Trekking",
+        "Hiking"
+      ],
+      "enrichedAt": "2026-05-23T16:46:05.036Z"
+    },
+    "6853": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [
+        "Glacier Tours",
+        "Glacier Hiking"
+      ],
+      "enrichedAt": "2026-05-23T16:46:05.038Z"
+    },
+    "7358": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [
+        "Golden Circle",
+        "South Coast Tours",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:15.403Z"
+    },
+    "8170": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:58.084Z"
+    },
+    "9884": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:15.141Z"
+    },
+    "9999": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [
+        "Snowmobile",
+        "Super jeeps"
+      ],
+      "enrichedAt": "2026-05-23T16:46:00.975Z"
+    },
+    "11721": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.088Z"
+    },
+    "12161": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.630Z"
+    },
+    "14504": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:00.670Z"
+    },
+    "15786": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.384Z"
+    },
+    "17337": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:01.715Z"
+    },
+    "17338": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:08.088Z"
+    },
+    "17340": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:59.056Z"
+    },
+    "17345": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:08.571Z"
+    },
+    "17762": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:01.153Z"
+    },
+    "18444": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:09.682Z"
+    },
+    "18570": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.923Z"
+    },
+    "18571": {
+      "chipIds": [
+        "aurora",
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:02.502Z"
+    },
+    "19038": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.788Z"
+    },
+    "19157": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:13.169Z"
+    },
+    "19173": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.303Z"
+    },
+    "19768": {
+      "chipIds": [
+        "day",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:00.384Z"
+    },
+    "20483": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:04.557Z"
+    },
+    "22558": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:16.434Z"
+    },
+    "22559": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:03.708Z"
+    },
+    "26227": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:10.146Z"
+    },
+    "30538": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.089Z"
+    },
+    "31988": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.389Z"
+    },
+    "32545": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:09.322Z"
+    },
+    "33665": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:04.722Z"
+    },
+    "51284": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:15.034Z"
+    },
+    "56356": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:10.105Z"
+    },
+    "59017": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:56.854Z"
+    },
+    "84974": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:56.685Z"
+    },
+    "87448": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [
+        "Golden Circle",
+        "South Coast Tours",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:14.836Z"
+    },
+    "103202": {
+      "chipIds": [
+        "day",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Snorkeling",
+        "Golden Circle",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:05.911Z"
+    },
+    "119922": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:01.112Z"
+    },
+    "127755": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:16.671Z"
+    },
+    "137456": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:10.530Z"
+    },
+    "164615": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:13.025Z"
+    },
+    "166874": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.536Z"
+    },
+    "170834": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:13.404Z"
+    },
+    "174193": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Diving"
+      ],
+      "enrichedAt": "2026-05-23T16:46:03.769Z"
+    },
+    "205419": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [
+        "Golden Circle",
+        "South Coast Tours",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:00.304Z"
+    },
+    "222055": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [
+        "Caving"
+      ],
+      "enrichedAt": "2026-05-23T16:46:16.847Z"
+    },
+    "247406": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:05.774Z"
+    },
+    "281102": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:54.648Z"
+    },
+    "303328": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:54.640Z"
+    },
+    "303329": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:15.078Z"
+    },
+    "303331": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:54.640Z"
+    },
+    "303335": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:54.639Z"
+    },
+    "449906": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:00.304Z"
+    },
+    "618325": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:16.291Z"
+    },
+    "624443": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:07.457Z"
+    },
+    "624451": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:58.378Z"
+    },
+    "624878": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.884Z"
+    },
+    "644340": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:03.675Z"
+    },
+    "644377": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.091Z"
+    },
+    "646163": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Diving"
+      ],
+      "enrichedAt": "2026-05-23T16:46:04.424Z"
+    },
+    "646165": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [
+        "Diving"
+      ],
+      "enrichedAt": "2026-05-23T16:45:55.083Z"
+    },
+    "654363": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:03.393Z"
+    },
+    "685202": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:58.102Z"
+    },
+    "716547": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.537Z"
+    },
+    "725805": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:55.086Z"
+    },
+    "727838": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:03.548Z"
+    },
+    "738812": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [
+        "Trekking",
+        "Hiking"
+      ],
+      "enrichedAt": "2026-05-23T16:46:14.470Z"
+    },
+    "825419": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:15.895Z"
+    },
+    "837567": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:57.441Z"
+    },
+    "841485": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.152Z"
+    },
+    "858735": {
+      "chipIds": [
+        "aurora",
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:58.265Z"
+    },
+    "876949": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:07.718Z"
+    },
+    "877245": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:03.218Z"
+    },
+    "877846": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:09.322Z"
+    },
+    "891260": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:56.222Z"
+    },
+    "891387": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:05.972Z"
+    },
+    "909184": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:02.674Z"
+    },
+    "909299": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:54.578Z"
+    },
+    "909701": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.988Z"
+    },
+    "938778": {
+      "chipIds": [
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:03.238Z"
+    },
+    "941697": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:03.435Z"
+    },
+    "1005441": {
+      "chipIds": [
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:59.054Z"
+    },
+    "1023007": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:07.334Z"
+    },
+    "1033130": {
+      "chipIds": [
+        "day",
+        "glacier",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:59.641Z"
+    },
+    "1088067": {
+      "chipIds": [
+        "aurora",
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:13.622Z"
+    },
+    "1101833": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "glacier",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:58.914Z"
+    },
+    "1105833": {
+      "chipIds": [],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:14.150Z"
+    },
+    "1109905": {
+      "chipIds": [
+        "aurora",
+        "day",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:15.906Z"
+    },
+    "1111407": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [
+        "Golden Circle",
+        "South Coast Tours",
+        "Sightseeing"
+      ],
+      "enrichedAt": "2026-05-23T16:46:00.179Z"
+    },
+    "1126961": {
+      "chipIds": [],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:13.589Z"
+    },
+    "1131886": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:57.039Z"
+    },
+    "1136884": {
+      "chipIds": [
+        "day",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:07.348Z"
+    },
+    "1149722": {
+      "chipIds": [
+        "day",
+        "hotspring",
+        "self-drive"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:08.561Z"
+    },
+    "1152769": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:08.466Z"
+    },
+    "1160634": {
+      "chipIds": [
+        "aurora",
+        "day"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:46:08.555Z"
+    },
+    "1214280": {
+      "chipIds": [
+        "day",
+        "glacier"
+      ],
+      "categoryLabels": [],
+      "enrichedAt": "2026-05-23T16:45:59.915Z"
+    }
+  }
+}

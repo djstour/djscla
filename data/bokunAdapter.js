@@ -372,6 +372,8 @@
         meetingType: activity.meetingType || null,
         startTimes: activity.startTimes || [],
         categories: activity.categories || [],
+        categoryLabels: activity.categoryLabels || activity.categories || [],
+        chipIds: activity.chipIds || [],
         stops,
         tags,
         availability,
