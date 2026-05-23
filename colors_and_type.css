@@ -339,7 +339,31 @@
   50%      { background-position: 30% 20%, 60% 30%, 70% 70%, 100% 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bg-aurora-animated { animation: none; }
+  .bg-aurora-animated,
+  .bg-mist-animated,
+  .bg-sun-animated { animation: none; }
+}
+
+/* Glacier mist — soft lavender / peach / sky (booking / alt hero) */
+.bg-mist-animated {
+  background:
+    radial-gradient(62% 78% at 18% 28%, rgba(232, 226, 255, 0.92) 0%, transparent 58%),
+    radial-gradient(58% 72% at 82% 22%, rgba(255, 233, 214, 0.88) 0%, transparent 58%),
+    radial-gradient(72% 88% at 52% 92%, rgba(219, 247, 255, 0.9) 0%, transparent 62%),
+    var(--gradient-mist);
+  background-size: 220% 220%;
+  animation: auroraDrift 22s var(--ease-in-out) infinite;
+}
+
+/* Midnight sun — violet / magenta / orange (premium hero) */
+.bg-sun-animated {
+  background:
+    radial-gradient(60% 80% at 22% 32%, rgba(107, 47, 230, 0.55) 0%, transparent 60%),
+    radial-gradient(55% 70% at 78% 24%, rgba(255, 122, 46, 0.48) 0%, transparent 60%),
+    radial-gradient(70% 90% at 58% 88%, rgba(179, 49, 226, 0.42) 0%, transparent 60%),
+    linear-gradient(135deg, #EDE4FF 0%, #FFE8D4 55%, #FFD3A8 100%);
+  background-size: 220% 220%;
+  animation: auroraDrift 20s var(--ease-in-out) infinite;
 }
 
 /* =========================================================================

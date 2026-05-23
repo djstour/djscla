@@ -2,12 +2,76 @@
    Used on the Discover screen. */
 
 (function () {
-  const { useState } = React;
+  const { useState, useMemo } = React;
   const { Icon, pick, formatCatalogCount } = window.AuralisUI;
+
+  const HERO_THEME_STORAGE_KEY = 'auralis-hero-theme';
+
+  /** Brand hero backdrops — one random theme per browser tab session (sessionStorage). */
+  const HERO_THEMES = [
+    {
+      id: 'aurora',
+      sectionClass: 'bg-aurora-animated',
+      accentGrad: 'var(--gradient-aurora)',
+      accentGlow: 'var(--shadow-glow-aurora)',
+      ctaColor: '#062F2A',
+      headlineLine2Grad: 'var(--gradient-aurora)',
+      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 60%,#6B2FE6 100%)',
+    },
+    {
+      id: 'mist',
+      sectionClass: 'bg-mist-animated',
+      accentGrad: 'var(--gradient-aurora)',
+      accentGlow: 'var(--shadow-glow-aurora)',
+      ctaColor: '#062F2A',
+      headlineLine2Grad: 'linear-gradient(120deg,#2E3647 0%,#6B2FE6 55%,#00A3D1 100%)',
+      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#11151F 70%,#485670 100%)',
+    },
+    {
+      id: 'sun',
+      sectionClass: 'bg-sun-animated',
+      accentGrad: 'var(--gradient-sun)',
+      accentGlow: 'var(--shadow-glow-sun)',
+      ctaColor: '#fff',
+      headlineLine2Grad: 'var(--gradient-sun)',
+      headlineLine1Grad: 'linear-gradient(120deg,#11151F 0%,#6B2FE6 50%,#FF7A2E 100%)',
+    },
+  ];
+
+  function pickHeroTheme() {
+    return HERO_THEMES[Math.floor(Math.random() * HERO_THEMES.length)];
+  }
+
+  function getOrPickHeroTheme() {
+    try {
+      const saved = sessionStorage.getItem(HERO_THEME_STORAGE_KEY);
+      if (saved) {
+        const found = HERO_THEMES.find((t) => t.id === saved);
+        if (found) return found;
+      }
+    } catch (_) { /* private / blocked storage */ }
+    const theme = pickHeroTheme();
+    try {
+      sessionStorage.setItem(HERO_THEME_STORAGE_KEY, theme.id);
+    } catch (_) { /* ignore */ }
+    return theme;
+  }
 
   function Hero({ onSearch, lang, catalogTotal = 0 }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
+    const [theme] = useState(getOrPickHeroTheme);
+
+    const stars = useMemo(
+      () => Array.from({ length: 40 }, (_, i) => ({
+        id: i,
+        cx: Math.random() * 1440,
+        cy: Math.random() * 400,
+        r: Math.random() * 1.6 + 0.4,
+        opacity: 0.3 + Math.random() * 0.5,
+      })),
+      [],
+    );
 
     const [city, setCity] = useState('');
     const [dates, setDates] = useState('');
@@ -24,12 +88,12 @@
     const cityPlaceholder = T({ hant: '雷克雅維克 (KEF)', hans: '雷克雅未克 (KEF)', en: 'Reykjavík (KEF)' });
 
     return (
-      <section className="hero-section bg-aurora-animated">
+      <section className={`hero-section ${theme.sectionClass}`} data-hero-theme={theme.id}>
         <svg viewBox="0 0 1440 640" preserveAspectRatio="none"
-             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.6 }}>
-          {Array.from({ length: 40 }, (_, i) => (
-            <circle key={i} cx={Math.random() * 1440} cy={Math.random() * 400} r={Math.random() * 1.6 + 0.4}
-                    fill="#fff" opacity={0.3 + Math.random() * 0.5}/>
+             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.6 }}
+             aria-hidden="true">
+          {stars.map((s) => (
+            <circle key={s.id} cx={s.cx} cy={s.cy} r={s.r} fill="#fff" opacity={s.opacity} />
           ))}
         </svg>
 
@@ -47,12 +111,12 @@
             }}>
               <span style={{
                 display: 'inline-block',
-                background: 'linear-gradient(120deg,#11151F 0%,#11151F 60%,#6B2FE6 100%)',
+                background: theme.headlineLine1Grad,
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{headlineGrad[0]}</span><br />
               <span style={{
                 display: 'inline-block',
-                background: 'var(--gradient-aurora)',
+                background: theme.headlineLine2Grad,
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{headlineGrad[1]}</span>
             </h1>
@@ -68,9 +132,9 @@
             <div style={{ display: 'flex', gap: 14, marginTop: 32, alignItems: 'center', flexWrap: 'wrap' }}>
               <button type="button" onClick={() => onSearch && onSearch()} style={{
                 height: 54, padding: '0 28px', borderRadius: 999, border: 0, cursor: 'pointer',
-                background: 'var(--gradient-aurora)', color: '#062F2A',
+                background: theme.accentGrad, color: theme.ctaColor,
                 font: '700 15px/1 var(--font-text)',
-                boxShadow: 'var(--shadow-glow-aurora)',
+                boxShadow: theme.accentGlow,
                 display: 'inline-flex', alignItems: 'center', gap: 10,
               }}>
                 {T({ hant: '開始規劃', hans: '开始规划', en: 'Start your itinerary' })}
@@ -101,9 +165,9 @@
 
             <button type="button" onClick={() => onSearch && onSearch()} style={{
               marginTop: 16, width: '100%', height: 52, borderRadius: 16, border: 0, cursor: 'pointer',
-              background: 'var(--gradient-aurora)', color: '#062F2A',
+              background: theme.accentGrad, color: theme.ctaColor,
               font: '700 15px/1 var(--font-text)',
-              boxShadow: 'var(--shadow-glow-aurora)',
+              boxShadow: theme.accentGlow,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
               <Icon name="search" size={18} />
@@ -164,5 +228,8 @@
     );
   }
 
+  window.AuralisUI.HERO_THEMES = HERO_THEMES;
+  window.AuralisUI.pickHeroTheme = pickHeroTheme;
+  window.AuralisUI.getOrPickHeroTheme = getOrPickHeroTheme;
   window.AuralisUI.Hero = Hero;
 })();
