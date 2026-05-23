@@ -136,7 +136,7 @@ Local preview: `npx vercel dev` (not static `http.server`).
 
 1. API responses store `data.translations` in `A._runtimeTranslations`.
 2. `getActivityOverlay(id)` merges `bokunTranslations.js` + runtime.
-3. `toViewModel` uses `pickFromOverlay` (hant ↔ hans cross-fallback, then English).
+3. `toViewModel` uses `pickFromOverlay` — strict per locale (`hant` / `hans` / `en` only; no cross-script fallback).
 
 Changing UI language remaps cached raw activities without refetching Bókun.
 

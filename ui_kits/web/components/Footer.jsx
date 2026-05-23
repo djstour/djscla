@@ -10,10 +10,10 @@
       {
         h: T({ hant: '探索', hans: '探索', en: 'Explore' }),
         items: [
-          T({ hant: '自駕 · Self-drive',        hans: '自驾 · Self-drive',        en: 'Self-drive' }),
-          T({ hant: '極光 · Northern Lights',  hans: '极光 · Northern Lights',  en: 'Northern Lights' }),
-          T({ hant: '冰川 · Glacier',           hans: '冰川 · Glacier',           en: 'Glacier' }),
-          T({ hant: '溫泉 · Hot springs',       hans: '温泉 · Hot springs',       en: 'Hot springs' }),
+          T({ hant: '自駕', hans: '自驾', en: 'Self-drive' }),
+          T({ hant: '極光', hans: '极光', en: 'Northern Lights' }),
+          T({ hant: '冰川', hans: '冰川', en: 'Glacier' }),
+          T({ hant: '溫泉', hans: '温泉', en: 'Hot springs' }),
         ],
       },
       {

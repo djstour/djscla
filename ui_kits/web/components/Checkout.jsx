@@ -12,7 +12,7 @@
     const totalUsd = subtotalUsd + feeUsd;
 
     const steps = [
-      { id: 'review', label: { hant: '檢視行程', hans: '检视行程', en: 'Review trip' } },
+      { id: 'review', label: { hant: '檢視行程', hans: '查看行程', en: 'Review trip' } },
       { id: 'pay',    label: { hant: '付款',     hans: '付款',     en: 'Payment' } },
       { id: 'done',   label: { hant: '完成',     hans: '完成',     en: 'Confirmation' } },
     ];
@@ -85,7 +85,7 @@
       <div className="checkout-grid">
         <div style={{ background: '#fff', borderRadius: 24, padding: 28, boxShadow: 'var(--shadow-2)' }}>
           <h2 style={{ margin: '0 0 18px', font: '700 26px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
-            {T({ hant: '檢視你的行程', hans: '检视你的行程', en: 'Review your trip' })}
+            {T({ hant: '檢視你的行程', hans: '查看你的行程', en: 'Review your trip' })}
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {trip.map((t, i) => {

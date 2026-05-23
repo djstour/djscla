@@ -34,7 +34,7 @@
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ margin: 0, font: '600 18px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
-            {T({ hant: '篩選 · Filters', hans: '筛选 · Filters', en: 'Filters' })}
+            {T({ hant: '篩選', hans: '筛选', en: 'Filters' })}
           </h3>
         </div>
 

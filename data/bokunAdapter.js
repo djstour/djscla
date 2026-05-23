@@ -63,8 +63,6 @@
     }
     if (!entry) return '';
     if (entry[lang] != null && entry[lang] !== '') return entry[lang];
-    if (lang === 'hant' && entry.hans) return entry.hans;
-    if (lang === 'hans' && entry.hant) return entry.hant;
     return '';
   }
 

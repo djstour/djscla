@@ -181,11 +181,9 @@
   }
 
   // ------------------------------------------------------------------
-  // i18n helper.
-  // `lang` is one of: 'hant' (繁體) | 'hans' (简体) | 'en'.
-  // Pass an object { hant, hans, en } to pick(); if a translation is
-  // missing we fall back hant→hans→en, which is the safest order for
-  // this brand (Taiwan-first content).
+  // i18n helper — strict locale separation (no hant↔hans mixing).
+  // `lang`: 'hant' (台灣繁體) | 'hans' (中國簡體) | 'en'.
+  // Missing copy returns '' for zh locales; English may fall back to en only.
   // ------------------------------------------------------------------
   const LANGS = [
     { id: 'hant', label: '繁',  htmlLang: 'zh-Hant' },
@@ -195,10 +193,9 @@
 
   function pick(lang, options) {
     if (!options) return '';
-    if (options[lang] != null) return options[lang];
-    if (options.hant != null) return options.hant;
-    if (options.hans != null) return options.hans;
-    return options.en || '';
+    if (options[lang] != null && options[lang] !== '') return options[lang];
+    if (lang === 'en') return options.en || '';
+    return '';
   }
 
   // Convenience: bind a lang so component code reads `T({...})` instead of `pick(lang, {...})`.
@@ -259,12 +256,12 @@
   // strip + filter rail show it.
   // -------------------------------------------------------------------
   const CATEGORIES = [
-    { id: 'self-drive', icon: 'car-front',     label: { hant: '自駕 · Self-drive',       hans: '自驾 · Self-drive',       en: 'Self-drive' } },
-    { id: 'aurora',     icon: 'sparkles',      label: { hant: '極光 · Northern Lights',  hans: '极光 · Northern Lights',  en: 'Northern Lights' } },
-    { id: 'glacier',    icon: 'mountain-snow', label: { hant: '冰川 · Glacier',          hans: '冰川 · Glacier',          en: 'Glacier' } },
-    { id: 'hotspring',  icon: 'droplets',      label: { hant: '溫泉 · Hot spring',       hans: '温泉 · Hot spring',       en: 'Hot spring' } },
-    { id: 'day',        icon: 'sun',           label: { hant: '一日遊 · Day trip',       hans: '一日游 · Day trip',       en: 'Day trip' } },
-    { id: 'premium',    icon: 'crown',         label: { hant: '頂級 · Premium',          hans: '顶级 · Premium',          en: 'Premium' } },
+    { id: 'self-drive', icon: 'car-front',     label: { hant: '自駕',   hans: '自驾',   en: 'Self-drive' } },
+    { id: 'aurora',     icon: 'sparkles',      label: { hant: '極光',   hans: '极光',   en: 'Northern Lights' } },
+    { id: 'glacier',    icon: 'mountain-snow', label: { hant: '冰川',   hans: '冰川',   en: 'Glacier' } },
+    { id: 'hotspring',  icon: 'droplets',      label: { hant: '溫泉',   hans: '温泉',   en: 'Hot spring' } },
+    { id: 'day',        icon: 'sun',           label: { hant: '一日遊', hans: '一日游', en: 'Day trip' } },
+    { id: 'premium',    icon: 'crown',         label: { hant: '頂級',   hans: '顶级',   en: 'Premium' } },
   ];
 
   // -------------------------------------------------------------------
