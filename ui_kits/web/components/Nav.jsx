@@ -130,23 +130,33 @@
               </a>
             );
           })}
-        </nav>
-
-        <div className="nav-actions">
-          {onSiteThemeChange && (
-            <ThemePicker
-              themeId={siteThemeId || 'aurora'}
-              onChange={onSiteThemeChange}
-              lang={lang}
-            />
-          )}
-
-          <LocaleControls
+          <MobileMenuSettings
             lang={lang}
             onLangChange={onCycleLang}
             displayCurrency={displayCurrency}
             onCurrencyChange={onCurrencyChange}
+            siteThemeId={siteThemeId}
+            onSiteThemeChange={onSiteThemeChange}
           />
+        </nav>
+
+        <div className="nav-actions">
+          <div className="nav-toolbar-desktop">
+            {onSiteThemeChange && (
+              <ThemePicker
+                themeId={siteThemeId || 'aurora'}
+                onChange={onSiteThemeChange}
+                lang={lang}
+              />
+            )}
+
+            <LocaleControls
+              lang={lang}
+              onLangChange={onCycleLang}
+              displayCurrency={displayCurrency}
+              onCurrencyChange={onCurrencyChange}
+            />
+          </div>
 
           <button type="button" className="u-hide-sm" aria-label={T({ hant: '帳戶', hans: '账户', en: 'Account' })}
                   style={{
@@ -185,6 +195,47 @@
     );
   }
 
+  function MobileMenuSettings({
+    lang, onLangChange, displayCurrency, onCurrencyChange, siteThemeId, onSiteThemeChange,
+  }) {
+    const T = (opts) => pick(lang, opts);
+
+    return (
+      <div className="nav-mobile-settings">
+        {onSiteThemeChange && (
+          <div className="nav-mobile-settings__group">
+            <span className="nav-mobile-settings__label">
+              {T({ hant: '主題配色', hans: '主题配色', en: 'Color theme' })}
+            </span>
+            <ThemePicker
+              themeId={siteThemeId || 'aurora'}
+              onChange={onSiteThemeChange}
+              lang={lang}
+              className="theme-picker--menu"
+            />
+          </div>
+        )}
+        <div className="nav-mobile-settings__group">
+          <span className="nav-mobile-settings__label">
+            {T({ hant: '語言', hans: '语言', en: 'Language' })}
+          </span>
+          <LangPicker lang={lang} onChange={onLangChange} layout="expanded" />
+        </div>
+        <div className="nav-mobile-settings__group">
+          <span className="nav-mobile-settings__label">
+            {T({ hant: '顯示幣別', hans: '显示币别', en: 'Display currency' })}
+          </span>
+          <CurrencyPicker
+            lang={lang}
+            value={displayCurrency}
+            onChange={onCurrencyChange}
+            layout="expanded"
+          />
+        </div>
+      </div>
+    );
+  }
+
   function LocaleControls({ lang, onLangChange, displayCurrency, onCurrencyChange }) {
     const T = (opts) => pick(lang, opts);
 
@@ -206,7 +257,7 @@
     );
   }
 
-  function LangPicker({ lang, onChange }) {
+  function LangPicker({ lang, onChange, layout = 'compact' }) {
     const T = (opts) => pick(lang, opts);
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
@@ -228,6 +279,31 @@
       en:   { hant: 'English',  hans: 'English',  en: 'English' },
     };
     const current = LANGS.find((l) => l.id === lang) || LANGS[0];
+
+    if (layout === 'expanded') {
+      return (
+        <div className="locale-expanded" role="listbox" aria-label={T({ hant: '選擇語言', hans: '选择语言', en: 'Choose language' })}>
+          {LANGS.map((l) => {
+            const selected = l.id === lang;
+            const name = pick(lang, titles[l.id]);
+            return (
+              <button
+                key={l.id}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={`locale-expanded__btn${selected ? ' is-active' : ''}`}
+                onClick={() => onChange(l.id)}
+              >
+                <span className="locale-expanded__code">{l.label}</span>
+                <span className="locale-expanded__name">{name}</span>
+                {selected && <Icon name="check" size={14} color="var(--aurora-deep)" />}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
 
     return (
       <div ref={rootRef} style={{ position: 'relative' }}>
@@ -302,7 +378,7 @@
     );
   }
 
-  function CurrencyPicker({ lang, value, onChange }) {
+  function CurrencyPicker({ lang, value, onChange, layout = 'compact' }) {
     const T = (opts) => pick(lang, opts);
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
@@ -319,6 +395,30 @@
     }, [open]);
 
     const current = DISPLAY_CURRENCIES.find((c) => c.code === value) || DISPLAY_CURRENCIES[0];
+
+    if (layout === 'expanded') {
+      return (
+        <div className="locale-expanded locale-expanded--grid" role="listbox" aria-label={T({ hant: '選擇顯示幣別', hans: '选择显示币别', en: 'Choose display currency' })}>
+          {DISPLAY_CURRENCIES.map((c) => {
+            const selected = c.code === value;
+            return (
+              <button
+                key={c.code}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                aria-label={pick(lang, c.name)}
+                className={`locale-expanded__btn locale-expanded__btn--compact${selected ? ' is-active' : ''}`}
+                onClick={() => onChange(c.code)}
+              >
+                <span className="locale-expanded__code">{c.code}</span>
+                {selected && <Icon name="check" size={12} color="var(--aurora-deep)" />}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
 
     return (
       <div ref={rootRef} style={{ position: 'relative' }}>

@@ -337,11 +337,11 @@
   }
 
   /** Minimal 3-swatch theme picker for the nav bar. */
-  function ThemePicker({ themeId, onChange, lang }) {
+  function ThemePicker({ themeId, onChange, lang, className = '' }) {
     const T = (opts) => pick(lang, opts);
     return (
       <div
-        className="theme-picker"
+        className={`theme-picker${className ? ` ${className}` : ''}`}
         role="group"
         aria-label={T({ hant: '主題配色', hans: '主题配色', en: 'Color theme' })}
       >
