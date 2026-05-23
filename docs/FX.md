@@ -14,19 +14,23 @@ Browser  →  GET /api/fx/rates
 
 - **Anchor currency:** USD (matches `BOKUN_CURRENCY=USD` and Bókun quote amounts).
 - **Provider:** [Frankfurter](https://www.frankfurter.dev/) (`api.frankfurter.dev/v1`) — ECB daily reference rates, no API key.
-- **Supplement:** `TWD` and `MOP` are not published by ECB; those two codes use [open.er-api.com](https://open.er-api.com) live USD cross-rates (still no hardcoded numbers in our repo).
+- **Supplement:** `TWD` is not published by ECB; filled from [open.er-api.com](https://open.er-api.com) live USD cross-rates.
 - **Purpose:** UI display only. Checkout in production would still charge in the merchant settlement currency.
 
 ## Supported display currencies
 
+Nav picker and `/api/fx/rates`:
+
 `USD`, `TWD`, `CNY`, `HKD`, `SGD`, `MYR`, `MOP`, `CAD`, `AUD`
+
+Whole-number display after conversion: `TWD`, `CNY`, `HKD`, `MYR`, `MOP`. Supplemental FX: `TWD`, `MOP` (not on ECB).
 
 ## UI behaviour
 
 | Control | Behaviour |
 |---------|-----------|
 | Nav currency dropdown | Persists to `localStorage` key `auralis.currency` |
-| Default on first visit | `TWD` (hant), `CNY` (hans), `USD` (en) |
+| Default on language change | `TWD` (hant), `CNY` (hans), `USD` (en) |
 | Nav currency menu | ISO code list only; full name on `title` / `aria-label` |
 | Prices on cards / trip / checkout | `tour.priceUsd` converted with live rates |
 

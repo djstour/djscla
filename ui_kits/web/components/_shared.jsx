@@ -29,12 +29,19 @@
     );
   }
 
+  /** Display / round to whole units after FX (and Bókun ISK/JPY/KRW). */
+  const INTEGER_DISPLAY_CURRENCY_CODES = ['TWD', 'CNY', 'HKD', 'MYR', 'MOP', 'ISK', 'JPY', 'KRW'];
+
+  function currencyDisplaysAsInteger(code) {
+    return INTEGER_DISPLAY_CURRENCY_CODES.includes(String(code || '').toUpperCase());
+  }
+
   /** Format amount using Bókun ISO currency (ISK, EUR, USD, …). */
   function formatPrice(n, currency) {
     const amount = Number(n);
     if (!Number.isFinite(amount)) return '—';
     const code = (currency || 'ISK').toUpperCase();
-    const noDecimals = ['ISK', 'JPY', 'KRW'].includes(code);
+    const noDecimals = currencyDisplaysAsInteger(code);
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -75,6 +82,8 @@
     { code: 'AUD', symbol: '$',   name: { hant: '澳元',       hans: '澳元',       en: 'Australian dollar' } },
   ];
 
+  const DISPLAY_CURRENCIES = CURRENCIES;
+
   function currencyLabel(currency, lang) {
     const c = CURRENCIES.find((x) => x.code === currency) || CURRENCIES[0];
     return `${c.code} · ${pick(lang, c.name)}`;
@@ -83,7 +92,8 @@
   const FX_BASE = 'USD';
 
   function defaultCurrencyForLang(lang) {
-    return ({ hant: 'TWD', hans: 'CNY', en: 'USD' }[lang] || 'USD');
+    const pref = ({ hant: 'TWD', hans: 'CNY', en: 'USD' }[lang] || 'USD');
+    return DISPLAY_CURRENCIES.some((c) => c.code === pref) ? pref : 'USD';
   }
 
   function convertFromUsd(amountUsd, targetCurrency, rates) {
@@ -98,8 +108,7 @@
 
   function roundForCurrency(amount, code) {
     const c = (code || FX_BASE).toUpperCase();
-    const zeroDec = ['TWD', 'CNY', 'HKD', 'JPY', 'KRW', 'ISK', 'MOP', 'MYR'].includes(c);
-    return zeroDec ? Math.round(amount) : Math.round(amount * 100) / 100;
+    return currencyDisplaysAsInteger(c) ? Math.round(amount) : Math.round(amount * 100) / 100;
   }
 
   /** Bókun USD amount → user-selected display currency (no hardcoded rates). */
@@ -241,7 +250,7 @@
 
   window.AuralisUI = {
     Icon, formatPrice, singleCurrency, formatTotalAmount,
-    CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
+    CURRENCIES, DISPLAY_CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
     fakePhoto, PhotoSparkles, proxyImageUrl, CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
   };

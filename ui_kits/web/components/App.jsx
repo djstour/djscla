@@ -31,7 +31,7 @@
 
     const [displayCurrency, setDisplayCurrency] = useState(() => {
       const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(CURRENCY_KEY)) || '';
-      const codes = window.AuralisUI.CURRENCIES.map(c => c.code);
+      const codes = window.AuralisUI.DISPLAY_CURRENCIES.map((c) => c.code);
       if (codes.includes(saved)) return saved;
       const initialLang = LANGS.find(l => l.id === (localStorage.getItem(STORAGE_KEY) || 'hant'))?.id || 'hant';
       return defaultCurrencyForLang(initialLang);

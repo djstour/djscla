@@ -3,7 +3,7 @@
 
 (function () {
   const { useState, useEffect, useRef } = React;
-  const { Icon, LANGS, CURRENCIES, pick, currencyLabel } = window.AuralisUI;
+  const { Icon, LANGS, DISPLAY_CURRENCIES, pick, currencyLabel } = window.AuralisUI;
 
   const LOCALE_STRIP = {
     display: 'inline-flex',
@@ -307,7 +307,7 @@
       return () => document.removeEventListener('keydown', onKey);
     }, [open]);
 
-    const current = CURRENCIES.find((c) => c.code === value) || CURRENCIES[0];
+    const current = DISPLAY_CURRENCIES.find((c) => c.code === value) || DISPLAY_CURRENCIES[0];
 
     return (
       <div ref={rootRef} style={{ position: 'relative' }}>
@@ -342,7 +342,7 @@
             style={{ ...LOCALE_MENU, right: 0 }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {CURRENCIES.map((c) => {
+              {DISPLAY_CURRENCIES.map((c) => {
                 const selected = c.code === value;
                 return (
                   <button
