@@ -108,7 +108,7 @@
      * @returns {Promise<{ activities: object[], meta: { total?: number, page?: number, pageSize?: number } }>}
      */
     fetchActivities(opts = {}) {
-      const { lang = 'hant', page = 1, pageSize = 50 } = opts;
+      const { lang = 'hant', page = 1, pageSize = 50, all = true, vendorId, maxItems = 2000 } = opts;
 
       if (typeof fetch === 'undefined') {
         const err = new Error('fetch is not available — use a browser or vercel dev');
@@ -116,13 +116,17 @@
         return Promise.reject(err);
       }
 
-      const qs = new URLSearchParams({
-        lang,
-        page: String(page),
-        pageSize: String(pageSize),
-      });
+      const qs = new URLSearchParams({ lang });
+      if (all) {
+        qs.set('all', 'true');
+        qs.set('maxItems', String(maxItems));
+      } else {
+        qs.set('page', String(page));
+        qs.set('pageSize', String(pageSize));
+      }
+      if (vendorId != null && vendorId !== '') qs.set('vendorId', String(vendorId));
 
-      return fetch(`/api/bokun/activities?${qs}`)
+      return fetch(`/api/catalog/activities?${qs}`)
         .then((res) => res.json().then((data) => ({ res, data })))
         .then(({ res, data }) => {
           if (!res.ok) {
@@ -133,7 +137,7 @@
           }
           const list = data.activities;
           if (!Array.isArray(list)) {
-            throw new Error('Invalid response from /api/bokun/activities');
+            throw new Error('Invalid response from /api/catalog/activities');
           }
           if (data.translations && typeof data.translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };

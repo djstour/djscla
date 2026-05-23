@@ -88,14 +88,15 @@ Response shape:
 ```
 
 - `force: true` — re-translate even when `sourceHash` unchanged.
-- Default batch: first `limit` activities from Bókun search (max 50).
+- Default batch: first `limit` activities from catalog (`fetchAllCatalogPages`, capped).
+- Full channel: `./scripts/sync-all-translations.sh` (see [VENDOR_SCALE.md](./VENDOR_SCALE.md)).
 
 ## API routes
 
 | Route | Method | Auth | Purpose |
 |-------|--------|------|---------|
 | `/api/translations/sync` | POST | Bearer `TRANSLATION_SYNC_SECRET` | Batch translate + upsert |
-| `/api/bokun/activities` | GET | — | Includes `translations` map |
+| `/api/catalog/activities` | GET | — | Includes `translations` map (`all=true` for full channel) |
 | `/api/bokun/activity?id=` | GET | — | Includes `translations` for one id |
 
 Local preview: `npx vercel dev` (not static `http.server`).

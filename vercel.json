@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/bokun/activities",
+      "destination": "/api/catalog/activities"
+    }
+  ],
   "redirects": [
     {
       "source": "/",

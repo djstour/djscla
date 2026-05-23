@@ -3,8 +3,8 @@
 ## Architecture
 
 ```
-Browser  →  GET /api/bokun/activities?lang=hant
-              ↓ (Vercel serverless)
+Browser  →  GET /api/catalog/activities?lang=hant&all=true
+              ↓ (Vercel serverless — paginates Bókun search when all=true)
            Bókun POST /activity.json/search
               ↓
            normalizeActivity → bokunAdapter.toViewModel → TourCard
@@ -55,7 +55,9 @@ There is **no mock catalog fallback**. If `/api/bokun/activities` fails, the UI 
 | Booking channel | API key must belong to a booking channel with products to sell |
 | Permissions | Key needs access to activity search / booking API |
 
-Verify: open `https://djscla.vercel.app/api/bokun/activities?lang=hant` — should return `"source":"bokun"` and an `activities` array (not `Invalid API key`).
+Verify: open `https://djscla.vercel.app/api/catalog/activities?lang=hant&all=true` — should return `"source":"bokun"`, `meta.total` (e.g. 123), and an `activities` array.
+
+**Multi-vendor scale:** see [VENDOR_SCALE.md](./VENDOR_SCALE.md).
 
 ## Files
 
@@ -63,5 +65,7 @@ Verify: open `https://djscla.vercel.app/api/bokun/activities?lang=hant` — shou
 |------|------|
 | `lib/bokun.js` | HMAC signing + search |
 | `lib/normalizeActivity.js` | Bókun → catalog shape |
-| `api/bokun/activities.js` | Vercel handler |
+| `api/catalog/activities.js` | Catalog handler (paginated / `all=true`) |
+| `vercel.json` | Rewrites `/api/bokun/activities` → catalog |
+| `lib/catalog.js` | Bókun pagination helper |
 | `data/bokunAdapter.js` | `fetch('/api/bokun/activities')` + view models |
