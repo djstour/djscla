@@ -45,17 +45,18 @@
   function MapPanel({ children, lang = 'hant', trip = [] }) {
     const pins = deriveTripPins(trip);
     return (
-      <div style={{
-        position: 'relative', minHeight: 720, overflow: 'hidden',
-        background:
-          'radial-gradient(60% 80% at 20% 30%, rgba(46,255,184,0.4) 0%, transparent 60%),' +
-          'radial-gradient(55% 70% at 80% 20%, rgba(0,213,255,0.4) 0%, transparent 60%),' +
-          'radial-gradient(70% 90% at 60% 90%, rgba(107,47,230,0.3) 0%, transparent 60%),' +
-          'var(--brand-panel)',
-      }}>
+      <div
+        className="trip-map-shell"
+        style={{
+          background:
+            'radial-gradient(60% 80% at 20% 30%, rgba(46,255,184,0.4) 0%, transparent 60%),' +
+            'radial-gradient(55% 70% at 80% 20%, rgba(0,213,255,0.4) 0%, transparent 60%),' +
+            'radial-gradient(70% 90% at 60% 90%, rgba(107,47,230,0.3) 0%, transparent 60%),' +
+            'var(--brand-panel)',
+        }}
+      >
         {/* SVG map */}
-        <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
-             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        <svg className="trip-map-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
           {/* grid lines */}
           <g opacity="0.18" stroke="#11151F" strokeWidth="0.5">
             {Array.from({ length: 12 }, (_, i) => (
@@ -123,10 +124,7 @@
         });
 
     return (
-      <div className="glass trip-panel" style={{
-        padding: 24, borderRadius: 28,
-        display: 'flex', flexDirection: 'column', gap: 16,
-      }}>
+      <div className="glass trip-panel">
         <div>
           <span className="overline" style={{ color: 'var(--coral)' }}>
             {T({ hant: '我的行程', hans: '我的行程', en: 'My itinerary' })}
@@ -147,11 +145,7 @@
         {/* Day-by-day */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {trip.length === 0 ? (
-            <div style={{
-              padding: '32px 16px', textAlign: 'center',
-              background: 'rgba(255,255,255,0.5)', borderRadius: 16, border: '1.5px dashed rgba(20,30,60,0.18)',
-              color: 'var(--fg-3)', font: '500 13px/1.5 var(--font-text)',
-            }}>
+            <div className="trip-panel-empty">
               {T({
                 hant: '行程還是一張白紙。加入第一個體驗開始規劃。',
                 hans: '行程还是一张白纸。加入第一个体验开始规划。',
@@ -163,36 +157,25 @@
               const colors = ['#2EFFB8', '#00D5FF', '#6B2FE6', '#FF7A2E', '#FF5A6A'];
               const c = colors[i % colors.length];
               return (
-                <div key={t.id} style={{
-                  display: 'flex', gap: 12, alignItems: 'center',
-                  background: '#fff', borderRadius: 14, padding: '10px 12px',
-                  boxShadow: 'var(--shadow-1)', position: 'relative', overflow: 'hidden',
-                }}>
-                  <div style={{ position: 'absolute', inset: 0, left: 0, width: 4, background: c }}/>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-                    background: c + '22', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <span style={{ font: '500 9px/1 var(--font-text)', letterSpacing: '0.1em', color: 'var(--fg-3)', textTransform: 'uppercase' }}>
+                <div key={t.id} className="trip-item" style={{ '--trip-accent': c }}>
+                  <div className="trip-item__accent" />
+                  <div className="trip-item__day">
+                    <span className="trip-item__day-label">
                       {T({ hant: '第', hans: '第', en: 'Day' })}
                     </span>
-                    <span style={{ font: '700 18px/1 var(--font-display)', color: 'var(--fg-1)' }}>{i + 1}</span>
+                    <span className="trip-item__day-num">{i + 1}</span>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ font: '600 13px/1.25 var(--font-display)', color: 'var(--fg-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.title}
-                    </div>
-                    <div style={{ font: '400 11px/1.3 var(--font-text)', color: 'var(--fg-3)' }}>
+                  <div className="trip-item__body">
+                    <div className="trip-item__title">{t.title}</div>
+                    <div className="trip-item__meta">
                       {t.supplier} · {t.duration}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                    <span style={{ font: '700 13px/1 var(--font-display)', color: 'var(--fg-1)' }}>
+                  <div className="trip-item__aside">
+                    <span className="trip-item__price">
                       {formatDisplayPrice(t.priceUsd ?? t.price, displayCurrency, fxRates)}
                     </span>
-                    <button onClick={() => onRemove(t.id)}
-                            style={{ border: 0, background: 'transparent', color: 'var(--fg-4)', cursor: 'pointer', font: '500 11px/1 var(--font-text)', display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+                    <button type="button" className="trip-item__remove" onClick={() => onRemove(t.id)}>
                       <Icon name="x" size={11} />{T({ hant: '移除', hans: '移除', en: 'remove' })}
                     </button>
                   </div>
@@ -203,29 +186,20 @@
         </div>
 
         {/* Total + CTA */}
-        <div style={{ marginTop: 4, paddingTop: 16, borderTop: '1px solid rgba(20,30,60,0.08)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-            <span style={{ font: '500 13px/1 var(--font-text)', color: 'var(--fg-3)' }}>
+        <div className="trip-panel-footer">
+          <div className="trip-panel-total">
+            <span className="trip-panel-total-label">
               {T({ hant: '總計', hans: '总计', en: 'Total' })}
             </span>
-            <span style={{ font: '700 28px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
+            <span className="trip-panel-total-value">
               {formatTotalDisplay(totalUsd, displayCurrency, fxRates)}
             </span>
           </div>
-          <button onClick={onCheckout} disabled={trip.length === 0}
-                  style={{
-                    width: '100%', height: 52, borderRadius: 16, border: 0,
-                    cursor: trip.length === 0 ? 'not-allowed' : 'pointer',
-                    background: trip.length === 0 ? 'var(--base-200)' : 'var(--gradient-aurora)',
-                    color: trip.length === 0 ? 'var(--fg-4)' : 'var(--brand-on-gradient)',
-                    boxShadow: trip.length === 0 ? 'none' : 'var(--shadow-glow-aurora)',
-                    font: '700 15px/1 var(--font-text)',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  }}>
+          <button type="button" className="trip-panel-cta" onClick={onCheckout} disabled={trip.length === 0}>
             {T({ hant: '前往結帳', hans: '前往结账', en: 'Continue to checkout' })}
             <Icon name="arrow-right" size={18} />
           </button>
-          <div style={{ marginTop: 10, display: 'flex', gap: 12, justifyContent: 'center', color: 'var(--fg-3)', font: '500 11px/1 var(--font-text)' }}>
+          <div className="trip-panel-trust">
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name="shield-check" size={12} color="var(--success)" />
               {T({ hant: '24 小時免費取消', hans: '24 小时免费取消', en: 'Free cancel 24 h' })}

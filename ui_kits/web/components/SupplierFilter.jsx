@@ -26,12 +26,7 @@
     }, [activities]);
 
     return (
-      <aside className="supplier-filter" style={{
-        background: '#fff', borderRadius: 24,
-        padding: 22,
-        boxShadow: 'var(--shadow-2)',
-        display: 'flex', flexDirection: 'column', gap: 22,
-      }}>
+      <aside className="supplier-filter">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ margin: 0, font: '600 18px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
             {T({ hant: '篩選', hans: '筛选', en: 'Filters' })}

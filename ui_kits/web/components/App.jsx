@@ -337,12 +337,12 @@
     }, [activities, activeSupplier, activeCats]);
 
     return (
-      <section className="auralis-section" style={{ paddingTop: 'var(--page-pad-y)', paddingBottom: 80, background: 'var(--bg-page)' }}>
+      <section className="tours-page">
         <div className="auralis-container">
-          <div style={{ font: '500 12px/1 var(--font-text)', color: 'var(--fg-3)', marginBottom: 8 }}>
+          <p className="tours-page-kicker">
             {T({ hant: '探索 / 雷克雅維克', hans: '探索 / 雷克雅未克', en: 'Discover / Reykjavík' })}
-          </div>
-          <h1 className="tours-page-title" style={{ margin: 0, font: '700 40px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
+          </p>
+          <h1 className="tours-page-title">
             {T({
               hant: `${countLabel} 個體驗等你挑選`,
               hans: `${countLabel} 个体验等你挑选`,
@@ -352,7 +352,7 @@
 
           {error && <BokunErrorBanner error={error} lang={lang} />}
 
-          <div style={{ display: 'flex', gap: 24, marginTop: 24 }}>
+          <div className="tours-layout">
             <SupplierFilter
               activities={activities}
               activeSupplier={activeSupplier} onSupplier={onSupplier}
@@ -361,21 +361,17 @@
               displayCurrency={displayCurrency}
               fxRates={fxRates}
             />
-            <div style={{ flex: 1 }}>
-              <div style={{
-                background: '#fff', borderRadius: 16, padding: '12px 16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                boxShadow: 'var(--shadow-1)', marginBottom: 18,
-              }}>
-                <span style={{ font: '500 13px/1 var(--font-text)', color: 'var(--fg-3)' }}>
+            <div className="tours-main">
+              <div className="tours-toolbar tours-toolbar-card">
+                <span className="tours-toolbar-count">
                   {T({
                     hant: `顯示 ${filtered.length} / ${activities.length}${catalogTotal > activities.length ? `（共 ${catalogTotal}）` : ''}`,
                     hans: `显示 ${filtered.length} / ${activities.length}${catalogTotal > activities.length ? `（共 ${catalogTotal}）` : ''}`,
                     en: `Showing ${filtered.length} of ${activities.length}${catalogTotal > activities.length ? ` (${catalogTotal} total)` : ''}`,
                   })}
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ font: '500 12px/1 var(--font-text)', color: 'var(--fg-3)' }}>
+                <div className="tours-sort" role="group" aria-label={T({ hant: '排序', hans: '排序', en: 'Sort' })}>
+                  <span className="tours-sort-label">
                     {T({ hant: '排序：', hans: '排序：', en: 'Sort:' })}
                   </span>
                   {[
@@ -383,12 +379,9 @@
                     T({ hant: '價格 ↑', hans: '价格 ↑', en: 'Price ↑' }),
                     T({ hant: '評分 ★', hans: '评分 ★', en: 'Rating ★' }),
                   ].map((s, i) => (
-                    <button key={s} style={{
-                      height: 32, padding: '0 12px', borderRadius: 999, border: 0, cursor: 'pointer',
-                      background: i === 0 ? 'var(--base-100)' : 'transparent',
-                      color: i === 0 ? 'var(--fg-1)' : 'var(--fg-2)',
-                      font: '600 12px/1 var(--font-text)',
-                    }}>{s}</button>
+                    <button key={s} type="button" className={`tours-sort-btn${i === 0 ? ' is-active' : ''}`}>
+                      {s}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -409,12 +402,8 @@
               </div>
 
               {hasMore && !loading && (
-                <div style={{ marginTop: 28, textAlign: 'center' }}>
-                  <button type="button" onClick={onLoadMore} disabled={loadingMore} style={{
-                    height: 48, padding: '0 28px', borderRadius: 999, border: 0, cursor: loadingMore ? 'wait' : 'pointer',
-                    background: 'var(--base-100)', boxShadow: 'inset 0 0 0 1px var(--base-300)',
-                    font: '600 14px/1 var(--font-text)', color: 'var(--fg-1)',
-                  }}>
+                <div className="tours-load-more">
+                  <button type="button" className="tours-load-more-btn" onClick={onLoadMore} disabled={loadingMore}>
                     {loadingMore
                       ? T({ hant: '載入中…', hans: '加载中…', en: 'Loading…' })
                       : T({ hant: '載入更多行程', hans: '加载更多行程', en: 'Load more tours' })}

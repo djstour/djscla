@@ -461,7 +461,26 @@ html[data-site-theme="sun"] .hero-lead {
   }
 }
 
-/* ---- Tours --------------------------------------------------------------- */
+/* ---- Tours (行程列表) ---------------------------------------------------- */
+.tours-page {
+  padding-top: var(--page-pad-y);
+  padding-bottom: clamp(48px, 8vw, 80px);
+  background: var(--bg-page);
+}
+
+.tours-page-kicker {
+  margin: 0 0 8px;
+  font: 500 12px/1 var(--font-text);
+  color: var(--fg-3);
+}
+
+.tours-page-title {
+  margin: 0;
+  font: 700 40px/1.05 var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: -0.025em;
+}
+
 .tours-layout {
   display: flex;
   gap: clamp(16px, 3vw, 24px);
@@ -474,12 +493,26 @@ html[data-site-theme="sun"] .hero-lead {
   min-width: 0;
 }
 
+.tours-toolbar-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-1);
+  margin-bottom: 18px;
+}
+
 .tours-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.tours-toolbar-count {
+  font: 500 13px/1.4 var(--font-text);
+  color: var(--fg-3);
+  min-width: 0;
 }
 
 .tours-sort {
@@ -489,12 +522,65 @@ html[data-site-theme="sun"] .hero-lead {
   flex-wrap: wrap;
 }
 
+.tours-sort-label {
+  font: 500 12px/1 var(--font-text);
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+
+.tours-sort-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--fg-2);
+  font: 600 12px/1 var(--font-text);
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.tours-sort-btn.is-active {
+  background: var(--base-100);
+  color: var(--fg-1);
+}
+
+.tours-load-more {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.tours-load-more-btn {
+  height: 48px;
+  padding: 0 28px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  background: var(--base-100);
+  box-shadow: inset 0 0 0 1px var(--base-300);
+  font: 600 14px/1 var(--font-text);
+  color: var(--fg-1);
+}
+
+.tours-load-more-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .supplier-filter {
-  width: 280px;
+  width: min(280px, 100%);
   flex-shrink: 0;
   align-self: flex-start;
   position: sticky;
   top: 88px;
+  background: var(--bg-card);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 
 @media (max-width: 900px) {
@@ -505,6 +591,38 @@ html[data-site-theme="sun"] .hero-lead {
   .supplier-filter {
     width: 100%;
     position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .tours-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tours-toolbar-count {
+    font-size: 12px;
+  }
+
+  .tours-sort {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin: 0 calc(-4px);
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .tours-sort::-webkit-scrollbar {
+    display: none;
+  }
+
+  .supplier-filter {
+    padding: 16px;
+    border-radius: 20px;
+    gap: 18px;
   }
 }
 
@@ -660,32 +778,245 @@ html[data-site-theme="sun"] .hero-lead {
   }
 }
 
-/* ---- Trip map ------------------------------------------------------------ */
+/* ---- Trip map (我的旅程) ------------------------------------------------- */
+.trip-map-shell {
+  position: relative;
+  overflow: hidden;
+  min-height: clamp(560px, 90vh, 720px);
+}
+
+.trip-map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .trip-map-inner {
   position: relative;
+  z-index: 1;
   padding: var(--page-pad-x);
   display: flex;
   gap: clamp(16px, 3vw, 24px);
   min-height: clamp(560px, 90vh, 720px);
   flex-direction: row;
   align-items: flex-start;
+  justify-content: flex-end;
 }
 
 .trip-panel {
   width: min(420px, 100%);
   flex-shrink: 0;
+  padding: 24px;
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trip-panel-empty {
+  padding: 32px 16px;
+  text-align: center;
+  background: var(--glass-medium);
+  border-radius: 16px;
+  border: 1.5px dashed var(--base-300);
+  color: var(--fg-3);
+  font: 500 13px/1.5 var(--font-text);
+}
+
+.trip-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow-1);
+  position: relative;
+  overflow: hidden;
+}
+
+.trip-item__accent {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--trip-accent, var(--aurora-cyan));
+}
+
+.trip-item__day {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--trip-accent, var(--aurora-cyan)) 14%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.trip-item__day-label {
+  font: 500 9px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  color: var(--fg-3);
+  text-transform: uppercase;
+}
+
+.trip-item__day-num {
+  font: 700 18px/1 var(--font-display);
+  color: var(--fg-1);
+}
+
+.trip-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.trip-item__title {
+  font: 600 13px/1.25 var(--font-display);
+  color: var(--fg-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-item__meta {
+  font: 400 11px/1.3 var(--font-text);
+  color: var(--fg-3);
+}
+
+.trip-item__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.trip-item__price {
+  font: 700 13px/1 var(--font-display);
+  color: var(--fg-1);
+}
+
+.trip-item__remove {
+  border: 0;
+  background: transparent;
+  color: var(--fg-4);
+  cursor: pointer;
+  font: 500 11px/1 var(--font-text);
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 4px;
+}
+
+.trip-panel-footer {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--base-200);
+}
+
+.trip-panel-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.trip-panel-total-label {
+  font: 500 13px/1 var(--font-text);
+  color: var(--fg-3);
+}
+
+.trip-panel-total-value {
+  font: 700 28px/1 var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: -0.02em;
+}
+
+.trip-panel-cta {
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  border: 0;
+  cursor: pointer;
+  background: var(--gradient-aurora);
+  color: var(--brand-on-gradient);
+  box-shadow: var(--shadow-glow-aurora);
+  font: 700 15px/1 var(--font-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8;
+}
+
+.trip-panel-cta:disabled {
+  cursor: not-allowed;
+  background: var(--base-200);
+  color: var(--fg-4);
+  box-shadow: none;
+}
+
+.trip-panel-trust {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  color: var(--fg-3);
+  font: 500 11px/1 var(--font-text);
 }
 
 @media (max-width: 900px) {
+  .trip-map-shell {
+    min-height: clamp(420px, 72vh, 560px);
+  }
+
   .trip-map-inner {
     flex-direction: column;
-    min-height: auto;
-    padding-bottom: 32px;
+    min-height: 0;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    justify-content: flex-start;
+    align-items: stretch;
   }
 
   .trip-panel {
     width: 100%;
-    order: -1;
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .trip-panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .trip-item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .trip-item__aside {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 56px;
+  }
+
+  .trip-panel-total-value {
+    font-size: 24px;
+  }
+
+  .trip-panel-trust {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
   }
 }
 
