@@ -1,7 +1,81 @@
 /* ActivityDetail — full product page from Bókun GET /activity.json/{id}. */
 
 (function () {
+  const { useState, useEffect } = React;
   const { Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl } = window.AuralisUI;
+
+  /** Reuse list-card proxy size (often cached), then fade in a sharper hero. */
+  function DetailHeroImage({ heroUrl, placeholderKey }) {
+    const [fastLoaded, setFastLoaded] = useState(false);
+    const [hiLoaded, setHiLoaded] = useState(false);
+
+    const fastSrc = heroUrl ? proxyImageUrl(heroUrl, { w: 520, q: 78 }) : null;
+    const hiSrc = heroUrl ? proxyImageUrl(heroUrl, { w: 960, q: 82 }) : null;
+    const useHiRes = hiSrc && hiSrc !== fastSrc;
+
+    useEffect(() => {
+      setFastLoaded(false);
+      setHiLoaded(false);
+    }, [heroUrl]);
+
+    useEffect(() => {
+      if (!useHiRes) return undefined;
+      const img = new Image();
+      img.onload = () => setHiLoaded(true);
+      img.onerror = () => setHiLoaded(false);
+      img.src = hiSrc;
+      return () => { img.onload = null; img.onerror = null; };
+    }, [hiSrc, useHiRes]);
+
+    if (!heroUrl) {
+      return (
+        <div style={{ position: 'absolute', inset: 0, background: fakePhoto(placeholderKey) }} />
+      );
+    }
+
+    return (
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--base-100)' }}>
+        {!fastLoaded && (
+          <div className="tour-card-image-shimmer" aria-hidden="true" style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(120deg,#E4E9F2 0%,#F1F4FA 50%,#E4E9F2 100%)',
+            backgroundSize: '200% 100%',
+          }} />
+        )}
+        {fastSrc && (
+          <img
+            src={fastSrc}
+            alt=""
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            onLoad={() => setFastLoaded(true)}
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center',
+              opacity: useHiRes && hiLoaded ? 0 : (fastLoaded ? 1 : 0),
+              transition: 'opacity 0.35s var(--ease-out)',
+            }}
+          />
+        )}
+        {useHiRes && (
+          <img
+            src={hiSrc}
+            alt=""
+            loading="eager"
+            decoding="async"
+            aria-hidden="true"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center',
+              opacity: hiLoaded ? 1 : 0,
+              transition: 'opacity 0.35s var(--ease-out)',
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 
   function ActivityDetail({
     tour,
@@ -33,7 +107,6 @@
 
     const photos = (tour.photoUrls && tour.photoUrls.length) ? tour.photoUrls : [];
     const heroUrl = photos[0] || tour.coverImageUrl;
-    const heroThumb = heroUrl ? proxyImageUrl(heroUrl, { w: 1200, q: 82 }) : null;
     const cancelHrs = tour.availability && tour.cancellationCutoffMinutes != null
       ? Math.round(tour.cancellationCutoffMinutes / 60)
       : null;
@@ -41,12 +114,7 @@
     return (
       <div style={{ background: 'var(--bg-page)', minHeight: '100vh', paddingBottom: 100 }}>
         <div className="detail-hero">
-          <div style={{
-            position: 'absolute', inset: 0,
-            ...(heroUrl
-              ? { backgroundImage: `url(${heroUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-              : { background: fakePhoto(tour.photo) }),
-          }} />
+          <DetailHeroImage heroUrl={heroUrl} placeholderKey={tour.photo} />
           <div style={{
             position: 'absolute', inset: 0,
             background: 'linear-gradient(180deg, rgba(17,21,31,0.15) 0%, rgba(17,21,31,0.55) 100%)',
@@ -60,12 +128,19 @@
               display: 'flex', gap: 8, maxWidth: '90%', overflowX: 'auto', padding: '0 8px',
             }}>
               {photos.slice(0, 6).map((url, i) => (
-                <div key={url + i} style={{
-                  width: 72, height: 48, borderRadius: 10, flexShrink: 0,
-                  backgroundImage: `url(${proxyImageUrl(url, { w: 160, q: 75 })})`,
-                  backgroundSize: 'cover', backgroundPosition: 'center',
-                  boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.8)',
-                }} />
+                <img
+                  key={url + i}
+                  src={proxyImageUrl(url, { w: 160, q: 75 })}
+                  alt=""
+                  loading={i < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  style={{
+                    width: 72, height: 48, borderRadius: 10, flexShrink: 0,
+                    objectFit: 'cover', objectPosition: 'center',
+                    boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.8)',
+                    background: 'var(--base-100)',
+                  }}
+                />
               ))}
             </div>
           )}

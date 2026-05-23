@@ -5,7 +5,7 @@
 
 (function () {
   const { useState } = React;
-  const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick, proxyImageUrl } = window.AuralisUI;
+  const { Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage } = window.AuralisUI;
 
   function TourCardImage({ src, alt, height, fallbackPhoto, priority }) {
     const [loaded, setLoaded] = useState(!src);
@@ -80,7 +80,11 @@
           cursor: onView ? 'pointer' : 'default',
           transition: 'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out)',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-4)'; }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-3px)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-4)';
+          if (onView && tour.coverImageUrl) prefetchProxiedImage(tour.coverImageUrl, { w: 520, q: 78 });
+        }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-2)'; }}
       >
         <div style={{ position: 'relative' }}>

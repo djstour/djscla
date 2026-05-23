@@ -235,6 +235,18 @@
     return `/api/media/thumb?${params.toString()}`;
   }
 
+  function prefetchProxiedImage(url, opts = { w: 520, q: 78 }) {
+    const href = proxyImageUrl(url, opts);
+    if (!href || href === url) return;
+    if (typeof document === 'undefined') return;
+    if (document.querySelector(`link[rel="preload"][href="${href}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = href;
+    document.head.appendChild(link);
+  }
+
   /** Supplier filter options derived from live Bókun activities. */
   function getSupplierOptions(lang, activities = []) {
     const all = { id: 'all', label: pick(lang, { hant: '全部供應商', hans: '全部供应商', en: 'All suppliers' }) };
@@ -252,6 +264,6 @@
     Icon, formatPrice, singleCurrency, formatTotalAmount,
     CURRENCIES, DISPLAY_CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
-    fakePhoto, PhotoSparkles, proxyImageUrl, CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+    fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage, CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
   };
 })();
