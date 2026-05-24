@@ -462,6 +462,121 @@
     { id: 'south-coast',   label: { hant: '南岸',   hans: '南岸',   en: 'South Coast' } },
   ];
 
+  // -------------------------------------------------------------------
+  // Trip search (Hero → Tours → Activity detail)
+  // -------------------------------------------------------------------
+  const TRIP_SEARCH_STORAGE_KEY = 'auralis.tripSearch';
+
+  const TRIP_HUBS = [
+    {
+      id: 'reykjavik',
+      facetId: 'reykjavik',
+      label: { hant: '雷克雅維克 (KEF)', hans: '雷克雅未克 (KEF)', en: 'Reykjavík (KEF)' },
+    },
+  ];
+
+  const TRIP_HUB_IDS = new Set(TRIP_HUBS.map((h) => h.id));
+
+  function isoDateOffset(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function todayIsoDate() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function defaultTripSearch() {
+    return {
+      hubId: 'reykjavik',
+      startDate: isoDateOffset(14),
+      endDate: isoDateOffset(21),
+      adults: 2,
+      children: 0,
+    };
+  }
+
+  function normalizeTripSearch(raw) {
+    const base = defaultTripSearch();
+    const hubId = raw && TRIP_HUB_IDS.has(raw.hubId) ? raw.hubId : base.hubId;
+    const today = todayIsoDate();
+    let startDate = (raw && raw.startDate) || base.startDate;
+    let endDate = (raw && raw.endDate) || base.endDate;
+    if (startDate < today) startDate = today;
+    if (endDate < startDate) endDate = startDate;
+    const adults = Math.min(6, Math.max(1, Number(raw && raw.adults) || base.adults));
+    const children = Math.min(6, Math.max(0, Number(raw && raw.children) || base.children));
+    return { hubId, startDate, endDate, adults, children };
+  }
+
+  function loadTripSearch() {
+    try {
+      const saved = typeof localStorage !== 'undefined' && localStorage.getItem(TRIP_SEARCH_STORAGE_KEY);
+      if (saved) return normalizeTripSearch(JSON.parse(saved));
+    } catch (e) { /* ignore */ }
+    return defaultTripSearch();
+  }
+
+  function saveTripSearch(tripSearch) {
+    try {
+      localStorage.setItem(TRIP_SEARCH_STORAGE_KEY, JSON.stringify(normalizeTripSearch(tripSearch)));
+    } catch (e) { /* ignore */ }
+  }
+
+  function facetsFromTripSearch(tripSearch) {
+    const hub = TRIP_HUBS.find((h) => h.id === tripSearch?.hubId);
+    return hub && hub.facetId ? [hub.facetId] : [];
+  }
+
+  function formatTripSearchDateRange(tripSearch, lang) {
+    const { startDate, endDate } = normalizeTripSearch(tripSearch);
+    const locale = lang === 'en' ? 'en-GB' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW';
+    const opts = { day: 'numeric', month: 'short', year: 'numeric' };
+    const start = new Date(`${startDate}T12:00:00`);
+    const end = new Date(`${endDate}T12:00:00`);
+    const a = start.toLocaleDateString(locale, opts);
+    const b = end.toLocaleDateString(locale, opts);
+    if (startDate === endDate) return a;
+    return pick(lang, {
+      hant: `${a} → ${b}`,
+      hans: `${a} → ${b}`,
+      en: `${a} → ${b}`,
+    });
+  }
+
+  function formatTripSearchPax(tripSearch, lang) {
+    const { adults, children } = normalizeTripSearch(tripSearch);
+    if (children > 0) {
+      return pick(lang, {
+        hant: `${adults} 成人 · ${children} 孩童`,
+        hans: `${adults} 成人 · ${children} 孩童`,
+        en: `${adults} adult${adults === 1 ? '' : 's'} · ${children} child${children === 1 ? '' : 'ren'}`,
+      });
+    }
+    return pick(lang, {
+      hant: `${adults} 位成人`,
+      hans: `${adults} 位成人`,
+      en: `${adults} adult${adults === 1 ? '' : 's'}`,
+    });
+  }
+
+  function formatTripSearchSummary(tripSearch, lang) {
+    const hub = TRIP_HUBS.find((h) => h.id === tripSearch?.hubId);
+    const hubLabel = hub ? pick(lang, hub.label) : '';
+    const dates = formatTripSearchDateRange(tripSearch, lang);
+    const pax = formatTripSearchPax(tripSearch, lang);
+    return [hubLabel, dates, pax].filter(Boolean).join(' · ');
+  }
+
+  /** Hero quick picks → Tours filters (keeps hub facet from trip search). */
+  const HERO_POPULAR_CHIPS = [
+    { chipId: 'aurora' },
+    { routeId: 'golden-circle' },
+    { chipId: 'hotspring' },
+    { chipId: 'self-drive' },
+  ];
+
   /** Orthogonal facets (maps to activity.facetIds; AND when multiple selected). */
   const FACETS = [
     { id: 'premium',      label: { hant: '頂級／私人', hans: '顶级／私人', en: 'Premium / private' } },
@@ -625,6 +740,9 @@
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     aboveFoldImagePriorityCount, prefersReducedData,
     CATEGORIES, ROUTES, FACETS, formatCatalogCount, formatToursToolbarSummary,
+    TRIP_HUBS, HERO_POPULAR_CHIPS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
+    facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
+    todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,
     SITE_THEMES, HERO_THEMES, ThemePicker,
     getInitialSiteTheme, setSiteThemeById, applySiteTheme,

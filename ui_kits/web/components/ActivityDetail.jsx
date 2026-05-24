@@ -214,6 +214,8 @@
     lang,
     displayCurrency = 'USD',
     fxRates = { USD: 1 },
+    initialDate = null,
+    initialGuestCounts = null,
   }) {
     const T = (opts) => pick(lang, opts);
     const imgProfile = useResponsiveImageProfile();
@@ -223,9 +225,16 @@
     const [descExpanded, setDescExpanded] = useState(false);
     const [stopsExpanded, setStopsExpanded] = useState(false);
     const [priceSheetOpen, setPriceSheetOpen] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(nextIsoDate(14));
+    const [selectedDate, setSelectedDate] = useState(() => {
+      const min = todayIso();
+      const fromTrip = initialDate && initialDate >= min ? initialDate : null;
+      return fromTrip || nextIsoDate(14);
+    });
     const [selectedStartTime, setSelectedStartTime] = useState('');
-    const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0 });
+    const [guestCounts, setGuestCounts] = useState(() => ({
+      adults: Math.min(6, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
+      children: Math.min(6, Math.max(0, Number(initialGuestCounts?.children) || 0)),
+    }));
     const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
     const [availabilityOpen, setAvailabilityOpen] = useState(false);
     const [stickyBarVisible, setStickyBarVisible] = useState(false);
@@ -248,21 +257,26 @@
       : [];
 
     useEffect(() => {
+      const min = todayIso();
+      const fromTrip = initialDate && initialDate >= min ? initialDate : null;
       setActivePhoto(0);
       setDescExpanded(false);
       setStopsExpanded(false);
       setPriceSheetOpen(false);
       setCompactHeader(false);
-      setSelectedDate(nextIsoDate(14));
+      setSelectedDate(fromTrip || nextIsoDate(14));
       setSelectedStartTime('');
-      setGuestCounts({ adults: 2, children: 0 });
+      setGuestCounts({
+        adults: Math.min(6, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
+        children: Math.min(6, Math.max(0, Number(initialGuestCounts?.children) || 0)),
+      });
       setAvailabilityState({ loading: false, error: '', data: null });
       setAvailabilityOpen(false);
       setStickyBarVisible(false);
       setInquiryOpen(false);
       setInquirySubmitting(false);
       setInquiryStatus({ ok: false, message: '' });
-    }, [tour && tour.id, galleryPhotos.length]);
+    }, [tour && tour.id, galleryPhotos.length, initialDate, initialGuestCounts?.adults, initialGuestCounts?.children]);
 
     useEffect(() => {
       const firstStartTime = tour && tour.startTimes && tour.startTimes[0];

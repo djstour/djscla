@@ -9,6 +9,7 @@
   const {
     Icon,
     CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount, formatToursToolbarSummary,
+    loadTripSearch, saveTripSearch, normalizeTripSearch, facetsFromTripSearch, formatTripSearchSummary,
     activityVendor, vendorIdsMatch,
     Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail,
   } = window.AuralisUI;
@@ -130,10 +131,15 @@
     }
     const tripIdSet = useMemo(() => new Set(tripIds), [tripIds]);
 
+    const [tripSearch, setTripSearch] = useState(() => loadTripSearch());
     const [activeSupplier, setActiveSupplier] = useState('all');
     const [activeCats, setActiveCats] = useState([]);
     const [activeRoutes, setActiveRoutes] = useState([]);
     const [activeFacets, setActiveFacets] = useState([]);
+
+    useEffect(() => {
+      saveTripSearch(tripSearch);
+    }, [tripSearch]);
 
     function addToTrip(vm) {
       if (tripIdSet.has(vm.id)) return;
@@ -152,29 +158,56 @@
     function toggleFacet(id) {
       setActiveFacets(fs => fs.includes(id) ? fs.filter(f => f !== id) : [...fs, id]);
     }
-    function openToursWithChip(chipId) {
-      setActiveRoutes([]);
-      setActiveFacets([]);
-      setActiveCats([chipId]);
+    function goToToursWithFilters(search, { chipId = null, routeId = null } = {}) {
+      const normalized = normalizeTripSearch(search || tripSearch);
+      setTripSearch(normalized);
+      setActiveFacets(facetsFromTripSearch(normalized));
+      setActiveCats(chipId ? [chipId] : []);
+      setActiveRoutes(routeId ? [routeId] : []);
       setScreen('tours');
       window.scrollTo(0, 0);
     }
 
+    function openToursWithChip(chipId) {
+      goToToursWithFilters(tripSearch, { chipId });
+    }
+
+    function handleNav(target) {
+      if (target === 'tours') {
+        setActiveFacets((prev) => {
+          const hubFacets = facetsFromTripSearch(tripSearch);
+          return [...new Set([...hubFacets, ...prev])];
+        });
+      }
+      setScreen(target);
+      if (target !== 'detail') window.scrollTo(0, 0);
+    }
+
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
-        <Nav currentScreen={screen} onNav={setScreen}
+        <Nav currentScreen={screen} onNav={handleNav}
              cartCount={tripIds.length} lang={lang} onCycleLang={handleLangChange}
              displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency}
              siteThemeId={siteTheme.id} onSiteThemeChange={handleSiteThemeChange} />
 
         {screen === 'home' && (
           <>
-            <Hero lang={lang} catalogTotal={catalogTotal} theme={siteTheme}
-                  onSearch={() => setScreen('tours')} />
+            <Hero
+              lang={lang}
+              catalogTotal={catalogTotal}
+              theme={siteTheme}
+              tripSearch={tripSearch}
+              onTripSearchChange={setTripSearch}
+              onSearch={(search) => goToToursWithFilters(search)}
+              onPopularChip={(search, chip) => goToToursWithFilters(search, {
+                chipId: chip.chipId || null,
+                routeId: chip.routeId || null,
+              })}
+            />
             {error && <div className="auralis-container"><BokunErrorBanner error={error} lang={lang} /></div>}
             <CategoryStrip onSelectCategory={openToursWithChip} lang={lang} />
             <FeaturedSection activities={activities} loading={loading} catalogTotal={catalogTotal}
-                             onView={() => setScreen('tours')} onAdd={addToTrip} onOpenDetail={openActivityDetail}
+                             onView={() => goToToursWithFilters(tripSearch)} onAdd={addToTrip} onOpenDetail={openActivityDetail}
                              tripIdSet={tripIdSet} lang={lang}
                              displayCurrency={displayCurrency} fxRates={fxRates} />
             <Footer lang={lang} />
@@ -200,6 +233,8 @@
             onToggleRoute={toggleRoute}
             activeFacets={activeFacets}
             onToggleFacet={toggleFacet}
+            tripSearch={tripSearch}
+            onEditTripSearch={() => setScreen('home')}
             lang={lang}
             catalogTotal={catalogTotal}
             catalogMeta={meta}
@@ -220,6 +255,8 @@
             lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
+            initialDate={tripSearch.startDate}
+            initialGuestCounts={{ adults: tripSearch.adults, children: tripSearch.children }}
           />
         )}
 
@@ -330,6 +367,7 @@
     activities, loading, loadingMore, hasMore, onLoadMore, error, tripIdSet, onAdd, onOpenDetail,
     activeSupplier, onSupplier, activeCats, onToggleCat,
     activeRoutes, onToggleRoute, activeFacets, onToggleFacet,
+    tripSearch, onEditTripSearch,
     lang, catalogTotal, catalogMeta, displayCurrency, fxRates,
   }) {
     const T = (opts) => pick(lang, opts);
@@ -440,6 +478,14 @@
               fxRates={fxRates}
             />
             <div className="tours-main">
+              <div className="tours-trip-context" role="status">
+                <span className="tours-trip-context__text">
+                  {formatTripSearchSummary(tripSearch, lang)}
+                </span>
+                <button type="button" className="tours-trip-context__edit" onClick={onEditTripSearch}>
+                  {T({ hant: '修改', hans: '修改', en: 'Edit' })}
+                </button>
+              </div>
               <div className="tours-toolbar tours-toolbar-card">
                 <span className="tours-toolbar-count">{toolbarSummary}</span>
                 <div className="tours-sort" role="group" aria-label={T({ hant: '排序', hans: '排序', en: 'Sort' })}>
