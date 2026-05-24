@@ -84,6 +84,12 @@ Verify: open `https://djscla.vercel.app/api/catalog/activities?lang=hant&all=tru
 
 **Multi-vendor scale:** see [VENDOR_SCALE.md](./VENDOR_SCALE.md).
 
+### Supplier counts (Marketplace contract)
+
+Pill counts come from **`meta.vendorContractCounts`**, aligned with Bókun Marketplace → Contract summary (e.g. Arctic Adventures **123**, Adventure Vikings **18**). The API loads each contracted vendor separately (`data/bokunVendors.json`) and counts merged search rows per vendor before display dedupe.
+
+Add a new marketplace vendor: edit `data/bokunVendors.json` and redeploy.
+
 ## Files
 
 | File | Role |

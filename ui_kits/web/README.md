@@ -19,7 +19,7 @@ Responsive from **640px** (phone) and **900px** (tablet) breakpoints — see `re
 | Screen | What's there |
 |---|---|
 | **Discover** | Animated aurora hero · category strip · 6 featured tours · "why Auralis" stats · sample 7-day trip block · footer with newsletter capture |
-| **Tours** | Left rail: supplier filter (Bókun list, checkboxes), category chips, price range, guide language · right: sort bar + responsive tour grid |
+| **Tours** | Left rail: supplier pills (live Bókun vendors + counts), experience / routes / facets / price · right: sort bar + tour grid |
 | **Trip · Map** | Stylized Iceland map with 5 numbered pins · day-by-day glass itinerary panel · stat pills (drive distance, aurora forecast) |
 | **Checkout** | 3-step flow — Review → Payment (card / Apple Pay / LINE Pay) → Confirmation |
 

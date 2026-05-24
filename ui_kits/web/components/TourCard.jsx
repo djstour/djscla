@@ -163,9 +163,11 @@
             <div style={{ font: '600 16px/1.25 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
               {tour.title}
             </div>
-            <div style={{ font: '500 13px/1.4 var(--font-text)', color: 'var(--fg-3)', marginTop: 2 }}>
-              {tour.supplierRole || '\u00A0'}
-            </div>
+            {tour.supplierRole ? (
+              <div style={{ font: '500 13px/1.4 var(--font-text)', color: 'var(--fg-3)', marginTop: 2 }}>
+                {tour.supplierRole}
+              </div>
+            ) : null}
           </div>
 
           <div style={{ display: 'flex', gap: 12, color: 'var(--fg-3)', font: '500 12px/1 var(--font-text)', alignItems: 'center', flexWrap: 'wrap' }}>

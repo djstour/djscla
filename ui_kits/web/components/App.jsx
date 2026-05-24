@@ -8,7 +8,8 @@
   const { useState, useMemo, useEffect } = React;
   const {
     Icon,
-    CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount,
+    CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount, formatToursToolbarSummary,
+    activityVendor, vendorIdsMatch,
     Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail,
   } = window.AuralisUI;
   const { useActivities } = window.AuralisData;
@@ -80,7 +81,9 @@
     const {
       loading, loadingMore, error, activities, meta, hasMore, loadMore, catalogTotal: hookCatalogTotal,
     } = useActivities(lang);
-    const catalogTotal = hookCatalogTotal > 0 ? hookCatalogTotal : (meta && meta.total > 0 ? meta.total : activities.length);
+    const catalogTotal = (meta && meta.total > 0)
+      ? meta.total
+      : (hookCatalogTotal > 0 ? hookCatalogTotal : activities.length);
 
     // Trip = ARRAY OF BÓKUN IDS (numbers). View-models are looked up from the
     // current `activities` list, so a language flip rehydrates every cart row
@@ -199,6 +202,7 @@
             onToggleFacet={toggleFacet}
             lang={lang}
             catalogTotal={catalogTotal}
+            catalogMeta={meta}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
           />
@@ -326,17 +330,25 @@
     activities, loading, loadingMore, hasMore, onLoadMore, error, tripIdSet, onAdd, onOpenDetail,
     activeSupplier, onSupplier, activeCats, onToggleCat,
     activeRoutes, onToggleRoute, activeFacets, onToggleFacet,
-    lang, catalogTotal, displayCurrency, fxRates,
+    lang, catalogTotal, catalogMeta, displayCurrency, fxRates,
   }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
 
-    // Filter activities by supplier (numeric Bókun vendor id or 'all') + categories.
+    const catalogActivities = useMemo(() => {
+      const byId = new Map();
+      activities.forEach((vm) => {
+        if (vm && vm.id != null) byId.set(String(vm.id), vm);
+      });
+      return [...byId.values()];
+    }, [activities]);
+
+    // Filter activities by supplier (Bókun vendor.id) + categories.
     const filtered = useMemo(() => {
-      return activities.filter((vm) => {
+      return catalogActivities.filter((vm) => {
         if (activeSupplier !== 'all') {
-          const vid = vm.vendor && vm.vendor.id;
-          if (vid == null || String(vid) !== String(activeSupplier)) return false;
+          const v = activityVendor(vm);
+          if (!vendorIdsMatch(v && v.id, activeSupplier)) return false;
         }
         const chipIdsForActivity = vm.chipIds?.length
           ? vm.chipIds
@@ -365,7 +377,34 @@
         }
         return true;
       });
-    }, [activities, activeSupplier, activeCats, activeRoutes, activeFacets]);
+    }, [catalogActivities, activeSupplier, activeCats, activeRoutes, activeFacets]);
+
+    const channelContractTotal = (catalogMeta && catalogMeta.total > 0)
+      ? catalogMeta.total
+      : catalogTotal;
+
+    const vendorKey = activeSupplier !== 'all' ? String(activeSupplier).trim() : null;
+    const contractCounts = (catalogMeta && catalogMeta.vendorContractCounts) || {};
+    const contractInScope = vendorKey && contractCounts[vendorKey] != null
+      ? Number(contractCounts[vendorKey])
+      : channelContractTotal;
+
+    const uniqueCounts = (catalogMeta && catalogMeta.vendorUniqueCounts) || {};
+    const loadedInScope = vendorKey
+      ? (uniqueCounts[vendorKey] != null
+        ? Number(uniqueCounts[vendorKey])
+        : catalogActivities.filter((vm) => vendorIdsMatch(activityVendor(vm) && activityVendor(vm).id, activeSupplier)).length)
+      : catalogActivities.length;
+
+    const hasExtraFilters = activeCats.length > 0 || activeRoutes.length > 0 || activeFacets.length > 0;
+
+    const toolbarSummary = formatToursToolbarSummary({
+      filtered: filtered.length,
+      loadedUnique: loadedInScope,
+      contractProducts: contractInScope,
+      hasExtraFilters,
+      lang,
+    });
 
     return (
       <section className="tours-page">
@@ -385,24 +424,24 @@
 
           <div className="tours-layout">
             <SupplierFilter
-              activities={activities}
-              activeSupplier={activeSupplier} onSupplier={onSupplier}
-              activeCats={activeCats} onToggleCat={onToggleCat}
-              activeRoutes={activeRoutes} onToggleRoute={onToggleRoute}
-              activeFacets={activeFacets} onToggleFacet={onToggleFacet}
+              activities={catalogActivities}
+              activeSupplier={activeSupplier}
+              onSupplier={onSupplier}
+              activeCats={activeCats}
+              onToggleCat={onToggleCat}
+              activeRoutes={activeRoutes}
+              onToggleRoute={onToggleRoute}
+              activeFacets={activeFacets}
+              onToggleFacet={onToggleFacet}
               lang={lang}
+              vendorContractCounts={catalogMeta && catalogMeta.vendorContractCounts}
+              vendors={catalogMeta && catalogMeta.vendors}
               displayCurrency={displayCurrency}
               fxRates={fxRates}
             />
             <div className="tours-main">
               <div className="tours-toolbar tours-toolbar-card">
-                <span className="tours-toolbar-count">
-                  {T({
-                    hant: `顯示 ${filtered.length} / ${activities.length}${catalogTotal > activities.length ? `（共 ${catalogTotal}）` : ''}`,
-                    hans: `显示 ${filtered.length} / ${activities.length}${catalogTotal > activities.length ? `（共 ${catalogTotal}）` : ''}`,
-                    en: `Showing ${filtered.length} of ${activities.length}${catalogTotal > activities.length ? ` (${catalogTotal} total)` : ''}`,
-                  })}
-                </span>
+                <span className="tours-toolbar-count">{toolbarSummary}</span>
                 <div className="tours-sort" role="group" aria-label={T({ hant: '排序', hans: '排序', en: 'Sort' })}>
                   <span className="tours-sort-label">
                     {T({ hant: '排序：', hans: '排序：', en: 'Sort:' })}

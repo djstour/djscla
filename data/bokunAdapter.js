@@ -25,8 +25,8 @@
  *     id:           number,            // Bókun activity id
  *     title:        string,            // already localised
  *     summary:      string,            // localised, plain text (no HTML)
- *     supplier:     string,            // vendor.title (Latin brand name)
- *     supplierRole: string,            // localised vendor role line
+ *     supplier:     string,            // vendor.titleOriginal | title (never localized)
+ *     supplierRole: string,            // unused — brand name only
  *     duration:     string,            // localised duration
  *     mode:         string,            // localised mode label
  *     rating:       number,
@@ -295,10 +295,11 @@
       const mode = pickFromOverlay(overlay.mode, lang, '')
         || (catKey ? pickFromOverlay(T.CATEGORY[catKey], lang, lang === 'en' ? catKey : '') : '');
 
-      // ---- vendor ----
-      const vendorOverlay = T.VENDOR[activity.vendor && activity.vendor.id] || {};
-      const supplier = activity.vendor ? activity.vendor.title : '';
-      const supplierRole = pickFromOverlay(vendorOverlay.role, lang, '');
+      // ---- vendor — Latin brand name only; never localized ----
+      const supplier = activity.vendor
+        ? (activity.vendor.titleOriginal || activity.vendor.title)
+        : '';
+      const supplierRole = '';
 
       // ---- duration ----
       // Bókun ships `durationText` as English. For Chinese locales we render
@@ -571,10 +572,13 @@
           });
         };
 
-        if (state.raw.length > 0) {
+        const catalogReady = state.raw.length > 0 && state.meta && state.meta.catalogFetchComplete;
+
+        if (catalogReady) {
           applyPayload(state.raw, state.meta, null, { append: false });
         } else {
-          BokunAdapter.fetchActivities({ lang, page: 1, pageSize: CATALOG_PAGE_SIZE })
+          // Full channel catalog so supplier list + counts include every vendor (Phase A, <~2k SKU).
+          BokunAdapter.fetchActivities({ lang, all: true, maxItems: 2000 })
             .then(({ activities: raw, meta, translations }) => applyPayload(raw, meta, translations))
             .catch((err) => {
               if (!cancelled) {
@@ -590,7 +594,7 @@
       }, [lang]);
 
       const catalogTotal = state.meta && state.meta.total > 0 ? state.meta.total : state.raw.length;
-      const hasMore = state.raw.length < catalogTotal;
+      const hasMore = false;
 
       const loadMore = () => {
         if (state.loadingMore || state.loading || !hasMore) return;

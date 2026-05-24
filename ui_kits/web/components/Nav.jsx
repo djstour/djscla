@@ -18,13 +18,13 @@
 
   const LOCALE_BTN = {
     height: 28,
-    padding: '0 8px 0 9px',
+    padding: '0 9px',
     borderRadius: 999,
     border: 0,
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
     font: '700 11px/1 var(--font-text)',
     letterSpacing: '0.04em',
     color: 'var(--fg-1)',
@@ -54,8 +54,7 @@
     textAlign: 'left',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
+    justifyContent: 'flex-start',
     font: '700 11px/1 var(--font-text)',
     letterSpacing: '0.04em',
     transition: 'background var(--dur-fast) var(--ease-out)',
@@ -318,7 +317,6 @@
           }}
         >
           <span>{current.label}</span>
-          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={13} color="var(--fg-3)" />
         </button>
 
         {open && (
@@ -358,7 +356,6 @@
                     }}
                   >
                     <span>{l.label}</span>
-                    {selected && <Icon name="check" size={12} color="var(--aurora-deep)" />}
                   </button>
                 );
               })}
@@ -409,7 +406,6 @@
           }}
         >
           <span>{current.code}</span>
-          {!inMobileSheet && <Icon name={open ? 'chevron-up' : 'chevron-down'} size={13} color="var(--fg-3)" />}
         </button>
 
         {open && (
@@ -448,7 +444,6 @@
                     }}
                   >
                     <span>{c.code}</span>
-                    {selected && <Icon name="check" size={12} color="var(--aurora-deep)" />}
                   </button>
                 );
               })}

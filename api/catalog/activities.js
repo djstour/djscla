@@ -1,4 +1,9 @@
-const { fetchCatalogPage, fetchAllCatalogPages, DEFAULT_ALL_CAP } = require('../../lib/catalog');
+const {
+  fetchCatalogPage,
+  fetchAllCatalogPages,
+  fetchChannelContractCatalog,
+  DEFAULT_ALL_CAP,
+} = require('../../lib/catalog');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
 
@@ -29,7 +34,9 @@ module.exports = async function handler(req, res) {
 
   try {
     const { activities, meta } = fetchAll
-      ? await fetchAllCatalogPages({ uiLang, pageSize: Math.min(pageSize, 100), maxItems, vendorId })
+      ? (vendorId && vendorId !== 'all'
+        ? await fetchAllCatalogPages({ uiLang, pageSize: Math.min(pageSize, 100), maxItems, vendorId })
+        : await fetchChannelContractCatalog({ uiLang, pageSize: Math.min(pageSize, 100), maxItems }))
       : await fetchCatalogPage({ uiLang, page, pageSize, vendorId });
 
     const list = full ? activities : activities.map(slimActivityForList);

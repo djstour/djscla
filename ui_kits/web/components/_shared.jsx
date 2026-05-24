@@ -161,9 +161,9 @@
   // FX — USD anchor (Bókun) → display currency via Frankfurter (/api/fx/rates)
   // ------------------------------------------------------------------
   const CURRENCIES = [
-    { code: 'USD', symbol: '$',   name: { hant: '美元',       hans: '美元',       en: 'US dollar' } },
     { code: 'TWD', symbol: 'NT$', name: { hant: '新台幣',     hans: '新台币',     en: 'Taiwan dollar' } },
     { code: 'CNY', symbol: '¥',   name: { hant: '人民幣',     hans: '人民币',     en: 'Chinese yuan' } },
+    { code: 'USD', symbol: '$',   name: { hant: '美元',       hans: '美元',       en: 'US dollar' } },
     { code: 'HKD', symbol: 'HK$', name: { hant: '港幣',       hans: '港币',       en: 'Hong Kong dollar' } },
     { code: 'SGD', symbol: 'S$',  name: { hant: '新加坡元',   hans: '新加坡元',   en: 'Singapore dollar' } },
     { code: 'MYR', symbol: 'RM',  name: { hant: '馬來西亞令吉', hans: '马来西亚令吉', en: 'Malaysian ringgit' } },
@@ -505,17 +505,116 @@
     document.head.appendChild(link);
   }
 
-  /** Supplier filter options derived from live Bókun activities. */
-  function getSupplierOptions(lang, activities = []) {
-    const all = { id: 'all', label: pick(lang, { hant: '全部供應商', hans: '全部供应商', en: 'All suppliers' }) };
-    const byId = new Map();
-    (activities || []).forEach((vm) => {
-      const v = vm.raw && vm.raw.vendor;
-      if (!v || v.id == null) return;
-      if (!byId.has(v.id)) byId.set(v.id, { id: v.id, label: v.title || vm.supplier || String(v.id) });
+  /**
+   * Tours toolbar — always label with Bókun contract product count (Marketplace summary).
+   * Matches Adventure Vikings: "18 tours in contract". Extra filters only narrow the grid.
+   */
+  function formatToursToolbarSummary({
+    filtered,
+    loadedUnique,
+    contractProducts,
+    hasExtraFilters = false,
+    lang,
+  }) {
+    const f = Number(filtered) || 0;
+    const contract = Number(contractProducts) || 0;
+    const nf = formatCatalogCount(f, lang);
+    const nc = formatCatalogCount(contract, lang);
+
+    if (hasExtraFilters && contract > 0) {
+      return pick(lang, {
+        hant: `顯示 ${nf} / 合約 ${nc}`,
+        hans: `显示 ${nf} / 合约 ${nc}`,
+        en: `${nf} of ${nc} in contract`,
+      });
+    }
+
+    if (contract > 0) {
+      return pick(lang, {
+        hant: `合約 ${nc} 個行程`,
+        hans: `合约 ${nc} 个行程`,
+        en: `${nc} tours in contract`,
+      });
+    }
+
+    const nl = formatCatalogCount(Number(loadedUnique) || 0, lang);
+    return pick(lang, {
+      hant: `共 ${nl} 個行程`,
+      hans: `共 ${nl} 个行程`,
+      en: `${nl} tours`,
     });
-    const vendors = [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
-    return [all, ...vendors];
+  }
+
+  function activityVendor(vm) {
+    return (vm && (vm.vendor || (vm.raw && vm.raw.vendor))) || null;
+  }
+
+  function vendorIdKey(v) {
+    if (!v || v.id == null || v.id === '') return null;
+    return String(v.id).trim();
+  }
+
+  function vendorIdsMatch(a, b) {
+    if (a == null || b == null || a === 'all' || b === 'all') return a === b;
+    return String(a).trim() === String(b).trim();
+  }
+
+  /**
+   * Supplier filter options — counts from meta.vendorContractCounts (Bókun contract
+   * product totals per vendor), falling back to unique ids in loaded activities.
+   */
+  function getSupplierOptions(lang, activities = [], { vendorContractCounts = null, vendors = null } = {}) {
+    const list = activities || [];
+    const contractCounts = vendorContractCounts && typeof vendorContractCounts === 'object'
+      ? vendorContractCounts
+      : null;
+    const all = {
+      id: 'all',
+      label: pick(lang, { hant: '全部', hans: '全部', en: 'All' }),
+      count: contractCounts
+        ? Object.values(contractCounts).reduce((sum, n) => sum + (Number(n) || 0), 0)
+        : null,
+    };
+    const byVendor = new Map();
+    list.forEach((vm) => {
+      const v = activityVendor(vm);
+      const key = vendorIdKey(v);
+      if (!key) return;
+      if (!byVendor.has(key)) {
+        byVendor.set(key, {
+          id: v.id,
+          label: v.titleOriginal || v.title || vm.supplier || key,
+          ids: new Set(),
+        });
+      }
+      if (vm.id != null) byVendor.get(key).ids.add(String(vm.id));
+    });
+
+    const fromMeta = Array.isArray(vendors) ? vendors : [];
+    fromMeta.forEach((v) => {
+      const key = vendorIdKey({ id: v.id });
+      if (!key || byVendor.has(key)) return;
+      byVendor.set(key, {
+        id: v.id,
+        label: v.title || String(v.id),
+        ids: new Set(),
+      });
+    });
+
+    const vendorRows = [...byVendor.values()]
+      .map((entry) => {
+        const key = vendorIdKey({ id: entry.id });
+        const count = contractCounts && key && contractCounts[key] != null
+          ? Number(contractCounts[key])
+          : entry.ids.size;
+        return {
+          id: entry.id,
+          label: entry.label,
+          count: Number.isFinite(count) ? count : entry.ids.size,
+        };
+      })
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+    return [all, ...vendorRows];
   }
 
   window.AuralisUI = {
@@ -525,7 +624,8 @@
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     aboveFoldImagePriorityCount, prefersReducedData,
-    CATEGORIES, ROUTES, FACETS, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+    CATEGORIES, ROUTES, FACETS, formatCatalogCount, formatToursToolbarSummary,
+    getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,
     SITE_THEMES, HERO_THEMES, ThemePicker,
     getInitialSiteTheme, setSiteThemeById, applySiteTheme,
     pickSiteThemeForSession, pickHeroThemeForSession, getOrPickHeroTheme,

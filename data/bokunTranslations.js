@@ -25,8 +25,7 @@
  * re-translation job. See `data/README.md` for the full pipeline.
  *
  * Plus two shared dictionaries for symbols that aren't per-activity:
- *   VENDOR_TRANSLATIONS — vendor names usually stay in Latin, but we localise
- *                         their TAGLINE / role label.
+ *   VENDOR — reserved; supplier brand names stay as Bókun `vendor.title` (no TC/SC).
  *   TAG_TRANSLATIONS    — badge enums (top_pick, mandarin_guide, etc).
  *   CATEGORY_TRANSLATIONS — Bókun returns english categories; we own labels.
  * ----------------------------------------------------------------------------
@@ -156,17 +155,8 @@
     },
   };
 
-  // ----------------------------------------------------------- vendor labels --
-  // Vendors keep their Latin brand name; we only localise the supporting role
-  // line shown beneath the title on cards / dashboards.
-  const VENDOR = {
-    1247: { role: { hant: '在地嚮導 · 探險專家',  hans: '当地向导 · 探险专家',  en: 'Local operator · adventure' } },
-    1102: { role: { hant: '在地嚮導 · 觀光巴士',  hans: '当地向导 · 观光巴士',  en: 'Local operator · sightseeing' } },
-    1003: { role: { hant: '景點運營 · 溫泉',      hans: '景点运营 · 温泉',      en: 'Attraction · hot spring' } },
-    1411: { role: { hant: '在地嚮導 · 經典行程',  hans: '当地向导 · 经典行程',  en: 'Local operator · day tours' } },
-    1856: { role: { hant: '在地嚮導 · 冰川專家',  hans: '当地向导 · 冰川专家',  en: 'Local operator · glacier' } },
-    1972: { role: { hant: '在地嚮導 · 直升機觀光', hans: '当地向导 · 直升机观光', en: 'Local operator · helicopter' } },
-  };
+  // Vendor brand names are shown as returned by Bókun (Latin); not translated here.
+  const VENDOR = {};
 
   // ------------------------------------------------------- tag enums (badges) --
   const TAG = {

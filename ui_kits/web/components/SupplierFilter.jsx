@@ -1,9 +1,9 @@
-/* SupplierFilter — left rail on the Tours screen. */
+/* SupplierFilter — left rail on the Tours screen; SupplierStrip — vendor pills above results. */
 
 (function () {
   const { useMemo } = React;
   const {
-    Icon, CATEGORIES, ROUTES, FACETS, getSupplierOptions, formatDisplayPrice, pick,
+    Icon, CATEGORIES, ROUTES, FACETS, getSupplierOptions, formatDisplayPrice, pick, vendorIdsMatch,
   } = window.AuralisUI;
 
   function FilterChip({ active, onClick, children, compact }) {
@@ -15,6 +15,60 @@
       >
         {children}
       </button>
+    );
+  }
+
+  /** Horizontal supplier pills (vendor-first; scales to ~6 before wrapping). */
+  function SupplierStrip({
+    activities = [],
+    activeSupplier,
+    onSupplier,
+    lang = 'hant',
+    layout = 'inline',
+    vendorContractCounts = null,
+    vendors = null,
+  }) {
+    const T = (opts) => pick(lang, opts);
+    const options = useMemo(
+      () => getSupplierOptions(lang, activities, { vendorContractCounts, vendors }),
+      [lang, activities, vendorContractCounts, vendors],
+    );
+
+    if (options.length <= 1) {
+      return (
+        <p className="supplier-strip__empty">
+          {T({ hant: '載入目錄後顯示供應商', hans: '加载目录后显示供应商', en: 'Suppliers appear after catalog loads' })}
+        </p>
+      );
+    }
+
+    return (
+      <div
+        className={`supplier-strip${layout === 'sidebar' ? ' supplier-strip--sidebar' : ''}`}
+        role="listbox"
+        aria-label={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })}
+      >
+        {options.map((s) => {
+          const active = s.id === 'all'
+            ? activeSupplier === 'all'
+            : vendorIdsMatch(activeSupplier, s.id);
+          return (
+            <button
+              key={String(s.id)}
+              type="button"
+              role="option"
+              aria-selected={active}
+              className={`supplier-pill${active ? ' is-active' : ''}`}
+              onClick={() => onSupplier(s.id)}
+            >
+              <span className="supplier-pill__label">{s.label}</span>
+              {Number.isFinite(s.count) && s.count > 0 && (
+                <span className="supplier-pill__count" aria-hidden="true">{s.count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     );
   }
 
@@ -31,9 +85,10 @@
     lang = 'hant',
     displayCurrency = 'USD',
     fxRates = { USD: 1 },
+    vendorContractCounts = null,
+    vendors = null,
   }) {
     const T = (opts) => pick(lang, opts);
-    const supplierOptions = getSupplierOptions(lang, activities);
 
     const priceRange = useMemo(() => {
       const prices = activities
@@ -50,6 +105,18 @@
             {T({ hant: '篩選', hans: '筛选', en: 'Filters' })}
           </h3>
         </div>
+
+        <Section title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })}>
+          <SupplierStrip
+            activities={activities}
+            activeSupplier={activeSupplier}
+            onSupplier={onSupplier}
+            lang={lang}
+            layout="sidebar"
+            vendorContractCounts={vendorContractCounts}
+            vendors={vendors}
+          />
+        </Section>
 
         <Section title={T({ hant: '體驗類型', hans: '体验类型', en: 'Experience' })}>
           <div className="filter-chip-list filter-chip-list--stack">
@@ -92,40 +159,6 @@
           </div>
         </Section>
 
-        <Section title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {supplierOptions.length <= 1 ? (
-              <p style={{ margin: 0, font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-3)' }}>
-                {T({ hant: '載入目錄後顯示供應商', hans: '加载目录后显示供应商', en: 'Suppliers appear after catalog loads' })}
-              </p>
-            ) : (
-              supplierOptions.map((s) => {
-                const active = activeSupplier === s.id;
-                return (
-                  <button key={String(s.id)} type="button" onClick={() => onSupplier(s.id)}
-                          style={{
-                            height: 36, padding: '0 12px',
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            background: active ? 'var(--base-100)' : 'transparent',
-                            border: 0, borderRadius: 10, cursor: 'pointer',
-                            color: active ? 'var(--fg-1)' : 'var(--fg-2)',
-                            font: active ? '700 13px/1 var(--font-text)' : '500 13px/1 var(--font-text)',
-                            textAlign: 'left',
-                          }}>
-                    <span style={{
-                      width: 16, height: 16, borderRadius: 4,
-                      border: '1.5px solid ' + (active ? 'var(--aurora-deep)' : 'var(--base-300)'),
-                      background: active ? 'var(--aurora-cyan)' : 'transparent',
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    }}>{active && <Icon name="check" size={11} color="#fff" />}</span>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </Section>
-
         {priceRange && (
           <Section title={T({ hant: '價格範圍（目錄）', hans: '价格范围（目录）', en: 'Price range (catalog)' })}>
             <div style={{ display: 'flex', justifyContent: 'space-between', font: '600 13px/1 var(--font-text)', color: 'var(--fg-1)' }}>
@@ -152,5 +185,6 @@
     );
   }
 
+  window.AuralisUI.SupplierStrip = SupplierStrip;
   window.AuralisUI.SupplierFilter = SupplierFilter;
 })();
