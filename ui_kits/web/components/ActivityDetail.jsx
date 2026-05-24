@@ -24,6 +24,18 @@
     return null;
   }
 
+  /** Prefer catalog price; fall back to cheapest ticket row while detail loads. */
+  function resolvePriceUsd(tour) {
+    const direct = Number(tour.priceUsd ?? tour.price);
+    if (Number.isFinite(direct) && direct > 0) return direct;
+    const rows = tour.priceTable || [];
+    const amounts = rows
+      .map((r) => Number(r.amount))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (amounts.length) return Math.min(...amounts);
+    return null;
+  }
+
   function cancelLabel(cancelHrs, T) {
     if (cancelHrs == null || cancelHrs <= 0) return null;
     return T({
@@ -479,6 +491,8 @@
             T={T}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
+            priceUsd={resolvePriceUsd(tour)}
+            loading={loading}
             cancelText={cancelText}
             hasMultiPrice={hasMultiPrice}
             inTrip={inTrip}
@@ -502,8 +516,14 @@
   }
 
   function BookPanel({
-    tour, T, displayCurrency, fxRates, cancelText, hasMultiPrice, inTrip, onAdd, isMobile, onOpenPrices,
+    tour, T, displayCurrency, fxRates, priceUsd, loading, cancelText, hasMultiPrice, inTrip, onAdd, isMobile, onOpenPrices,
   }) {
+    const priceLabel = priceUsd != null
+      ? formatDisplayPrice(priceUsd, displayCurrency, fxRates)
+      : (loading
+        ? '…'
+        : T({ hant: '價格載入中', hans: '价格加载中', en: 'Price loading' }));
+
     return (
       <aside
         className="detail-sticky-book"
@@ -515,8 +535,8 @@
             <div className="detail-book-label">
               {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
             </div>
-            <div className="detail-book-price">
-              {formatDisplayPrice(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
+            <div className={`detail-book-price${priceUsd == null && loading ? ' is-loading' : ''}`}>
+              {priceLabel}
             </div>
             {isMobile && cancelText && (
               <p className="detail-book-trust">
