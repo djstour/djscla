@@ -3,7 +3,7 @@
   "name": "djscla",
   "scripts": {
     "start": "node scripts/dev.mjs",
-    "stop:dev": "lsof -ti :3000,:3001,:3002 | xargs kill -9 2>/dev/null || true",
+    "stop:dev": "sh -c 'for p in 3000 3001 3002 8765; do lsof -tiTCP:$p -sTCP:LISTEN | xargs kill -9 2>/dev/null || true; done'",
     "preview:static": "python3 -m http.server 8765",
     "deploy": "npx --yes vercel --prod",
     "enrich:chips": "node scripts/enrich-chip-ids.js",

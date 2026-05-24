@@ -47,8 +47,24 @@
 
   // Tiny helper — strip HTML tags out of a Bókun description (they ship
   // rich-text). Production should use DOMPurify; this is fine for a prototype.
+  function decodeHtmlEntities(text) {
+    const input = text == null ? '' : String(text);
+    if (!input) return '';
+    if (typeof document === 'undefined') {
+      return input
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
+    }
+    const el = document.createElement('textarea');
+    el.innerHTML = input;
+    return el.value;
+  }
+
   function stripHtml(html) {
-    return (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return decodeHtmlEntities(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   const DETAIL_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -296,6 +312,22 @@
                               ?? activity.pricingCategories?.[0]?.id;
       const defaultRow = (activity.pricing || []).find(p => p.pricingCategoryId === defaultCategoryId)
                      || activity.pricing?.[0];
+      const fallbackAmount = Number(
+        defaultRow?.amount
+        ?? activity.nextDefaultPrice?.amount
+        ?? activity.fromPrice?.amount
+        ?? activity.fromPrice
+        ?? activity.defaultPrice?.amount
+        ?? 0
+      );
+      const resolvedPriceAmount = Number.isFinite(fallbackAmount) && fallbackAmount > 0 ? fallbackAmount : 0;
+      const resolvedPriceCurrency = defaultRow?.currency
+        || activity.nextDefaultPrice?.currency
+        || activity.fromPrice?.currency
+        || activity.defaultPrice?.currency
+        || activity.currency
+        || activity.defaultCurrency
+        || 'USD';
 
       const priceTable = (activity.pricing || [])
         .map((row) => {
@@ -303,7 +335,13 @@
           const catRaw = (activity.pricingCategories || []).find((c) => c.id === row.pricingCategoryId);
           return {
             categoryId: row.pricingCategoryId,
-            label: pickFromOverlay(cat, lang, lang === 'en' && catRaw ? catRaw.fullTitle : ''),
+            label: pickFromOverlay(
+              cat,
+              lang,
+              lang === 'en'
+                ? (catRaw?.fullTitle || catRaw?.title || 'Traveler')
+                : '',
+            ),
             amount: row.amount,
             currency: row.currency,
           };
@@ -354,12 +392,9 @@
         mode,
         rating: activity.averageRating,
         reviews: activity.reviewCount,
-        priceUsd: defaultRow ? defaultRow.amount : 0,
-        price: defaultRow ? defaultRow.amount : 0,
-        priceCurrency: (defaultRow && defaultRow.currency)
-          || activity.currency
-          || activity.defaultCurrency
-          || 'USD',
+        priceUsd: resolvedPriceAmount,
+        price: resolvedPriceAmount,
+        priceCurrency: resolvedPriceCurrency,
         priceTable,
         badge,
         badgeKey,
@@ -454,6 +489,33 @@
     const priority = ['top_pick', 'selling_fast', 'premium'];
     for (const p of priority) if (tags.includes(p)) return p;
     return null;
+  }
+
+  function hasPositiveAmount(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0;
+  }
+
+  function tourHasResolvablePrice(tour) {
+    if (!tour) return false;
+    if (hasPositiveAmount(tour.priceUsd) || hasPositiveAmount(tour.price)) return true;
+    return Array.isArray(tour.priceTable) && tour.priceTable.some((row) => hasPositiveAmount(row && row.amount));
+  }
+
+  function mergePreviewPriceFallback(tour, previewVm) {
+    if (!tour || !previewVm) return tour || previewVm || null;
+    if (tourHasResolvablePrice(tour) || !tourHasResolvablePrice(previewVm)) return tour;
+
+    return {
+      ...tour,
+      priceUsd: previewVm.priceUsd ?? previewVm.price ?? tour.priceUsd ?? tour.price ?? null,
+      price: previewVm.price ?? previewVm.priceUsd ?? tour.price ?? tour.priceUsd ?? null,
+      priceCurrency: tour.priceCurrency || previewVm.priceCurrency || 'USD',
+      priceTable: Array.isArray(tour.priceTable) && tour.priceTable.some((row) => hasPositiveAmount(row && row.amount))
+        ? tour.priceTable
+        : (previewVm.priceTable || []),
+      priceFallbackSource: 'catalog-preview',
+    };
   }
 
   A.BokunAdapter = BokunAdapter;
@@ -581,11 +643,12 @@
         const initialTour = cachedRaw
           ? BokunAdapter.toViewModel(cachedRaw, lang)
           : (previewVm || (initialRaw ? BokunAdapter.toViewModel(initialRaw, lang) : null));
+        const stabilizedInitialTour = mergePreviewPriceFallback(initialTour, previewVm);
 
         setState({
           loading: !cachedRaw,
           error: null,
-          tour: initialTour,
+          tour: stabilizedInitialTour,
           raw: initialRaw,
         });
 
@@ -594,7 +657,7 @@
         BokunAdapter.fetchActivityById(activityId, { lang })
           .then((raw) => {
             if (cancelled) return;
-            const tour = BokunAdapter.toViewModel(raw, lang);
+            const tour = mergePreviewPriceFallback(BokunAdapter.toViewModel(raw, lang), previewVm);
             setState({ loading: false, error: null, tour, raw });
           })
           .catch((err) => {
@@ -612,7 +675,7 @@
 
       useEffect(() => {
         if (!state.raw) return;
-        const tour = BokunAdapter.toViewModel(state.raw, lang);
+        const tour = mergePreviewPriceFallback(BokunAdapter.toViewModel(state.raw, lang), previewVm);
         setState((s) => ({ ...s, tour }));
       }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 

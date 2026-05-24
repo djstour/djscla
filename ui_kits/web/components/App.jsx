@@ -212,6 +212,7 @@
             onBack={closeActivityDetail}
             onAdd={addToTrip}
             inTrip={detailActivityId != null && tripIdSet.has(detailActivityId)}
+            trip={trip}
             lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}

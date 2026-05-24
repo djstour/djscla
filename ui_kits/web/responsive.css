@@ -861,7 +861,7 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
 
 .detail-hero {
   position: relative;
-  height: clamp(240px, 45vw, 420px);
+  height: clamp(220px, 36vw, 360px);
   overflow: hidden;
   touch-action: pan-y pinch-zoom;
 }
@@ -960,7 +960,7 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
   grid-template-columns: 1fr min(340px, 100%);
   gap: clamp(24px, 4vw, 40px);
   align-items: start;
-  padding-top: 32px;
+  padding-top: 20px;
   padding-bottom: 48px;
 }
 
@@ -974,9 +974,10 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
 
 .detail-page-title {
   margin: 0;
-  font: 700 40px/1.08 var(--font-display);
+  font: 700 42px/1.02 var(--font-display);
   color: var(--fg-1);
   letter-spacing: -0.025em;
+  max-width: 15ch;
 }
 
 .detail-badge {
@@ -1077,6 +1078,24 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
   font: 500 16px/1.65 var(--font-text);
   color: var(--fg-2);
   white-space: pre-wrap;
+}
+
+.detail-highlight-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.detail-highlight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(46,255,184,0.08) 0%, rgba(0,213,255,0.08) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 213, 255, 0.12);
+  font: 600 14px/1.45 var(--font-text);
+  color: var(--fg-1);
 }
 
 .detail-description.is-clamped {
@@ -1280,6 +1299,35 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
   letter-spacing: 0.06em;
 }
 
+.detail-book-field {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--base-50);
+  box-shadow: inset 0 0 0 1px var(--base-200);
+  color: var(--fg-1);
+  font: 500 14px/1.4 var(--font-text);
+}
+
+textarea.detail-book-field {
+  min-height: 108px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.detail-book-field:focus {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 213, 255, 0.65),
+    0 0 0 4px rgba(0, 213, 255, 0.12);
+}
+
+.detail-book-field::placeholder {
+  color: var(--fg-3);
+}
+
 .detail-price-row {
   display: flex;
   justify-content: space-between;
@@ -1306,6 +1354,21 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
 }
 
 .detail-book-cancel span {
+  font: 500 13px/1.45 var(--font-text);
+  color: var(--fg-2);
+}
+
+.detail-book-trust-grid {
+  gap: 10px;
+}
+
+.detail-book-trust-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--gradient-aurora-soft);
   font: 500 13px/1.45 var(--font-text);
   color: var(--fg-2);
 }
@@ -1422,7 +1485,7 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
   }
 
   .detail-hero {
-    height: clamp(220px, 56vw, 320px);
+    height: clamp(220px, 56vw, 300px);
   }
 
   .detail-hero-back {

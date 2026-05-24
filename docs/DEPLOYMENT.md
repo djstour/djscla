@@ -5,7 +5,7 @@ This project is a **static UI kit + Vercel serverless APIs** (Bókun catalog, Su
 **Production:** https://djscla.vercel.app  
 **Vercel project:** `djscla` (GitHub: `djstour/djscla`)
 
-See also: [VERCEL.md](./VERCEL.md) (dashboard URLs, env table), [BOKUN.md](./BOKUN.md) (local dev), [TRANSLATIONS.md](./TRANSLATIONS.md), [VENDOR_SCALE.md](./VENDOR_SCALE.md) (when SKU grows).
+See also: [VERCEL.md](./VERCEL.md) (dashboard URLs, env table), [BOKUN.md](./BOKUN.md) (local dev), [TRANSLATIONS.md](./TRANSLATIONS.md), [VENDOR_SCALE.md](./VENDOR_SCALE.md) (when SKU grows), [OTA_API.md](./OTA_API.md) (productization routes).
 
 ---
 
@@ -52,6 +52,9 @@ flowchart LR
 | `/preview/*` | Design system cards |
 | `/api/catalog/activities` | Bókun catalog (paginated / `all=true`) |
 | `/api/bokun/activity` | Bókun detail |
+| `/api/availability/check` | Single-date availability + price summary |
+| `/api/checkout/questions` | Checkout question contract (preview skeleton) |
+| `/api/inquiries` | Concierge lead capture → Supabase |
 | `/api/media/thumb` | WebP proxy for Bókun S3 images |
 | `/api/translations/*` | Sync + Cron |
 

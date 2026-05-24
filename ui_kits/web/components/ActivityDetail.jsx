@@ -45,6 +45,90 @@
     });
   }
 
+  function todayIso() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function nextIsoDate(offsetDays) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function findPricingCategory(activity, matcher) {
+    return (activity?.raw?.pricingCategories || []).find(matcher) || null;
+  }
+
+  function escapeRegex(text) {
+    return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function normalizeDescriptionText(text, title) {
+    let source = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!source) return '';
+
+    if (title) {
+      const titlePattern = new RegExp(`^${escapeRegex(title)}\\s*[-:!]*\\s*`, 'i');
+      source = source.replace(titlePattern, '');
+    }
+
+    source = source
+      .replace(/^Trip difficulty\s*:?\s*[^.]+\.?\s*/i, '')
+      .replace(/^Tour Highlights\s*:?-?\s*/i, '')
+      .replace(/\s*Tour Highlights\s*:?-?\s*/gi, '. ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
+    return source;
+  }
+
+  function splitDescription(text, title) {
+    const source = normalizeDescriptionText(text, title);
+    if (!source) return { highlights: [], body: '' };
+
+    const sentences = source
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim().replace(/^-+\s*/, ''))
+      .filter(Boolean);
+
+    const highlights = [];
+    const bodySentences = [];
+
+    sentences.forEach((sentence) => {
+      if (
+        highlights.length < 3
+        && sentence.length <= 140
+        && !/^During this/i.test(sentence)
+        && !/^Firstly/i.test(sentence)
+      ) {
+        highlights.push(sentence);
+      } else {
+        bodySentences.push(sentence);
+      }
+    });
+
+    return {
+      highlights,
+      body: bodySentences.join(' '),
+    };
+  }
+
+  function buildAvailabilityPax(tour, counts) {
+    const adultCategory = findPricingCategory(tour, (row) => row.defaultCategory || /adult/i.test(row.title || row.fullTitle || ''))
+      || tour?.raw?.pricingCategories?.[0]
+      || null;
+    const childCategory = findPricingCategory(tour, (row) => /child|youth|kid/i.test(row.title || row.fullTitle || ''));
+    const pax = [];
+
+    if (adultCategory && counts.adults > 0) {
+      pax.push({ pricingCategoryId: adultCategory.id, quantity: counts.adults });
+    }
+    if (childCategory && counts.children > 0) {
+      pax.push({ pricingCategoryId: childCategory.id, quantity: counts.children });
+    }
+    return pax;
+  }
+
   /** Reuse list-card proxy size (often cached), then fade in a sharper hero on desktop. */
   function DetailHeroImage({ heroUrl, placeholderKey }) {
     const profile = useResponsiveImageProfile();
@@ -126,6 +210,7 @@
     onBack,
     onAdd,
     inTrip,
+    trip = [],
     lang,
     displayCurrency = 'USD',
     fxRates = { USD: 1 },
@@ -138,6 +223,20 @@
     const [descExpanded, setDescExpanded] = useState(false);
     const [stopsExpanded, setStopsExpanded] = useState(false);
     const [priceSheetOpen, setPriceSheetOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(nextIsoDate(14));
+    const [selectedStartTime, setSelectedStartTime] = useState('');
+    const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0 });
+    const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
+    const [inquiryOpen, setInquiryOpen] = useState(false);
+    const [inquirySubmitting, setInquirySubmitting] = useState(false);
+    const [inquiryStatus, setInquiryStatus] = useState({ ok: false, message: '' });
+    const [inquiryForm, setInquiryForm] = useState({
+      name: '',
+      email: '',
+      phone: '',
+      budgetRange: '',
+      notes: '',
+    });
     const touchStart = useRef({ x: 0, y: 0 });
 
     const galleryPhotos = tour
@@ -152,7 +251,22 @@
       setStopsExpanded(false);
       setPriceSheetOpen(false);
       setCompactHeader(false);
+      setSelectedDate(nextIsoDate(14));
+      setSelectedStartTime('');
+      setGuestCounts({ adults: 2, children: 0 });
+      setAvailabilityState({ loading: false, error: '', data: null });
+      setInquiryOpen(false);
+      setInquirySubmitting(false);
+      setInquiryStatus({ ok: false, message: '' });
     }, [tour && tour.id, galleryPhotos.length]);
+
+    useEffect(() => {
+      const firstStartTime = tour && tour.startTimes && tour.startTimes[0];
+      const nextValue = firstStartTime
+        ? String(firstStartTime.id ?? firstStartTime.startTimeId ?? firstStartTime.label ?? '')
+        : '';
+      setSelectedStartTime(nextValue);
+    }, [tour && tour.id]);
 
     useEffect(() => {
       const onScroll = () => setCompactHeader(window.scrollY > COMPACT_HEADER_SCROLL);
@@ -221,6 +335,7 @@
     const descPreview = descNeedsCollapse && !descExpanded
       ? `${tour.description.slice(0, DESC_PREVIEW_CHARS).trim()}…`
       : tour.description;
+    const descriptionParts = splitDescription(tour.description, tour.title);
     const mapsUrl = mapsSearchUrl(tour.meetingPoint);
 
     const anchorItems = [
@@ -233,6 +348,102 @@
     function scrollToSection(id) {
       const el = document.getElementById(id);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function checkAvailability() {
+      const pax = buildAvailabilityPax(tour, guestCounts);
+      if (!selectedDate || !pax.length) {
+        setAvailabilityState({
+          loading: false,
+          error: T({
+            hant: '請先選擇日期與人數。',
+            hans: '请先选择日期与人数。',
+            en: 'Choose a date and passenger count first.',
+          }),
+          data: null,
+        });
+        return;
+      }
+
+      setAvailabilityState({ loading: true, error: '', data: null });
+      try {
+        const res = await fetch('/api/availability/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activityId: tour.id,
+            date: selectedDate,
+            startTimeId: selectedStartTime || undefined,
+            lang,
+            pax,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Availability check failed');
+        setAvailabilityState({ loading: false, error: '', data });
+      } catch (err) {
+        setAvailabilityState({
+          loading: false,
+          error: err.message || T({ hant: '查詢失敗', hans: '查询失败', en: 'Request failed' }),
+          data: null,
+        });
+      }
+    }
+
+    async function submitInquiry(e) {
+      e.preventDefault();
+      setInquirySubmitting(true);
+      setInquiryStatus({ ok: false, message: '' });
+      try {
+        const selectedTrip = (trip && trip.length ? trip : [tour]).map((item) => ({
+          id: item.id,
+          title: item.title,
+          supplier: item.supplier,
+          date: selectedDate || null,
+          startTimeId: selectedStartTime || null,
+          guests: guestCounts,
+        }));
+
+        const res = await fetch('/api/inquiries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: inquiryForm.name,
+            email: inquiryForm.email,
+            phone: inquiryForm.phone,
+            lang,
+            travelStartDate: selectedDate || null,
+            pax: guestCounts.adults + guestCounts.children,
+            budgetRange: inquiryForm.budgetRange || null,
+            notes: [inquiryForm.notes, `${tour.title} · ${tour.supplier}`].filter(Boolean).join('\n'),
+            selectedTrip,
+            sourcePage: typeof window !== 'undefined' ? window.location.pathname : '/tours',
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Inquiry failed');
+        setInquirySubmitting(false);
+        setInquiryStatus({
+          ok: true,
+          message: T({
+            hant: '已送出顧問需求，我們會盡快與你聯絡。',
+            hans: '已提交顾问需求，我们会尽快与你联系。',
+            en: 'Your concierge request is in. We will reach out soon.',
+          }),
+        });
+        setInquiryOpen(false);
+        setInquiryForm((prev) => ({ ...prev, notes: '' }));
+      } catch (err) {
+        setInquirySubmitting(false);
+        setInquiryStatus({
+          ok: false,
+          message: err.message || T({
+            hant: '送出失敗，請稍後再試。',
+            hans: '提交失败，请稍后再试。',
+            en: 'Could not send your request. Please try again.',
+          }),
+        });
+      }
     }
 
     return (
@@ -368,8 +579,18 @@
               >
                 {tour.description ? (
                   <>
+                    {descriptionParts.highlights.length > 0 && (
+                      <div className="detail-highlight-list">
+                        {descriptionParts.highlights.map((line, index) => (
+                          <div key={index} className="detail-highlight-item">
+                            <Icon name="sparkles" size={15} color="var(--aurora-deep)" />
+                            <span>{line}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <p className={`detail-description${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}>
-                      {descPreview}
+                      {descExpanded ? tour.description : (descriptionParts.body || descPreview)}
                     </p>
                     {descNeedsCollapse && (
                       <button
@@ -497,8 +718,24 @@
             hasMultiPrice={hasMultiPrice}
             inTrip={inTrip}
             onAdd={onAdd}
+            trip={trip}
             isMobile={isMobile}
             onOpenPrices={() => setPriceSheetOpen(true)}
+            selectedDate={selectedDate}
+            onSelectedDate={setSelectedDate}
+            selectedStartTime={selectedStartTime}
+            onSelectedStartTime={setSelectedStartTime}
+            guestCounts={guestCounts}
+            onGuestCounts={setGuestCounts}
+            availabilityState={availabilityState}
+            onCheckAvailability={checkAvailability}
+            inquiryOpen={inquiryOpen}
+            onInquiryOpen={setInquiryOpen}
+            inquiryForm={inquiryForm}
+            onInquiryForm={setInquiryForm}
+            inquirySubmitting={inquirySubmitting}
+            inquiryStatus={inquiryStatus}
+            onSubmitInquiry={submitInquiry}
           />
         </div>
 
@@ -516,13 +753,35 @@
   }
 
   function BookPanel({
-    tour, T, displayCurrency, fxRates, priceUsd, loading, cancelText, hasMultiPrice, inTrip, onAdd, isMobile, onOpenPrices,
+    tour, T, displayCurrency, fxRates, priceUsd, loading, cancelText, hasMultiPrice, inTrip, onAdd, trip,
+    isMobile, onOpenPrices, selectedDate, onSelectedDate, selectedStartTime, onSelectedStartTime, guestCounts,
+    onGuestCounts, availabilityState, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
+    inquirySubmitting, inquiryStatus, onSubmitInquiry,
   }) {
     const priceLabel = priceUsd != null
       ? formatDisplayPrice(priceUsd, displayCurrency, fxRates)
       : (loading
         ? '…'
         : T({ hant: '價格載入中', hans: '价格加载中', en: 'Price loading' }));
+    const guestTotal = guestCounts.adults + guestCounts.children;
+    const trustRows = [
+      cancelText && {
+        icon: 'shield-check',
+        label: cancelText,
+      },
+      tour.availability?.bookableNow && {
+        icon: 'zap',
+        label: T({ hant: '即時確認庫存', hans: '即时确认库存', en: 'Instant inventory confirmation' }),
+      },
+      tour.startTimes?.length > 1 && {
+        icon: 'clock-3',
+        label: T({ hant: '多個出發時段', hans: '多个出发时段', en: 'Multiple departure times' }),
+      },
+      tour.languages?.length > 0 && {
+        icon: 'languages',
+        label: T({ hant: `${tour.languages.length} 種導覽語言`, hans: `${tour.languages.length} 种导览语言`, en: `${tour.languages.length} guide languages` }),
+      },
+    ].filter(Boolean);
 
     return (
       <aside
@@ -538,6 +797,12 @@
             <div className={`detail-book-price${priceUsd == null && loading ? ' is-loading' : ''}`}>
               {priceLabel}
             </div>
+            {priceUsd != null && (
+              <p className="detail-book-trust" style={{ display: 'flex' }}>
+                <Icon name="sparkles" size={14} color="var(--aurora-deep)" />
+                {T({ hant: '先顯示基礎票價，查詢後更新即時可售與總價', hans: '先显示基础票价，查询后更新即时可售与总价', en: 'Base fare shown now. Live availability updates below.' })}
+              </p>
+            )}
             {isMobile && cancelText && (
               <p className="detail-book-trust">
                 <Icon name="shield-check" size={14} color="var(--aurora-deep)" />
@@ -560,12 +825,116 @@
             </div>
           )}
 
-          {cancelText && (
-            <div className="detail-book-extra detail-book-extra--desktop detail-book-cancel">
-              <Icon name="shield-check" size={18} color="var(--aurora-deep)" />
-              <span>{cancelText}</span>
+          {trustRows.length > 0 && (
+            <div className="detail-book-extra detail-book-extra--desktop detail-book-trust-grid">
+              {trustRows.map((row) => (
+                <div key={row.label} className="detail-book-trust-item">
+                  <Icon name={row.icon} size={16} color="var(--aurora-deep)" />
+                  <span>{row.label}</span>
+                </div>
+              ))}
             </div>
           )}
+
+          <div className="detail-book-extra" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="detail-book-extra__title">
+              {T({ hant: '檢查可售狀態', hans: '检查可售状态', en: 'Check availability' })}
+            </div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span className="detail-book-label">{T({ hant: '日期', hans: '日期', en: 'Date' })}</span>
+              <input
+                type="date"
+                min={todayIso()}
+                value={selectedDate}
+                onChange={(e) => onSelectedDate(e.target.value)}
+                className="detail-book-field"
+              />
+            </label>
+            {tour.startTimes && tour.startTimes.length > 0 && (
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span className="detail-book-label">{T({ hant: '時段', hans: '时段', en: 'Time' })}</span>
+                <select
+                  value={selectedStartTime}
+                  onChange={(e) => onSelectedStartTime(e.target.value)}
+                  className="detail-book-field"
+                >
+                  {(tour.startTimes || []).map((st, i) => {
+                    const value = String(st.id ?? st.startTimeId ?? st.label ?? i);
+                    const label = st.label || (st.hour != null
+                      ? `${String(st.hour).padStart(2, '0')}:${String(st.minute || 0).padStart(2, '0')}`
+                      : value);
+                    return <option key={value} value={value}>{label}</option>;
+                  })}
+                </select>
+              </label>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span className="detail-book-label">{T({ hant: '成人', hans: '成人', en: 'Adults' })}</span>
+                <select
+                  value={guestCounts.adults}
+                  onChange={(e) => onGuestCounts((prev) => ({ ...prev, adults: Number(e.target.value) }))}
+                  className="detail-book-field"
+                >
+                  {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span className="detail-book-label">{T({ hant: '孩童', hans: '孩童', en: 'Children' })}</span>
+                <select
+                  value={guestCounts.children}
+                  onChange={(e) => onGuestCounts((prev) => ({ ...prev, children: Number(e.target.value) }))}
+                  className="detail-book-field"
+                >
+                  {[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+            </div>
+            <button
+              type="button"
+              className="detail-book-prices-link"
+              onClick={onCheckAvailability}
+              disabled={availabilityState.loading}
+              style={{ display: 'inline-flex', justifyContent: 'center', width: '100%' }}
+            >
+              {availabilityState.loading
+                ? T({ hant: '查詢中…', hans: '查询中…', en: 'Checking…' })
+                : T({ hant: '查看可售與價格', hans: '查看可售与价格', en: 'Check availability' })}
+            </button>
+            {availabilityState.error && (
+              <div style={{ color: 'var(--coral)', font: '500 12px/1.5 var(--font-text)' }}>
+                {availabilityState.error}
+              </div>
+            )}
+            {availabilityState.data && (
+              <div style={{
+                background: availabilityState.data.available ? 'var(--gradient-aurora-soft)' : 'var(--base-50)',
+                borderRadius: 16,
+                padding: 14,
+                boxShadow: 'inset 0 0 0 1px var(--base-200)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}>
+                <div style={{ font: '700 14px/1.3 var(--font-text)', color: 'var(--fg-1)' }}>
+                  {availabilityState.data.available
+                    ? T({ hant: '目前可預訂', hans: '目前可预订', en: 'Available now' })
+                    : T({ hant: '目前無法即時預訂', hans: '目前无法即时预订', en: 'Not instantly bookable now' })}
+                </div>
+                <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-2)' }}>
+                  {selectedDate} · {guestTotal} {T({ hant: '位旅客', hans: '位旅客', en: 'traveler(s)' })}
+                </div>
+                <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)' }}>
+                  {formatDisplayPrice(availabilityState.data.total, displayCurrency, fxRates)}
+                </div>
+                {Array.isArray(availabilityState.data.warnings) && availabilityState.data.warnings.length > 0 && (
+                  <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--coral)' }}>
+                    {availabilityState.data.warnings.join(' ')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
@@ -577,6 +946,78 @@
               ? <><Icon name="check" size={18} /> {T({ hant: '已在行程中', hans: '已在行程中', en: 'In your trip' })}</>
               : <>{T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })} <Icon name="plus" size={18} /></>}
           </button>
+
+          <button
+            type="button"
+            className="detail-book-prices-link"
+            onClick={() => onInquiryOpen(!inquiryOpen)}
+            style={{ display: 'inline-flex', justifyContent: 'center', width: '100%' }}
+          >
+            {inquiryOpen
+              ? T({ hant: '收合顧問需求', hans: '收起顾问需求', en: 'Hide concierge form' })
+              : T({ hant: '交給顧問規劃', hans: '交给顾问规划', en: 'Plan with a concierge' })}
+          </button>
+
+          {inquiryOpen && (
+            <form onSubmit={onSubmitInquiry} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                className="detail-book-field"
+                placeholder={T({ hant: '你的姓名', hans: '你的姓名', en: 'Your name' })}
+                value={inquiryForm.name}
+                onChange={(e) => onInquiryForm((prev) => ({ ...prev, name: e.target.value }))}
+                required
+              />
+              <input
+                type="email"
+                className="detail-book-field"
+                placeholder={T({ hant: '電子郵件', hans: '电子邮箱', en: 'Email' })}
+                value={inquiryForm.email}
+                onChange={(e) => onInquiryForm((prev) => ({ ...prev, email: e.target.value }))}
+                required
+              />
+              <input
+                className="detail-book-field"
+                placeholder={T({ hant: '手機號碼', hans: '手机号', en: 'Phone number' })}
+                value={inquiryForm.phone}
+                onChange={(e) => onInquiryForm((prev) => ({ ...prev, phone: e.target.value }))}
+              />
+              <select
+                className="detail-book-field"
+                value={inquiryForm.budgetRange}
+                onChange={(e) => onInquiryForm((prev) => ({ ...prev, budgetRange: e.target.value }))}
+              >
+                <option value="">{T({ hant: '預算範圍（選填）', hans: '预算范围（选填）', en: 'Budget range (optional)' })}</option>
+                <option value="USD_1000_3000">USD 1,000 - 3,000</option>
+                <option value="USD_3000_5000">USD 3,000 - 5,000</option>
+                <option value="USD_5000_PLUS">USD 5,000+</option>
+              </select>
+              <textarea
+                className="detail-book-field"
+                rows="4"
+                placeholder={T({
+                  hant: `告訴我們你的需求${trip && trip.length > 1 ? '（已自動附上目前行程）' : ''}`,
+                  hans: `告诉我们你的需求${trip && trip.length > 1 ? '（已自动附上当前行程）' : ''}`,
+                  en: `Tell us what you need${trip && trip.length > 1 ? ' (current trip included automatically)' : ''}`,
+                })}
+                value={inquiryForm.notes}
+                onChange={(e) => onInquiryForm((prev) => ({ ...prev, notes: e.target.value }))}
+              />
+              <button type="submit" className="detail-book-cta" disabled={inquirySubmitting}>
+                {inquirySubmitting
+                  ? T({ hant: '送出中…', hans: '提交中…', en: 'Sending…' })
+                  : T({ hant: '送出顧問需求', hans: '提交顾问需求', en: 'Send request' })}
+              </button>
+            </form>
+          )}
+
+          {inquiryStatus.message && (
+            <div style={{
+              color: inquiryStatus.ok ? 'var(--success)' : 'var(--coral)',
+              font: '500 12px/1.5 var(--font-text)',
+            }}>
+              {inquiryStatus.message}
+            </div>
+          )}
         </div>
       </aside>
     );
