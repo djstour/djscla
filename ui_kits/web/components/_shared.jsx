@@ -427,13 +427,31 @@
   // when an editor adds a new category there, also add it here so the home
   // strip + filter rail show it.
   // -------------------------------------------------------------------
+  /** Primary experience types (maps to activity.chipIds). */
   const CATEGORIES = [
-    { id: 'self-drive', icon: 'car-front',     label: { hant: '自駕',   hans: '自驾',   en: 'Self-drive' } },
-    { id: 'aurora',     icon: 'sparkles',      label: { hant: '極光',   hans: '极光',   en: 'Northern Lights' } },
-    { id: 'glacier',    icon: 'mountain-snow', label: { hant: '冰川',   hans: '冰川',   en: 'Glacier' } },
-    { id: 'hotspring',  icon: 'droplets',      label: { hant: '溫泉',   hans: '温泉',   en: 'Hot spring' } },
-    { id: 'day',        icon: 'sun',           label: { hant: '一日遊', hans: '一日游', en: 'Day trip' } },
-    { id: 'premium',    icon: 'crown',         label: { hant: '頂級',   hans: '顶级',   en: 'Premium' } },
+    { id: 'aurora',     icon: 'sparkles',      label: { hant: '極光',     hans: '极光',     en: 'Northern Lights' } },
+    { id: 'glacier',    icon: 'mountain-snow', label: { hant: '冰川',     hans: '冰川',     en: 'Glacier' } },
+    { id: 'hotspring',  icon: 'droplets',      label: { hant: '溫泉',     hans: '温泉',     en: 'Hot spring' } },
+    { id: 'day',        icon: 'sun',           label: { hant: '一日遊',   hans: '一日游',   en: 'Day tours' } },
+    { id: 'self-drive', icon: 'car-front',     label: { hant: '自駕',     hans: '自驾',     en: 'Self-drive' } },
+    { id: 'water',      icon: 'waves',         label: { hant: '水上',     hans: '水上',     en: 'Water' } },
+    { id: 'snow',       icon: 'snowflake',     label: { hant: '雪地',     hans: '雪地',     en: 'Snow & jeep' } },
+    { id: 'outdoor',    icon: 'footprints',    label: { hant: '戶外',     hans: '户外',     en: 'Outdoor' } },
+  ];
+
+  /** Classic route facets (maps to activity.routeIds). */
+  const ROUTES = [
+    { id: 'golden-circle', label: { hant: '黃金圈', hans: '黄金圈', en: 'Golden Circle' } },
+    { id: 'south-coast',   label: { hant: '南岸',   hans: '南岸',   en: 'South Coast' } },
+  ];
+
+  /** Orthogonal facets (maps to activity.facetIds; AND when multiple selected). */
+  const FACETS = [
+    { id: 'premium',      label: { hant: '頂級／私人', hans: '顶级／私人', en: 'Premium / private' } },
+    { id: 'free-cancel',  label: { hant: '可免費取消', hans: '可免费取消', en: 'Free cancellation' } },
+    { id: 'mandarin',     label: { hant: '中文導覽',   hans: '中文导览',   en: 'Mandarin guide' } },
+    { id: 'winter',       label: { hant: '冬季',       hans: '冬季',       en: 'Winter' } },
+    { id: 'reykjavik',    label: { hant: '雷市出發',   hans: '雷市出发',   en: 'From Reykjavík' } },
   ];
 
   // -------------------------------------------------------------------
@@ -489,7 +507,7 @@
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
-    CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
+    CATEGORIES, ROUTES, FACETS, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
     SITE_THEMES, HERO_THEMES, ThemePicker,
     getInitialSiteTheme, setSiteThemeById, applySiteTheme,
     pickSiteThemeForSession, pickHeroThemeForSession, getOrPickHeroTheme,

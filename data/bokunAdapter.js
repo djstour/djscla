@@ -374,6 +374,8 @@
         categories: activity.categories || [],
         categoryLabels: activity.categoryLabels || activity.categories || [],
         chipIds: activity.chipIds || [],
+        routeIds: activity.routeIds || [],
+        facetIds: activity.facetIds || [],
         stops,
         tags,
         availability,

@@ -64,7 +64,9 @@ data/
 | `availability` | `{ type, bookableNow, capacityRemaining, nextAvailableDates, lastChecked, warning }` | "Selling fast" badge, date picker |
 | `tags` | string[] (`top_pick`, `selling_fast`, `premium`, `mandarin_guide`) | Card badge, marketing flags |
 | `categoryLabels` | string[] | Flattened Bókun category leaves (detail API) |
-| `chipIds` | string[] | UI filter chips: `aurora`, `glacier`, `hotspring`, `day`, `self-drive`, `premium` |
+| `chipIds` | string[] | Experience types: `aurora`, `glacier`, `hotspring`, `day`, `self-drive`, `water`, `snow`, `outdoor` |
+| `routeIds` | string[] | Route facets: `golden-circle`, `south-coast` |
+| `facetIds` | string[] | Facets: `premium`, `free-cancel`, `mandarin`, `winter`, `reykjavik` |
 
 ### Category chips (hybrid rules + detail cache)
 

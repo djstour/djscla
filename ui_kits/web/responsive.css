@@ -699,6 +699,56 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
   }
 }
 
+.filter-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip-list--stack {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--fg-2);
+  font: 600 13px/1 var(--font-text);
+  transition: background var(--dur-fast) var(--ease-out);
+  text-align: left;
+}
+
+.filter-chip--compact {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--base-100);
+  font-size: 12px;
+}
+
+.filter-chip.is-active {
+  background: #c6ff3f;
+  color: #11151f;
+}
+
+.filter-chip--compact.is-active {
+  background: var(--gradient-aurora-soft);
+  color: var(--aurora-deep);
+  box-shadow: inset 0 0 0 1px rgba(0, 213, 255, 0.25);
+}
+
+.filter-chip-list--stack .filter-chip {
+  width: 100%;
+}
+
 /* ---- Category strip (home) ----------------------------------------------- */
 .category-strip {
   background: var(--surface-chrome);

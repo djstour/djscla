@@ -2,7 +2,21 @@
 
 (function () {
   const { useMemo } = React;
-  const { Icon, CATEGORIES, getSupplierOptions, formatDisplayPrice, pick } = window.AuralisUI;
+  const {
+    Icon, CATEGORIES, ROUTES, FACETS, getSupplierOptions, formatDisplayPrice, pick,
+  } = window.AuralisUI;
+
+  function FilterChip({ active, onClick, children, compact }) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`filter-chip${active ? ' is-active' : ''}${compact ? ' filter-chip--compact' : ''}`}
+      >
+        {children}
+      </button>
+    );
+  }
 
   function SupplierFilter({
     activities = [],
@@ -10,6 +24,10 @@
     onSupplier,
     activeCats,
     onToggleCat,
+    activeRoutes = [],
+    onToggleRoute,
+    activeFacets = [],
+    onToggleFacet,
     lang = 'hant',
     displayCurrency = 'USD',
     fxRates = { USD: 1 },
@@ -34,25 +52,41 @@
         </div>
 
         <Section title={T({ hant: '體驗類型', hans: '体验类型', en: 'Experience' })}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {CATEGORIES.map(c => {
+          <div className="filter-chip-list filter-chip-list--stack">
+            {CATEGORIES.map((c) => {
               const active = activeCats.includes(c.id);
               return (
-                <button key={c.id} type="button" onClick={() => onToggleCat(c.id)}
-                        style={{
-                          height: 40, padding: '0 12px',
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          background: active ? '#C6FF3F' : 'transparent',
-                          border: 0, borderRadius: 12, cursor: 'pointer',
-                          color: active ? '#11151F' : 'var(--fg-2)',
-                          font: '600 13px/1 var(--font-text)',
-                          transition: 'background var(--dur-fast) var(--ease-out)',
-                          textAlign: 'left',
-                        }}>
+                <FilterChip key={c.id} active={active} onClick={() => onToggleCat(c.id)}>
                   <Icon name={c.icon} size={16} />
-                  <span style={{ flex: 1 }}>{pick(lang, c.label)}</span>
+                  <span>{pick(lang, c.label)}</span>
                   {active && <Icon name="check" size={14} />}
-                </button>
+                </FilterChip>
+              );
+            })}
+          </div>
+        </Section>
+
+        <Section title={T({ hant: '經典路線', hans: '经典路线', en: 'Routes' })}>
+          <div className="filter-chip-list">
+            {ROUTES.map((r) => {
+              const active = activeRoutes.includes(r.id);
+              return (
+                <FilterChip key={r.id} active={active} compact onClick={() => onToggleRoute(r.id)}>
+                  {pick(lang, r.label)}
+                </FilterChip>
+              );
+            })}
+          </div>
+        </Section>
+
+        <Section title={T({ hant: '進階', hans: '进阶', en: 'More' })}>
+          <div className="filter-chip-list">
+            {FACETS.map((f) => {
+              const active = activeFacets.includes(f.id);
+              return (
+                <FilterChip key={f.id} active={active} compact onClick={() => onToggleFacet(f.id)}>
+                  {pick(lang, f.label)}
+                </FilterChip>
               );
             })}
           </div>
@@ -65,7 +99,7 @@
                 {T({ hant: '載入目錄後顯示供應商', hans: '加载目录后显示供应商', en: 'Suppliers appear after catalog loads' })}
               </p>
             ) : (
-              supplierOptions.map(s => {
+              supplierOptions.map((s) => {
                 const active = activeSupplier === s.id;
                 return (
                   <button key={String(s.id)} type="button" onClick={() => onSupplier(s.id)}

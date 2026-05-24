@@ -8,7 +8,7 @@
   const { useState, useMemo, useEffect } = React;
   const {
     Icon,
-    CATEGORIES, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount,
+    CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount,
     Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail,
   } = window.AuralisUI;
   const { useActivities } = window.AuralisData;
@@ -129,6 +129,8 @@
 
     const [activeSupplier, setActiveSupplier] = useState('all');
     const [activeCats, setActiveCats] = useState([]);
+    const [activeRoutes, setActiveRoutes] = useState([]);
+    const [activeFacets, setActiveFacets] = useState([]);
 
     function addToTrip(vm) {
       if (tripIdSet.has(vm.id)) return;
@@ -140,6 +142,19 @@
     }
     function toggleCat(id) {
       setActiveCats(cs => cs.includes(id) ? cs.filter(c => c !== id) : [...cs, id]);
+    }
+    function toggleRoute(id) {
+      setActiveRoutes(rs => rs.includes(id) ? rs.filter(r => r !== id) : [...rs, id]);
+    }
+    function toggleFacet(id) {
+      setActiveFacets(fs => fs.includes(id) ? fs.filter(f => f !== id) : [...fs, id]);
+    }
+    function openToursWithChip(chipId) {
+      setActiveRoutes([]);
+      setActiveFacets([]);
+      setActiveCats([chipId]);
+      setScreen('tours');
+      window.scrollTo(0, 0);
     }
 
     return (
@@ -154,7 +169,7 @@
             <Hero lang={lang} catalogTotal={catalogTotal} theme={siteTheme}
                   onSearch={() => setScreen('tours')} />
             {error && <div className="auralis-container"><BokunErrorBanner error={error} lang={lang} /></div>}
-            <CategoryStrip onClick={() => setScreen('tours')} lang={lang} />
+            <CategoryStrip onSelectCategory={openToursWithChip} lang={lang} />
             <FeaturedSection activities={activities} loading={loading} catalogTotal={catalogTotal}
                              onView={() => setScreen('tours')} onAdd={addToTrip} onOpenDetail={openActivityDetail}
                              tripIdSet={tripIdSet} lang={lang}
@@ -178,6 +193,10 @@
             onSupplier={setActiveSupplier}
             activeCats={activeCats}
             onToggleCat={toggleCat}
+            activeRoutes={activeRoutes}
+            onToggleRoute={toggleRoute}
+            activeFacets={activeFacets}
+            onToggleFacet={toggleFacet}
             lang={lang}
             catalogTotal={catalogTotal}
             displayCurrency={displayCurrency}
@@ -227,12 +246,12 @@
 
   // ============================================================ HOME pieces ===
 
-  function CategoryStrip({ onClick, lang }) {
+  function CategoryStrip({ onSelectCategory, lang }) {
     return (
       <section className="auralis-section category-strip">
         <div className="category-strip-inner">
           {CATEGORIES.map(c => (
-            <button key={c.id} onClick={onClick}
+            <button key={c.id} type="button" onClick={() => onSelectCategory(c.id)}
                     style={{
                       flexShrink: 0,
                       height: 96, width: 140,
@@ -304,29 +323,48 @@
 
   function ToursScreen({
     activities, loading, loadingMore, hasMore, onLoadMore, error, tripIdSet, onAdd, onOpenDetail,
-    activeSupplier, onSupplier, activeCats, onToggleCat, lang, catalogTotal, displayCurrency, fxRates,
+    activeSupplier, onSupplier, activeCats, onToggleCat,
+    activeRoutes, onToggleRoute, activeFacets, onToggleFacet,
+    lang, catalogTotal, displayCurrency, fxRates,
   }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
 
     // Filter activities by supplier (numeric Bókun vendor id or 'all') + categories.
     const filtered = useMemo(() => {
-      return activities.filter(vm => {
+      return activities.filter((vm) => {
         if (activeSupplier !== 'all') {
           const vid = vm.vendor && vm.vendor.id;
           if (vid == null || String(vid) !== String(activeSupplier)) return false;
         }
+        const chipIdsForActivity = vm.chipIds?.length
+          ? vm.chipIds
+          : (vm.raw && vm.raw.chipIds) || [];
+        const routeIdsForActivity = vm.routeIds?.length
+          ? vm.routeIds
+          : (vm.raw && vm.raw.routeIds) || [];
+        const facetIdsForActivity = vm.facetIds?.length
+          ? vm.facetIds
+          : (vm.raw && vm.raw.facetIds) || [];
+
         if (activeCats.length > 0) {
-          const chipIdsForActivity = vm.chipIds?.length
-            ? vm.chipIds
-            : (vm.raw && vm.raw.chipIds) || [];
           if (!chipIdsForActivity.length || !activeCats.some((c) => chipIdsForActivity.includes(c))) {
+            return false;
+          }
+        }
+        if (activeRoutes.length > 0) {
+          if (!routeIdsForActivity.length || !activeRoutes.some((r) => routeIdsForActivity.includes(r))) {
+            return false;
+          }
+        }
+        if (activeFacets.length > 0) {
+          if (!activeFacets.every((f) => facetIdsForActivity.includes(f))) {
             return false;
           }
         }
         return true;
       });
-    }, [activities, activeSupplier, activeCats]);
+    }, [activities, activeSupplier, activeCats, activeRoutes, activeFacets]);
 
     return (
       <section className="tours-page">
@@ -349,6 +387,8 @@
               activities={activities}
               activeSupplier={activeSupplier} onSupplier={onSupplier}
               activeCats={activeCats} onToggleCat={onToggleCat}
+              activeRoutes={activeRoutes} onToggleRoute={onToggleRoute}
+              activeFacets={activeFacets} onToggleFacet={onToggleFacet}
               lang={lang}
               displayCurrency={displayCurrency}
               fxRates={fxRates}
