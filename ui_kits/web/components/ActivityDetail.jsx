@@ -228,6 +228,7 @@
     const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0 });
     const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
     const [availabilityOpen, setAvailabilityOpen] = useState(false);
+    const [stickyBarVisible, setStickyBarVisible] = useState(false);
     const [inquiryOpen, setInquiryOpen] = useState(false);
     const [inquirySubmitting, setInquirySubmitting] = useState(false);
     const [inquiryStatus, setInquiryStatus] = useState({ ok: false, message: '' });
@@ -257,6 +258,7 @@
       setGuestCounts({ adults: 2, children: 0 });
       setAvailabilityState({ loading: false, error: '', data: null });
       setAvailabilityOpen(false);
+      setStickyBarVisible(false);
       setInquiryOpen(false);
       setInquirySubmitting(false);
       setInquiryStatus({ ok: false, message: '' });
@@ -276,6 +278,17 @@
       window.addEventListener('scroll', onScroll, { passive: true });
       return () => window.removeEventListener('scroll', onScroll);
     }, [tour && tour.id]);
+
+    useEffect(() => {
+      if (!isMobile) {
+        setStickyBarVisible(false);
+        return undefined;
+      }
+      const onScroll = () => setStickyBarVisible(window.scrollY > 920);
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }, [isMobile, tour && tour.id]);
 
     useEffect(() => {
       if (!priceSheetOpen) return undefined;
@@ -480,8 +493,9 @@
                 role="tablist"
                 aria-label={T({ hant: '行程照片', hans: '行程照片', en: 'Tour photos' })}
               >
-                {galleryPhotos.slice(0, isMobile ? 8 : 8).map((url, i) => {
+                {galleryPhotos.slice(0, isMobile ? 5 : 8).map((url, i) => {
                   const selected = safeIndex === i;
+                  const nearActive = Math.abs(i - safeIndex) <= 1;
                   return (
                     <button
                       key={url + i}
@@ -499,7 +513,8 @@
                       <img
                         src={proxyImageUrl(url, imgProfile.gallery)}
                         alt=""
-                        loading={i === 0 || i === safeIndex ? 'eager' : 'lazy'}
+                        loading={nearActive ? 'eager' : 'lazy'}
+                        fetchPriority={selected ? 'high' : 'low'}
                         decoding="async"
                         draggable={false}
                         className="detail-photo-thumb"
@@ -729,6 +744,7 @@
             onSelectedStartTime={setSelectedStartTime}
             guestCounts={guestCounts}
             onGuestCounts={setGuestCounts}
+            stickyBarVisible={stickyBarVisible}
             availabilityState={availabilityState}
             availabilityOpen={availabilityOpen}
             onAvailabilityOpen={setAvailabilityOpen}
@@ -759,7 +775,7 @@
   function BookPanel({
     tour, T, displayCurrency, fxRates, priceUsd, loading, cancelText, hasMultiPrice, inTrip, onAdd, trip,
     isMobile, onOpenPrices, selectedDate, onSelectedDate, selectedStartTime, onSelectedStartTime, guestCounts,
-    onGuestCounts, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
+    onGuestCounts, stickyBarVisible, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
     inquirySubmitting, inquiryStatus, onSubmitInquiry,
   }) {
     const priceLabel = priceUsd != null
@@ -796,12 +812,13 @@
       : T({ hant: '需要包車、客製行程或中文協助', hans: '需要包车、定制行程或中文协助', en: 'Private tours, custom itineraries, and planning help' });
 
     return (
-      <aside
-        className="detail-sticky-book"
-        role="complementary"
-        aria-label={T({ hant: '預訂', hans: '预订', en: 'Booking' })}
-      >
-        <div className="detail-sticky-book__card">
+      <>
+        <aside
+          className="detail-sticky-book"
+          role="complementary"
+          aria-label={T({ hant: '預訂', hans: '预订', en: 'Booking' })}
+        >
+          <div className="detail-sticky-book__card">
             <div className="detail-book-summary">
               <div className="detail-book-label">
                 {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
@@ -1074,16 +1091,38 @@
             </div>
           )}
 
-          {inquiryStatus.message && (
-            <div style={{
-              color: inquiryStatus.ok ? 'var(--success)' : 'var(--coral)',
-              font: '500 12px/1.5 var(--font-text)',
-            }}>
-              {inquiryStatus.message}
+            {inquiryStatus.message && (
+              <div style={{
+                color: inquiryStatus.ok ? 'var(--success)' : 'var(--coral)',
+                font: '500 12px/1.5 var(--font-text)',
+              }}>
+                {inquiryStatus.message}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {isMobile && (
+          <div className={`detail-mobile-sticky-bar${stickyBarVisible ? ' is-visible' : ''}`}>
+            <div className="detail-mobile-sticky-bar__price">
+              <span className="detail-mobile-sticky-bar__label">
+                {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
+              </span>
+              <strong>{priceLabel}</strong>
             </div>
-          )}
-        </div>
-      </aside>
+            <button
+              type="button"
+              className="detail-mobile-sticky-bar__cta"
+              onClick={() => onAdd && onAdd(tour)}
+              disabled={inTrip}
+            >
+              {inTrip
+                ? T({ hant: '已在行程中', hans: '已在行程中', en: 'In your trip' })
+                : T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })}
+            </button>
+          </div>
+        )}
+      </>
     );
   }
 

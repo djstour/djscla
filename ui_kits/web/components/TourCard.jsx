@@ -7,7 +7,7 @@
   const { useState, useEffect, useRef } = React;
   const {
     Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage,
-    imageProfileForViewport,
+    imageProfileForViewport, isMobileViewport,
   } = window.AuralisUI;
 
   function TourCardImage({ src, alt, height, fallbackPhoto, priority }) {
@@ -60,8 +60,9 @@
     const photoHeight = compact ? 150 : 200;
     const imgProfile = imageProfileForViewport();
     const cardThumb = compact
-      ? { w: Math.min(imgProfile.card.w, 400), q: imgProfile.card.q }
+      ? { w: Math.min(imgProfile.card.w, 360), q: imgProfile.card.q }
       : imgProfile.card;
+    const mobile = isMobileViewport();
     const coverSrc = tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null;
     const cardRef = useRef(null);
 
@@ -83,7 +84,7 @@
             obs.disconnect();
           }
         },
-        { rootMargin: '80px 0px', threshold: 0.01 },
+        { rootMargin: mobile ? '48px 0px' : '120px 0px', threshold: 0.01 },
       );
       obs.observe(cardRef.current);
       return () => obs.disconnect();
@@ -113,7 +114,7 @@
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-3px)';
           e.currentTarget.style.boxShadow = 'var(--shadow-4)';
-          prefetchCardAssets();
+          if (!mobile) prefetchCardAssets();
         }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-2)'; }}
         onTouchStart={prefetchCardAssets}

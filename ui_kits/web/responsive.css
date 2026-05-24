@@ -1451,6 +1451,10 @@ textarea.detail-book-field {
   margin-bottom: 10px;
 }
 
+.detail-mobile-sticky-bar {
+  display: none;
+}
+
 .detail-sheet-backdrop {
   position: fixed;
   inset: 0;
@@ -1534,7 +1538,7 @@ textarea.detail-book-field {
 
 @media (max-width: 640px) {
   .detail-page {
-    padding-bottom: 40px;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   }
 
   .detail-hero {
@@ -1699,7 +1703,73 @@ textarea.detail-book-field {
   }
 
   .detail-page--skeleton {
-    padding-bottom: 40px;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .detail-mobile-sticky-bar {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 52;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px 10px 12px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 10px 28px rgba(8, 18, 30, 0.12);
+    backdrop-filter: blur(14px) saturate(1.08);
+    -webkit-backdrop-filter: blur(14px) saturate(1.08);
+    transform: translateY(120%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform var(--dur-default) var(--ease-out), opacity var(--dur-default) var(--ease-out);
+  }
+
+  .detail-mobile-sticky-bar.is-visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .detail-mobile-sticky-bar__price {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .detail-mobile-sticky-bar__label {
+    font: 600 9px/1 var(--font-text);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+
+  .detail-mobile-sticky-bar__price strong {
+    font: 700 18px/1 var(--font-display);
+    letter-spacing: -0.02em;
+    color: var(--fg-1);
+  }
+
+  .detail-mobile-sticky-bar__cta {
+    min-width: 118px;
+    height: 42px;
+    border: 0;
+    border-radius: 12px;
+    padding: 0 14px;
+    background: var(--gradient-aurora);
+    color: var(--brand-on-gradient);
+    font: 700 13px/1 var(--font-text);
+    box-shadow: 0 8px 18px rgba(0, 213, 255, 0.16);
+  }
+
+  .detail-mobile-sticky-bar__cta:disabled {
+    background: var(--success-soft);
+    color: #0a7b4f;
+    box-shadow: none;
   }
 
   .locale-picker-menu {

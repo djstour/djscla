@@ -14,17 +14,26 @@
   function prefersReducedData() {
     const conn = typeof navigator !== 'undefined' && navigator.connection;
     if (!conn) return false;
-    return conn.saveData === true || conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g';
+    return conn.saveData === true
+      || conn.effectiveType === 'slow-2g'
+      || conn.effectiveType === '2g'
+      || conn.effectiveType === '3g';
   }
 
+  /**
+   * Proxy widths for /api/media/thumb. Mobile heroFast matches card so list → detail reuses cache.
+   * @see docs/BOKUN_IMAGES.md
+   */
   function imageProfileForViewport() {
     if (isMobileViewport() || prefersReducedData()) {
+      const w = prefersReducedData() ? 280 : 320;
+      const q = prefersReducedData() ? 68 : 72;
       return {
-        card: { w: 400, q: 76 },
-        heroFast: { w: 400, q: 76 },
+        card: { w, q },
+        heroFast: { w, q },
         heroHi: null,
-        gallery: { w: 112, q: 72 },
-        prefetch: { w: 400, q: 76 },
+        gallery: { w: 72, q: 68 },
+        prefetch: { w, q },
       };
     }
     return {
@@ -34,6 +43,14 @@
       gallery: { w: 160, q: 75 },
       prefetch: { w: 520, q: 78 },
     };
+  }
+
+  /** How many tour cards may use fetchpriority=high above the fold. */
+  function aboveFoldImagePriorityCount(surface) {
+    const mobile = isMobileViewport() || prefersReducedData();
+    if (surface === 'featured') return mobile ? 2 : 3;
+    if (surface === 'tours') return mobile ? 2 : 4;
+    return mobile ? 1 : 2;
   }
 
   function useResponsiveImageProfile() {
@@ -507,6 +524,7 @@
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
+    aboveFoldImagePriorityCount, prefersReducedData,
     CATEGORIES, ROUTES, FACETS, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
     SITE_THEMES, HERO_THEMES, ThemePicker,
     getInitialSiteTheme, setSiteThemeById, applySiteTheme,

@@ -194,3 +194,4 @@ Do **not** rely on one 300s function to translate the entire catalog in a single
 | Product images | Bókun S3 URLs via API |
 | Logo / gradients | `assets/` |
 | Filter taxonomy | `lib/chipIds.js`, `data/chipIdsCache.json` |
+| Image performance | [BOKUN_IMAGES.md](./BOKUN_IMAGES.md) |

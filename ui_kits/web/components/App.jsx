@@ -311,7 +311,7 @@
             : activities.slice(0, 6).map((t, i) => (
                 <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
                           inTrip={tripIdSet.has(t.id)} lang={lang}
-                          imagePriority={i < 3}
+                          imagePriority={i < window.AuralisUI.aboveFoldImagePriorityCount('featured')}
                           displayCurrency={displayCurrency} fxRates={fxRates} />
               ))}
         </div>
@@ -429,7 +429,7 @@
                     : filtered.map((t, i) => (
                         <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
                                   inTrip={tripIdSet.has(t.id)} lang={lang}
-                                  imagePriority={i < 4}
+                                  imagePriority={i < window.AuralisUI.aboveFoldImagePriorityCount('tours')}
                                   displayCurrency={displayCurrency} fxRates={fxRates} />
                       ))}
               </div>
