@@ -31,6 +31,10 @@ Auralis · 極光旅 是為華語旅人打造的冰島 OTA 設計系統。透過
 
 - **ChipIds 快取自動化** — 目錄變更時自動更新分類快取，避免手動 `npm run enrich:chips`。方案與檢查清單見 [`docs/CHIP_IDS_AUTOMATION.md`](docs/CHIP_IDS_AUTOMATION.md)。
 
+## 部署
+
+正式站與建議流程見 **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)**（Vercel `main` → Production、env、Cron、檢查清單）。Vercel 專案細節：[`docs/VERCEL.md`](docs/VERCEL.md)。
+
 ## 跑起來
 
 這個 prototype 用了 `<script type="text/babel">` 即時編譯，**不能直接用 `file://` 開啟**（會因為 CORS 拒絕載入 `data/` 下的 JS 檔）。需要本機起一個 HTTP server：

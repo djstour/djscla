@@ -196,7 +196,11 @@ See `assets/icons/` (Lucide library) and `ICONOGRAPHY.md` for the full guide. Qu
 
 ---
 
-## 6 · Local development (UI kit + Bókun)
+## 6 · Deployment
+
+Production: https://djscla.vercel.app — Vercel project `djscla`, deploy from GitHub `main` (no build step). See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for env vars, Preview vs Production, and checklist.
+
+## 7 · Local development (UI kit + Bókun)
 
 The booking prototype loads inventory from `GET /api/catalog/activities` (Vercel serverless). A static HTTP server cannot serve that route — the catalog will stay empty.
 
@@ -209,7 +213,7 @@ For CSS-only previews without APIs: `npm run preview:static`. Details: [`docs/BO
 
 ---
 
-## 7 · Next steps for the user
+## 8 · Next steps for the user
 
 The brand-name, gradients, voice and component grammar above are **first-draft assumptions** from your brief. Treat them as a starting point. The fastest way to dial it in:
 

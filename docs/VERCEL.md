@@ -2,6 +2,8 @@
 
 Static hosting for the Auralis design system and UI kit. No build step.
 
+**Recommended deployment (environments, workflow, checklist):** [DEPLOYMENT.md](./DEPLOYMENT.md)
+
 ## URLs
 
 | | |
