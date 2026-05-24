@@ -227,6 +227,7 @@
     const [selectedStartTime, setSelectedStartTime] = useState('');
     const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0 });
     const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
+    const [availabilityOpen, setAvailabilityOpen] = useState(false);
     const [inquiryOpen, setInquiryOpen] = useState(false);
     const [inquirySubmitting, setInquirySubmitting] = useState(false);
     const [inquiryStatus, setInquiryStatus] = useState({ ok: false, message: '' });
@@ -255,6 +256,7 @@
       setSelectedStartTime('');
       setGuestCounts({ adults: 2, children: 0 });
       setAvailabilityState({ loading: false, error: '', data: null });
+      setAvailabilityOpen(false);
       setInquiryOpen(false);
       setInquirySubmitting(false);
       setInquiryStatus({ ok: false, message: '' });
@@ -728,6 +730,8 @@
             guestCounts={guestCounts}
             onGuestCounts={setGuestCounts}
             availabilityState={availabilityState}
+            availabilityOpen={availabilityOpen}
+            onAvailabilityOpen={setAvailabilityOpen}
             onCheckAvailability={checkAvailability}
             inquiryOpen={inquiryOpen}
             onInquiryOpen={setInquiryOpen}
@@ -755,7 +759,7 @@
   function BookPanel({
     tour, T, displayCurrency, fxRates, priceUsd, loading, cancelText, hasMultiPrice, inTrip, onAdd, trip,
     isMobile, onOpenPrices, selectedDate, onSelectedDate, selectedStartTime, onSelectedStartTime, guestCounts,
-    onGuestCounts, availabilityState, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
+    onGuestCounts, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
     inquirySubmitting, inquiryStatus, onSubmitInquiry,
   }) {
     const priceLabel = priceUsd != null
@@ -782,6 +786,14 @@
         label: T({ hant: `${tour.languages.length} 種導覽語言`, hans: `${tour.languages.length} 种导览语言`, en: `${tour.languages.length} guide languages` }),
       },
     ].filter(Boolean);
+    const showAvailabilityPanel = !isMobile || availabilityOpen;
+    const showInquiryPanel = !isMobile || inquiryOpen;
+    const mobileAvailabilitySummary = availabilityState.data
+      ? `${selectedDate} · ${formatDisplayPrice(availabilityState.data.total, displayCurrency, fxRates)}`
+      : T({ hant: '選日期、時段與人數', hans: '选日期、时段与人数', en: 'Date, time, and travelers' });
+    const mobileInquirySummary = inquiryStatus.ok
+      ? inquiryStatus.message
+      : T({ hant: '需要包車、客製行程或中文協助', hans: '需要包车、定制行程或中文协助', en: 'Private tours, custom itineraries, and planning help' });
 
     return (
       <aside
@@ -790,31 +802,31 @@
         aria-label={T({ hant: '預訂', hans: '预订', en: 'Booking' })}
       >
         <div className="detail-sticky-book__card">
-          <div className="detail-book-summary">
-            <div className="detail-book-label">
-              {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
+            <div className="detail-book-summary">
+              <div className="detail-book-label">
+                {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
+              </div>
+              <div className={`detail-book-price${priceUsd == null && loading ? ' is-loading' : ''}`}>
+                {priceLabel}
+              </div>
+              {priceUsd != null && (
+                <p className="detail-book-trust" style={{ display: 'flex' }}>
+                  <Icon name="sparkles" size={14} color="var(--aurora-deep)" />
+                  {T({ hant: '先顯示基礎票價，查詢後更新即時可售與總價', hans: '先显示基础票价，查询后更新即时可售与总价', en: 'Base fare shown now. Live availability updates below.' })}
+                </p>
+              )}
+              {isMobile && cancelText && (
+                <p className="detail-book-trust">
+                  <Icon name="shield-check" size={14} color="var(--aurora-deep)" />
+                  {cancelText}
+                </p>
+              )}
+              {isMobile && hasMultiPrice && (
+                <button type="button" className="detail-book-prices-link" onClick={onOpenPrices}>
+                  {T({ hant: '查看票價', hans: '查看票价', en: 'View ticket prices' })}
+                </button>
+              )}
             </div>
-            <div className={`detail-book-price${priceUsd == null && loading ? ' is-loading' : ''}`}>
-              {priceLabel}
-            </div>
-            {priceUsd != null && (
-              <p className="detail-book-trust" style={{ display: 'flex' }}>
-                <Icon name="sparkles" size={14} color="var(--aurora-deep)" />
-                {T({ hant: '先顯示基礎票價，查詢後更新即時可售與總價', hans: '先显示基础票价，查询后更新即时可售与总价', en: 'Base fare shown now. Live availability updates below.' })}
-              </p>
-            )}
-            {isMobile && cancelText && (
-              <p className="detail-book-trust">
-                <Icon name="shield-check" size={14} color="var(--aurora-deep)" />
-                {cancelText}
-              </p>
-            )}
-            {isMobile && hasMultiPrice && (
-              <button type="button" className="detail-book-prices-link" onClick={onOpenPrices}>
-                {T({ hant: '查看票價', hans: '查看票价', en: 'View ticket prices' })}
-              </button>
-            )}
-          </div>
 
           {hasMultiPrice && (
             <div className="detail-book-extra detail-book-extra--desktop">
@@ -836,106 +848,6 @@
             </div>
           )}
 
-          <div className="detail-book-extra" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div className="detail-book-extra__title">
-              {T({ hant: '檢查可售狀態', hans: '检查可售状态', en: 'Check availability' })}
-            </div>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span className="detail-book-label">{T({ hant: '日期', hans: '日期', en: 'Date' })}</span>
-              <input
-                type="date"
-                min={todayIso()}
-                value={selectedDate}
-                onChange={(e) => onSelectedDate(e.target.value)}
-                className="detail-book-field"
-              />
-            </label>
-            {tour.startTimes && tour.startTimes.length > 0 && (
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span className="detail-book-label">{T({ hant: '時段', hans: '时段', en: 'Time' })}</span>
-                <select
-                  value={selectedStartTime}
-                  onChange={(e) => onSelectedStartTime(e.target.value)}
-                  className="detail-book-field"
-                >
-                  {(tour.startTimes || []).map((st, i) => {
-                    const value = String(st.id ?? st.startTimeId ?? st.label ?? i);
-                    const label = st.label || (st.hour != null
-                      ? `${String(st.hour).padStart(2, '0')}:${String(st.minute || 0).padStart(2, '0')}`
-                      : value);
-                    return <option key={value} value={value}>{label}</option>;
-                  })}
-                </select>
-              </label>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span className="detail-book-label">{T({ hant: '成人', hans: '成人', en: 'Adults' })}</span>
-                <select
-                  value={guestCounts.adults}
-                  onChange={(e) => onGuestCounts((prev) => ({ ...prev, adults: Number(e.target.value) }))}
-                  className="detail-book-field"
-                >
-                  {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span className="detail-book-label">{T({ hant: '孩童', hans: '孩童', en: 'Children' })}</span>
-                <select
-                  value={guestCounts.children}
-                  onChange={(e) => onGuestCounts((prev) => ({ ...prev, children: Number(e.target.value) }))}
-                  className="detail-book-field"
-                >
-                  {[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </label>
-            </div>
-            <button
-              type="button"
-              className="detail-book-prices-link"
-              onClick={onCheckAvailability}
-              disabled={availabilityState.loading}
-              style={{ display: 'inline-flex', justifyContent: 'center', width: '100%' }}
-            >
-              {availabilityState.loading
-                ? T({ hant: '查詢中…', hans: '查询中…', en: 'Checking…' })
-                : T({ hant: '查看可售與價格', hans: '查看可售与价格', en: 'Check availability' })}
-            </button>
-            {availabilityState.error && (
-              <div style={{ color: 'var(--coral)', font: '500 12px/1.5 var(--font-text)' }}>
-                {availabilityState.error}
-              </div>
-            )}
-            {availabilityState.data && (
-              <div style={{
-                background: availabilityState.data.available ? 'var(--gradient-aurora-soft)' : 'var(--base-50)',
-                borderRadius: 16,
-                padding: 14,
-                boxShadow: 'inset 0 0 0 1px var(--base-200)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-              }}>
-                <div style={{ font: '700 14px/1.3 var(--font-text)', color: 'var(--fg-1)' }}>
-                  {availabilityState.data.available
-                    ? T({ hant: '目前可預訂', hans: '目前可预订', en: 'Available now' })
-                    : T({ hant: '目前無法即時預訂', hans: '目前无法即时预订', en: 'Not instantly bookable now' })}
-                </div>
-                <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-2)' }}>
-                  {selectedDate} · {guestTotal} {T({ hant: '位旅客', hans: '位旅客', en: 'traveler(s)' })}
-                </div>
-                <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)' }}>
-                  {formatDisplayPrice(availabilityState.data.total, displayCurrency, fxRates)}
-                </div>
-                {Array.isArray(availabilityState.data.warnings) && availabilityState.data.warnings.length > 0 && (
-                  <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--coral)' }}>
-                    {availabilityState.data.warnings.join(' ')}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           <button
             type="button"
             className="detail-book-cta"
@@ -947,67 +859,219 @@
               : <>{T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })} <Icon name="plus" size={18} /></>}
           </button>
 
-          <button
-            type="button"
-            className="detail-book-prices-link"
-            onClick={() => onInquiryOpen(!inquiryOpen)}
-            style={{ display: 'inline-flex', justifyContent: 'center', width: '100%' }}
-          >
-            {inquiryOpen
-              ? T({ hant: '收合顧問需求', hans: '收起顾问需求', en: 'Hide concierge form' })
-              : T({ hant: '交給顧問規劃', hans: '交给顾问规划', en: 'Plan with a concierge' })}
-          </button>
+          {isMobile && (
+            <button
+              type="button"
+              className={`detail-book-disclosure${availabilityOpen ? ' is-open' : ''}`}
+              onClick={() => onAvailabilityOpen(!availabilityOpen)}
+            >
+              <span className="detail-book-disclosure__copy">
+                <span className="detail-book-disclosure__title">
+                  {T({ hant: '查可售與總價', hans: '查可售与总价', en: 'Check availability' })}
+                </span>
+                <span className="detail-book-disclosure__meta">{mobileAvailabilitySummary}</span>
+              </span>
+              <Icon name={availabilityOpen ? 'chevron-up' : 'chevron-down'} size={18} />
+            </button>
+          )}
 
-          {inquiryOpen && (
-            <form onSubmit={onSubmitInquiry} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input
-                className="detail-book-field"
-                placeholder={T({ hant: '你的姓名', hans: '你的姓名', en: 'Your name' })}
-                value={inquiryForm.name}
-                onChange={(e) => onInquiryForm((prev) => ({ ...prev, name: e.target.value }))}
-                required
-              />
-              <input
-                type="email"
-                className="detail-book-field"
-                placeholder={T({ hant: '電子郵件', hans: '电子邮箱', en: 'Email' })}
-                value={inquiryForm.email}
-                onChange={(e) => onInquiryForm((prev) => ({ ...prev, email: e.target.value }))}
-                required
-              />
-              <input
-                className="detail-book-field"
-                placeholder={T({ hant: '手機號碼', hans: '手机号', en: 'Phone number' })}
-                value={inquiryForm.phone}
-                onChange={(e) => onInquiryForm((prev) => ({ ...prev, phone: e.target.value }))}
-              />
-              <select
-                className="detail-book-field"
-                value={inquiryForm.budgetRange}
-                onChange={(e) => onInquiryForm((prev) => ({ ...prev, budgetRange: e.target.value }))}
-              >
-                <option value="">{T({ hant: '預算範圍（選填）', hans: '预算范围（选填）', en: 'Budget range (optional)' })}</option>
-                <option value="USD_1000_3000">USD 1,000 - 3,000</option>
-                <option value="USD_3000_5000">USD 3,000 - 5,000</option>
-                <option value="USD_5000_PLUS">USD 5,000+</option>
-              </select>
-              <textarea
-                className="detail-book-field"
-                rows="4"
-                placeholder={T({
-                  hant: `告訴我們你的需求${trip && trip.length > 1 ? '（已自動附上目前行程）' : ''}`,
-                  hans: `告诉我们你的需求${trip && trip.length > 1 ? '（已自动附上当前行程）' : ''}`,
-                  en: `Tell us what you need${trip && trip.length > 1 ? ' (current trip included automatically)' : ''}`,
-                })}
-                value={inquiryForm.notes}
-                onChange={(e) => onInquiryForm((prev) => ({ ...prev, notes: e.target.value }))}
-              />
-              <button type="submit" className="detail-book-cta" disabled={inquirySubmitting}>
-                {inquirySubmitting
-                  ? T({ hant: '送出中…', hans: '提交中…', en: 'Sending…' })
-                  : T({ hant: '送出顧問需求', hans: '提交顾问需求', en: 'Send request' })}
-              </button>
-            </form>
+          {showAvailabilityPanel && (
+            <div className={`detail-book-section${isMobile ? ' is-mobile' : ''}`}>
+              {isMobile && (
+                <div className="detail-book-section__eyebrow">
+                  {T({ hant: '檢查可售狀態', hans: '检查可售状态', en: 'Check availability' })}
+                </div>
+              )}
+              <div className="detail-book-extra" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {!isMobile && (
+                  <div className="detail-book-extra__title">
+                    {T({ hant: '檢查可售狀態', hans: '检查可售状态', en: 'Check availability' })}
+                  </div>
+                )}
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span className="detail-book-label">{T({ hant: '日期', hans: '日期', en: 'Date' })}</span>
+                  <input
+                    type="date"
+                    min={todayIso()}
+                    value={selectedDate}
+                    onChange={(e) => onSelectedDate(e.target.value)}
+                    className="detail-book-field"
+                  />
+                </label>
+                {tour.startTimes && tour.startTimes.length > 0 && (
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span className="detail-book-label">{T({ hant: '時段', hans: '时段', en: 'Time' })}</span>
+                    <select
+                      value={selectedStartTime}
+                      onChange={(e) => onSelectedStartTime(e.target.value)}
+                      className="detail-book-field"
+                    >
+                      {(tour.startTimes || []).map((st, i) => {
+                        const value = String(st.id ?? st.startTimeId ?? st.label ?? i);
+                        const label = st.label || (st.hour != null
+                          ? `${String(st.hour).padStart(2, '0')}:${String(st.minute || 0).padStart(2, '0')}`
+                          : value);
+                        return <option key={value} value={value}>{label}</option>;
+                      })}
+                    </select>
+                  </label>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span className="detail-book-label">{T({ hant: '成人', hans: '成人', en: 'Adults' })}</span>
+                    <select
+                      value={guestCounts.adults}
+                      onChange={(e) => onGuestCounts((prev) => ({ ...prev, adults: Number(e.target.value) }))}
+                      className="detail-book-field"
+                    >
+                      {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span className="detail-book-label">{T({ hant: '孩童', hans: '孩童', en: 'Children' })}</span>
+                    <select
+                      value={guestCounts.children}
+                      onChange={(e) => onGuestCounts((prev) => ({ ...prev, children: Number(e.target.value) }))}
+                      className="detail-book-field"
+                    >
+                      {[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  className="detail-book-prices-link"
+                  onClick={onCheckAvailability}
+                  disabled={availabilityState.loading}
+                  style={{ display: 'inline-flex', justifyContent: 'center', width: '100%' }}
+                >
+                  {availabilityState.loading
+                    ? T({ hant: '查詢中…', hans: '查询中…', en: 'Checking…' })
+                    : T({ hant: '查看可售與價格', hans: '查看可售与价格', en: 'Check availability' })}
+                </button>
+                {availabilityState.error && (
+                  <div style={{ color: 'var(--coral)', font: '500 12px/1.5 var(--font-text)' }}>
+                    {availabilityState.error}
+                  </div>
+                )}
+                {availabilityState.data && (
+                  <div style={{
+                    background: availabilityState.data.available ? 'var(--gradient-aurora-soft)' : 'var(--base-50)',
+                    borderRadius: 16,
+                    padding: 14,
+                    boxShadow: 'inset 0 0 0 1px var(--base-200)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}>
+                    <div style={{ font: '700 14px/1.3 var(--font-text)', color: 'var(--fg-1)' }}>
+                      {availabilityState.data.available
+                        ? T({ hant: '目前可預訂', hans: '目前可预订', en: 'Available now' })
+                        : T({ hant: '目前無法即時預訂', hans: '目前无法即时预订', en: 'Not instantly bookable now' })}
+                    </div>
+                    <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-2)' }}>
+                      {selectedDate} · {guestTotal} {T({ hant: '位旅客', hans: '位旅客', en: 'traveler(s)' })}
+                    </div>
+                    <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)' }}>
+                      {formatDisplayPrice(availabilityState.data.total, displayCurrency, fxRates)}
+                    </div>
+                    {Array.isArray(availabilityState.data.warnings) && availabilityState.data.warnings.length > 0 && (
+                      <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--coral)' }}>
+                        {availabilityState.data.warnings.join(' ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isMobile && (
+            <button
+              type="button"
+              className={`detail-book-disclosure${inquiryOpen ? ' is-open' : ''}`}
+              onClick={() => onInquiryOpen(!inquiryOpen)}
+            >
+              <span className="detail-book-disclosure__copy">
+                <span className="detail-book-disclosure__title">
+                  {T({ hant: '交給顧問規劃', hans: '交给顾问规划', en: 'Plan with a concierge' })}
+                </span>
+                <span className="detail-book-disclosure__meta">{mobileInquirySummary}</span>
+              </span>
+              <Icon name={inquiryOpen ? 'chevron-up' : 'chevron-down'} size={18} />
+            </button>
+          )}
+
+          {!isMobile && (
+            <button
+              type="button"
+              className="detail-book-prices-link"
+              onClick={() => onInquiryOpen(!inquiryOpen)}
+              style={{ display: 'inline-flex', justifyContent: 'center', width: '100%' }}
+            >
+              {inquiryOpen
+                ? T({ hant: '收合顧問需求', hans: '收起顾问需求', en: 'Hide concierge form' })
+                : T({ hant: '交給顧問規劃', hans: '交给顾问规划', en: 'Plan with a concierge' })}
+            </button>
+          )}
+
+          {showInquiryPanel && (
+            <div className={`detail-book-section${isMobile ? ' is-mobile' : ''}`}>
+              {isMobile && (
+                <div className="detail-book-section__eyebrow">
+                  {T({ hant: '讓我們協助你安排', hans: '让我们协助你安排', en: 'Let us help plan it' })}
+                </div>
+              )}
+              <form onSubmit={onSubmitInquiry} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input
+                  className="detail-book-field"
+                  placeholder={T({ hant: '你的姓名', hans: '你的姓名', en: 'Your name' })}
+                  value={inquiryForm.name}
+                  onChange={(e) => onInquiryForm((prev) => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+                <input
+                  type="email"
+                  className="detail-book-field"
+                  placeholder={T({ hant: '電子郵件', hans: '电子邮箱', en: 'Email' })}
+                  value={inquiryForm.email}
+                  onChange={(e) => onInquiryForm((prev) => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+                <input
+                  className="detail-book-field"
+                  placeholder={T({ hant: '手機號碼', hans: '手机号', en: 'Phone number' })}
+                  value={inquiryForm.phone}
+                  onChange={(e) => onInquiryForm((prev) => ({ ...prev, phone: e.target.value }))}
+                />
+                <select
+                  className="detail-book-field"
+                  value={inquiryForm.budgetRange}
+                  onChange={(e) => onInquiryForm((prev) => ({ ...prev, budgetRange: e.target.value }))}
+                >
+                  <option value="">{T({ hant: '預算範圍（選填）', hans: '预算范围（选填）', en: 'Budget range (optional)' })}</option>
+                  <option value="USD_1000_3000">USD 1,000 - 3,000</option>
+                  <option value="USD_3000_5000">USD 3,000 - 5,000</option>
+                  <option value="USD_5000_PLUS">USD 5,000+</option>
+                </select>
+                <textarea
+                  className="detail-book-field"
+                  rows="4"
+                  placeholder={T({
+                    hant: `告訴我們你的需求${trip && trip.length > 1 ? '（已自動附上目前行程）' : ''}`,
+                    hans: `告诉我们你的需求${trip && trip.length > 1 ? '（已自动附上当前行程）' : ''}`,
+                    en: `Tell us what you need${trip && trip.length > 1 ? ' (current trip included automatically)' : ''}`,
+                  })}
+                  value={inquiryForm.notes}
+                  onChange={(e) => onInquiryForm((prev) => ({ ...prev, notes: e.target.value }))}
+                />
+                <button type="submit" className="detail-book-cta" disabled={inquirySubmitting}>
+                  {inquirySubmitting
+                    ? T({ hant: '送出中…', hans: '提交中…', en: 'Sending…' })
+                    : T({ hant: '送出顧問需求', hans: '提交顾问需求', en: 'Send request' })}
+                </button>
+              </form>
+            </div>
           )}
 
           {inquiryStatus.message && (
