@@ -128,7 +128,7 @@ Response shape:
 | `/api/catalog/activities` | GET | — | Includes `translations` map (`all=true` for full channel) |
 | `/api/bokun/activity?id=` | GET | — | Includes `translations` for one id |
 
-Local preview: `npx vercel dev` (not static `http.server`).
+Local preview: `npm start` from repo root (not `npm run preview:static`).
 
 ## Client merge
 

@@ -34,14 +34,37 @@ Set these in https://vercel.com/djstours-projects/djscla/settings/environment-va
 
 ## Local preview with live data
 
-`python3 -m http.server` does **not** run `/api/*`. Use:
+The catalog calls `GET /api/catalog/activities`. That route is a **Vercel serverless function** — it does not exist on a plain static file server.
+
+| Command | Bókun catalog | Use for |
+|---------|---------------|---------|
+| `npm start` (`vercel dev`) | ✅ | UI + API + env from `.env.local` |
+| `npm run preview:static` | ❌ (404 on `/api/*`) | CSS/layout only — no catalog |
+
+Do **not** put `"dev": "vercel dev"` in `package.json`: Vercel CLI runs `npm run dev` as the development command and will recurse forever.
 
 ```bash
-cd "/Users/chrisshan/Documents/Auralis Design System"
-cp .env.example .env.local   # fill BOKUN_* keys
-npx vercel dev
-# open http://localhost:3000/ui_kits/web/index.html
+cd "/path/to/auralis-design-system"
+cp .env.example .env.local
+# Paste from Bókun → Settings → API keys (same pair as Vercel Production):
+#   BOKUN_ACCESS_KEY=…
+#   BOKUN_SECRET_KEY=…
+#   BOKUN_API_HOST=https://api.bokun.io
+npm start
+# open http://localhost:3000/
 ```
+
+### `BOKUN_CONFIG` locally but production works
+
+| Cause | Fix |
+|-------|-----|
+| No `.env.local` | Create it with `BOKUN_ACCESS_KEY` + `BOKUN_SECRET_KEY` (see above). |
+| Ran `vercel env pull` | **Sensitive** vars on Vercel cannot be read back — pull writes `BOKUN_ACCESS_KEY=""`. Delete those empty lines and paste real keys from Bókun. |
+| Keys only on Preview/Production | `vercel dev` does not inject Preview secrets into `.env.local`; you must paste keys locally (or add the same keys under Vercel → **Development**). |
+| Changed `.env.local` | Run `npm run stop:dev` then `npm start` (use the port printed in the terminal, not an old tab). |
+| Keys in file but still `BOKUN_CONFIG` | `vercel dev` may not load `.env.local` — use `npm start` (runs `scripts/dev.mjs` which injects env). |
+
+Quick check: http://localhost:3000/api/catalog/activities?lang=hant&all=true should return `"source":"bokun"` and an `activities` array.
 
 Production: https://djscla.vercel.app/
 

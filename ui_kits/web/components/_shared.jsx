@@ -58,6 +58,25 @@
     return profile;
   }
 
+  function useMobileViewport() {
+    const [mobile, setMobile] = useState(() => isMobileViewport());
+
+    useEffect(() => {
+      if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+      const mq = window.matchMedia(MOBILE_IMAGE_MQ);
+      const update = () => setMobile(mq.matches);
+      update();
+      if (mq.addEventListener) mq.addEventListener('change', update);
+      else mq.addListener(update);
+      return () => {
+        if (mq.removeEventListener) mq.removeEventListener('change', update);
+        else mq.removeListener(update);
+      };
+    }, []);
+
+    return mobile;
+  }
+
   // Lucide-icon wrapper. Renders <i data-lucide="name"></i> and calls createIcons
   // on every render so dynamic icons attach correctly.
   function Icon({ name, size = 18, color, strokeWidth = 1.75, style, className }) {
@@ -469,7 +488,7 @@
     CURRENCIES, DISPLAY_CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
     convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
-    isMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
+    isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     CATEGORIES, formatCatalogCount, getSupplierOptions, LANGS, pick, makeT, applyHtmlLang,
     SITE_THEMES, HERO_THEMES, ThemePicker,
     getInitialSiteTheme, setSiteThemeById, applySiteTheme,

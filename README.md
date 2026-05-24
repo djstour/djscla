@@ -196,7 +196,20 @@ See `assets/icons/` (Lucide library) and `ICONOGRAPHY.md` for the full guide. Qu
 
 ---
 
-## 6 · Next steps for the user
+## 6 · Local development (UI kit + Bókun)
+
+The booking prototype loads inventory from `GET /api/catalog/activities` (Vercel serverless). A static HTTP server cannot serve that route — the catalog will stay empty.
+
+```bash
+cp .env.example .env.local   # paste BOKUN_ACCESS_KEY + BOKUN_SECRET_KEY from Bókun dashboard
+npm start                    # restart after editing .env.local
+```
+
+For CSS-only previews without APIs: `npm run preview:static`. Details: [`docs/BOKUN.md`](docs/BOKUN.md).
+
+---
+
+## 7 · Next steps for the user
 
 The brand-name, gradients, voice and component grammar above are **first-draft assumptions** from your brief. Treat them as a starting point. The fastest way to dial it in:
 

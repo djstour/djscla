@@ -39,13 +39,14 @@ Auralis · 極光旅 是為華語旅人打造的冰島 OTA 設計系統。透過
 # 在專案根目錄
 cd /path/to/auralis-design-system
 
-# 任選一個：
-python3 -m http.server 8000
-# 或
-npx serve .
+# 要載入 Bókun 商品目錄（/api/catalog/activities）— 必須用 Vercel dev：
+cp .env.example .env.local   # 填入 BOKUN_* 金鑰
+npm start
+open http://localhost:3000/
 
-# 然後開
-open http://localhost:8000/ui_kits/web/index.html
+# 僅預覽 CSS / 版面（無 API、目錄會失敗）：
+npm run preview:static
+open http://localhost:8765/ui_kits/web/index.html
 ```
 
 設計系統卡片也一樣：

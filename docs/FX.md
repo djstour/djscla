@@ -36,10 +36,10 @@ Whole-number display after conversion: `TWD`, `CNY`, `HKD`, `MOP`. Two decimals:
 
 ## Local preview
 
-Same as Bókun: `python3 -m http.server` cannot serve `/api/fx/rates`. Use:
+Same as Bókun: `npm run preview:static` cannot serve `/api/fx/rates`. Use:
 
 ```bash
-npx vercel dev
+npm start
 ```
 
 Test endpoint: http://localhost:3000/api/fx/rates

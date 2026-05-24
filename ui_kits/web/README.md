@@ -3,7 +3,16 @@
 A click-thru recreation of the Auralis booking experience. **Not production code** — components prioritise visual fidelity and demonstrate the brand's vocabulary in motion.
 
 ## Run
-Open `index.html` directly (or via Vercel). Responsive from **640px** (phone) and **900px** (tablet) breakpoints — see `responsive.css`.
+
+| Goal | Command | URL |
+|------|---------|-----|
+| Live Bókun catalog + checkout APIs | `npm start` (from repo root; needs `.env.local`) | http://localhost:3000/ |
+| Static layout only (no `/api/*`) | `npm run preview:static` | http://localhost:8765/ui_kits/web/index.html |
+| Production | Vercel deploy | https://djscla.vercel.app/ |
+
+Do not open `index.html` via `file://` (CORS blocks `/data/*.js`). See [`docs/BOKUN.md`](../../docs/BOKUN.md) for API keys and troubleshooting.
+
+Responsive from **640px** (phone) and **900px** (tablet) breakpoints — see `responsive.css`.
 
 ## Screens (use the floating switcher at the bottom)
 
