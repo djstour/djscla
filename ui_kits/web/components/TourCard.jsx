@@ -7,10 +7,10 @@
   const { useState, useEffect, useRef } = React;
   const {
     Icon, formatDisplayPrice, formatDisplayPriceCompact, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage,
-    imageProfileForViewport, isMobileViewport,
+    imageProfileForViewport, isMobileViewport, CATEGORIES,
   } = window.AuralisUI;
 
-  function TourCardImage({ src, alt, height, fallbackPhoto, priority }) {
+  function TourCardImage({ src, alt, height, fallbackPhoto, priority, hovered }) {
     const [loaded, setLoaded] = useState(!src);
     const [failed, setFailed] = useState(false);
     const showImg = src && !failed;
@@ -42,7 +42,8 @@
               position: 'absolute', inset: 0, width: '100%', height: '100%',
               objectFit: 'cover', objectPosition: 'center',
               opacity: loaded ? 1 : 0,
-              transition: 'opacity 0.28s var(--ease-out)',
+              transform: hovered ? 'scale(1.06)' : 'scale(1)',
+              transition: 'opacity 0.28s var(--ease-out), transform 0.45s var(--ease-out)',
             }}
           />
         )}
@@ -65,6 +66,16 @@
     const mobile = isMobileViewport();
     const coverSrc = tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null;
     const cardRef = useRef(null);
+    const [hovered, setHovered] = useState(false);
+
+    const primaryCategory = (() => {
+      const ids = Array.isArray(tour.chipIds) ? tour.chipIds : [];
+      for (const id of ids) {
+        const hit = CATEGORIES && CATEGORIES.find((c) => c.id === id);
+        if (hit) return hit;
+      }
+      return null;
+    })();
 
     function prefetchCardAssets() {
       if (!onView) return;
@@ -114,9 +125,14 @@
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-3px)';
           e.currentTarget.style.boxShadow = 'var(--shadow-4)';
+          setHovered(true);
           if (!mobile) prefetchCardAssets();
         }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-2)'; }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-2)';
+          setHovered(false);
+        }}
         onTouchStart={prefetchCardAssets}
       >
         <div style={{ position: 'relative' }}>
@@ -126,6 +142,7 @@
             height={photoHeight}
             fallbackPhoto={tour.coverImageUrl ? null : fakePhoto(tour.photo)}
             priority={imagePriority}
+            hovered={hovered}
           />
           {!tour.coverImageUrl && tour.photo === 'aurora' && <PhotoSparkles density={12} color="#2EFFB8" />}
           {!tour.coverImageUrl && tour.photo === 'sunset' && <PhotoSparkles density={6} color="#FFD3A8" />}
@@ -141,6 +158,21 @@
               font: '700 10px/1 var(--font-text)', letterSpacing: '0.08em', textTransform: 'uppercase',
               boxShadow: tour.badgeKey === 'premium' ? 'var(--shadow-glow-sun)' : 'var(--shadow-1)',
             }}>{tour.badge}</span>
+          )}
+
+          {!tour.badge && primaryCategory && (
+            <span style={{
+              position: 'absolute', top: 12, left: 12,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '6px 10px 6px 8px', borderRadius: 999,
+              background: 'var(--glass-medium)', backdropFilter: 'blur(10px)',
+              color: 'var(--fg-1)', font: '600 11px/1 var(--font-text)',
+              letterSpacing: '0.02em',
+              boxShadow: 'var(--shadow-1)',
+            }}>
+              <Icon name={primaryCategory.icon} size={12} />
+              {pick(lang, primaryCategory.label)}
+            </span>
           )}
 
           <button type="button" className="tour-card__icon-btn" onClick={(e) => e.stopPropagation()} style={{
