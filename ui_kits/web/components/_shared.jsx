@@ -208,6 +208,27 @@
     return formatPrice(converted, code);
   }
 
+  /**
+   * Compact "starts from" price for cards — always rounded to the nearest unit
+   * so the headline reads $68 instead of $67.82. Detail and checkout keep the
+   * precise figure via formatDisplayPrice.
+   */
+  function formatDisplayPriceCompact(amountUsd, displayCurrency, rates) {
+    const code = (displayCurrency || FX_BASE).toUpperCase();
+    const converted = Math.round(convertFromUsd(amountUsd, code, rates));
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        currencyDisplay: 'narrowSymbol',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(converted);
+    } catch {
+      return `${code} ${converted}`;
+    }
+  }
+
   function formatTotalDisplay(totalUsd, displayCurrency, rates) {
     return formatDisplayPrice(totalUsd, displayCurrency, rates);
   }
@@ -860,7 +881,7 @@
   window.AuralisUI = {
     Icon, formatPrice, singleCurrency, formatTotalAmount,
     CURRENCIES, DISPLAY_CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
-    convertFromUsd, formatDisplayPrice, formatTotalDisplay, tripTotalUsd,
+    convertFromUsd, formatDisplayPrice, formatDisplayPriceCompact, formatTotalDisplay, tripTotalUsd,
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     aboveFoldImagePriorityCount, prefersReducedData,

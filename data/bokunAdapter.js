@@ -302,11 +302,13 @@
       const supplierRole = '';
 
       // ---- duration ----
-      // Bókun ships `durationText` as English. For Chinese locales we render
-      // a templated version using the numeric `durationMinutes`.
-      const duration = formatDuration(activity.durationMinutes, lang)
-        || (lang === 'en' ? activity.durationText : '')
-        || '';
+      // Bókun ships `durationText` as a long English phrase ("5 hours and
+      // 30 minutes"); we re-render a compact form ("5h 30m" / "5 小時 30 分")
+      // either from numeric minutes or by parsing the original text.
+      const minsForDuration = Number(activity.durationMinutes) > 0
+        ? Number(activity.durationMinutes)
+        : parseDurationTextToMinutes(activity.durationText);
+      const duration = formatDuration(minsForDuration, lang) || '';
 
       // ---- pricing ----
       const defaultCategoryId = (activity.pricingCategories || []).find(c => c.defaultCategory)?.id
@@ -473,15 +475,40 @@
   // -------- helpers --------
 
   function formatDuration(mins, lang) {
-    if (!mins) return null;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    if (h === 0) {
-      return ({ hant: `${m} 分鐘`, hans: `${m} 分钟`, en: `${m} min` }[lang]);
+    const total = Number(mins);
+    if (!Number.isFinite(total) || total <= 0) return null;
+    const dayMin = 24 * 60;
+    const d = Math.floor(total / dayMin);
+    const remAfterDays = total - d * dayMin;
+    const h = Math.floor(remAfterDays / 60);
+    const m = Math.round(remAfterDays % 60);
+
+    if (lang === 'en') {
+      if (d > 0) return h === 0 ? `${d}d` : `${d}d ${h}h`;
+      if (h === 0) return `${m}m`;
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}m`;
     }
-    const baseHr = ({ hant: '小時', hans: '小时', en: 'hr' }[lang]);
-    const baseMin = ({ hant: '分', hans: '分', en: 'min' }[lang]);
-    return m === 0 ? `${h} ${baseHr}` : `${h} ${baseHr} ${m} ${baseMin}`;
+    const baseDay = lang === 'hans' ? '天' : '天';
+    const baseHr = lang === 'hans' ? '小时' : '小時';
+    const baseMin = lang === 'hans' ? '分' : '分';
+    if (d > 0) return h === 0 ? `${d} ${baseDay}` : `${d} ${baseDay} ${h} ${baseHr}`;
+    if (h === 0) return `${m} ${baseMin}`;
+    if (m === 0) return `${h} ${baseHr}`;
+    return `${h} ${baseHr} ${m} ${baseMin}`;
+  }
+
+  /** Parse Bókun's English duration text ("5 hours and 30 minutes") into minutes. */
+  function parseDurationTextToMinutes(text) {
+    if (!text || typeof text !== 'string') return 0;
+    let total = 0;
+    const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*hour/i);
+    const minMatch = text.match(/(\d+(?:\.\d+)?)\s*min/i);
+    const dayMatch = text.match(/(\d+(?:\.\d+)?)\s*day/i);
+    if (dayMatch) total += Math.round(parseFloat(dayMatch[1]) * 24 * 60);
+    if (hourMatch) total += Math.round(parseFloat(hourMatch[1]) * 60);
+    if (minMatch) total += Math.round(parseFloat(minMatch[1]));
+    return total;
   }
 
   // Pick the badge key with the highest visual priority for a card.

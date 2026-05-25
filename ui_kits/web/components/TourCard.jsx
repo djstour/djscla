@@ -6,7 +6,7 @@
 (function () {
   const { useState, useEffect, useRef } = React;
   const {
-    Icon, formatDisplayPrice, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage,
+    Icon, formatDisplayPrice, formatDisplayPriceCompact, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage,
     imageProfileForViewport, isMobileViewport,
   } = window.AuralisUI;
 
@@ -150,16 +150,21 @@
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow-1)',
           }}><Icon name="heart" size={16} color="var(--fg-1)" /></button>
-
-          <span style={{
-            position: 'absolute', bottom: 12, left: 12,
-            color: '#fff', font: '500 10px/1 var(--font-text)', letterSpacing: '0.12em', textTransform: 'uppercase',
-            textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-          }}>{tour.supplier}</span>
         </div>
 
         <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
           <div>
+            {tour.supplier && (
+              <div style={{
+                font: '600 11px/1 var(--font-text)',
+                color: 'var(--fg-3)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                marginBottom: 6,
+              }}>
+                {tour.supplier}
+              </div>
+            )}
             <div style={{ font: '600 16px/1.25 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
               {tour.title}
             </div>
@@ -171,19 +176,23 @@
           </div>
 
           <div style={{ display: 'flex', gap: 12, color: 'var(--fg-3)', font: '500 12px/1 var(--font-text)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Icon name="clock" size={12} />{tour.duration}
-            </span>
+            {tour.duration && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="clock" size={12} />{tour.duration}
+              </span>
+            )}
             {tour.mode && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <Icon name="car-front" size={12} />{tour.mode}
               </span>
             )}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Icon name="star" size={12} color="#FFB347" />
-              <b style={{ color: 'var(--fg-1)' }}>{tour.rating}</b>
-              <span>· {tour.reviews.toLocaleString()}</span>
-            </span>
+            {(tour.rating > 0 || tour.reviews > 0) && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="star" size={12} color="#FFB347" />
+                {tour.rating > 0 && <b style={{ color: 'var(--fg-1)' }}>{tour.rating.toFixed(1)}</b>}
+                {tour.reviews > 0 && <span>· {tour.reviews.toLocaleString()}</span>}
+              </span>
+            )}
           </div>
 
           {tour.tags && tour.tags.length > 0 && (
@@ -231,7 +240,7 @@
                 {T({ hant: '起', hans: '起', en: 'from' })}
               </div>
               <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 4 }}>
-                {formatDisplayPrice(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
+                {formatDisplayPriceCompact(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
               </div>
             </div>
             <button type="button" onClick={(e) => { e.stopPropagation(); onAdd && onAdd(tour); }}
