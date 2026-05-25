@@ -40,7 +40,7 @@ async function fetchFromBokun(id, uiLang) {
   const raw = unwrapActivity(rawPayload);
   const quoteCurrency = getQuoteCurrency();
   const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
-  return { activity, quoteCurrency };
+  return { activity, quoteCurrency, raw };
 }
 
 module.exports = async function handler(req, res) {
@@ -81,11 +81,42 @@ module.exports = async function handler(req, res) {
 
   try {
     let quoteCurrency = getQuoteCurrency();
+    let rawUpstream = null;
     if (!activity) {
       const fresh = await fetchFromBokun(id, uiLang);
       activity = fresh.activity;
       quoteCurrency = fresh.quoteCurrency;
+      rawUpstream = fresh.raw;
       usedSource = 'bokun';
+    }
+
+    if (req.query.debug === 'raw' && rawUpstream) {
+      const keys = Object.keys(rawUpstream).sort();
+      const sizes = {};
+      keys.forEach((k) => {
+        const v = rawUpstream[k];
+        sizes[k] = Array.isArray(v) ? `array(${v.length})` : (v && typeof v === 'object' ? `object(${Object.keys(v).length})` : typeof v);
+      });
+      return res.status(200).json({
+        debug: 'raw upstream keys',
+        keys,
+        sizes,
+        sample: {
+          pickupPlaces: rawUpstream.pickupPlaces,
+          includedItems: rawUpstream.includedItems,
+          excludedItems: rawUpstream.excludedItems,
+          requirements: rawUpstream.requirements,
+          attentionPoints: rawUpstream.attentionPoints,
+          highlights: rawUpstream.highlights,
+          cancellationPolicy: rawUpstream.cancellationPolicy,
+          bookingQuestions: rawUpstream.bookingQuestions,
+          additionalInfo: rawUpstream.additionalInfo,
+          safety: rawUpstream.safety,
+          conditions: rawUpstream.conditions,
+          knowBeforeYouGo: rawUpstream.knowBeforeYouGo,
+          additionalSearchKeywords: rawUpstream.additionalSearchKeywords,
+        },
+      });
     }
 
     const translations = await loadTranslationsForActivities([activity]);
