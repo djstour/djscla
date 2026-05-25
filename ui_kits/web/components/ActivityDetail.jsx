@@ -5,6 +5,7 @@
   const {
     Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl,
     useResponsiveImageProfile, useMobileViewport,
+    sanitizeVendorHtml, vendorHtmlIsMeaningful,
   } = window.AuralisUI;
 
   const DESC_PREVIEW_CHARS = 320;
@@ -54,6 +55,44 @@
 
   function todayIso() {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  function difficultyLabel(level, T) {
+    const key = String(level || '').toUpperCase();
+    const map = {
+      EASY:     { hant: '輕鬆', hans: '轻松', en: 'Easy' },
+      MODERATE: { hant: '中等', hans: '中等', en: 'Moderate' },
+      HARD:     { hant: '進階', hans: '进阶', en: 'Challenging' },
+      EXTREME:  { hant: '高強度', hans: '高强度', en: 'Extreme' },
+    };
+    if (map[key]) return T(map[key]);
+    return level;
+  }
+
+  function attributeIcon(attr) {
+    switch (String(attr).toUpperCase()) {
+      case 'FAMILY_FRIENDLY': return 'baby';
+      case 'ECO_FRIENDLY':    return 'leaf';
+      case 'OUTDOOR':         return 'tree-pine';
+      case 'INDOOR':          return 'home';
+      case 'ACCESSIBLE':      return 'accessibility';
+      case 'SMALL_GROUP':     return 'users-round';
+      default:                return 'sparkles';
+    }
+  }
+
+  function attributeLabel(attr, T) {
+    const key = String(attr || '').toUpperCase();
+    const map = {
+      FAMILY_FRIENDLY: { hant: '親子友善', hans: '亲子友善', en: 'Family-friendly' },
+      ECO_FRIENDLY:    { hant: '環境友善', hans: '环境友善', en: 'Eco-friendly' },
+      OUTDOOR:         { hant: '戶外體驗', hans: '户外体验', en: 'Outdoor' },
+      INDOOR:          { hant: '室內體驗', hans: '室内体验', en: 'Indoor' },
+      ACCESSIBLE:      { hant: '無障礙',   hans: '无障碍',   en: 'Accessible' },
+      SMALL_GROUP:     { hant: '小團體',   hans: '小团体',   en: 'Small group' },
+    };
+    if (map[key]) return T(map[key]);
+    return String(attr || '').replace(/_/g, ' ').toLowerCase();
   }
 
   function nextIsoDate(offsetDays) {
@@ -374,10 +413,27 @@
     const descriptionParts = splitDescription(tour.description, tour.title);
     const mapsUrl = mapsSearchUrl(tour.meetingPoint);
 
+    const includedHtml = sanitizeVendorHtml(tour.includedHtml);
+    const excludedHtml = sanitizeVendorHtml(tour.excludedHtml);
+    const requirementsHtml = sanitizeVendorHtml(tour.requirementsHtml);
+    const attentionHtml = sanitizeVendorHtml(tour.attentionHtml);
+    const hasIncluded = vendorHtmlIsMeaningful(includedHtml);
+    const hasExcluded = vendorHtmlIsMeaningful(excludedHtml);
+    const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
+    const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
+    const extras = Array.isArray(tour.bookableExtras) ? tour.bookableExtras : [];
+    const hasExtras = extras.length > 0;
+    const pickupInfo = tour.pickupInfo || null;
+    const showPickupInfo = pickupInfo && pickupInfo.enabled;
+
     const anchorItems = [
       tour.description && { id: 'detail-about', label: T({ hant: '介紹', hans: '介绍', en: 'About' }) },
+      hasIncluded && { id: 'detail-included', label: T({ hant: '包含', hans: '包含', en: 'Included' }) },
       stopsNamed.length > 0 && { id: 'detail-stops', label: T({ hant: '站點', hans: '站点', en: 'Stops' }) },
+      hasRequirements && { id: 'detail-requirements', label: T({ hant: '需自備', hans: '需自备', en: 'Bring' }) },
+      hasAttention && { id: 'detail-attention', label: T({ hant: '注意', hans: '注意', en: 'Notes' }) },
       tour.meetingPoint && { id: 'detail-meeting', label: T({ hant: '集合', hans: '集合', en: 'Meet' }) },
+      showPickupInfo && { id: 'detail-pickup', label: T({ hant: '接送', hans: '接送', en: 'Pickup' }) },
       tour.startTimes && tour.startTimes.length > 0 && { id: 'detail-times', label: T({ hant: '時段', hans: '时段', en: 'Times' }) },
     ].filter(Boolean);
 
@@ -653,6 +709,36 @@
               </Section>
             )}
 
+            {(hasIncluded || hasExcluded) && (
+              <Section
+                id="detail-included"
+                title={T({ hant: '行程包含 / 不含', hans: '行程包含 / 不含', en: 'What\u2019s included' })}
+              >
+                <div className="detail-included-grid">
+                  {hasIncluded && (
+                    <div className="detail-included-block detail-included-block--yes">
+                      <div className="detail-included-block__head">
+                        <Icon name="check" size={16} color="#0A7B4F" />
+                        <span>{T({ hant: '含', hans: '含', en: 'Included' })}</span>
+                      </div>
+                      <div className="detail-vendor-html"
+                           dangerouslySetInnerHTML={{ __html: includedHtml }} />
+                    </div>
+                  )}
+                  {hasExcluded && (
+                    <div className="detail-included-block detail-included-block--no">
+                      <div className="detail-included-block__head">
+                        <Icon name="x" size={16} color="#C03A3A" />
+                        <span>{T({ hant: '不含', hans: '不含', en: 'Not included' })}</span>
+                      </div>
+                      <div className="detail-vendor-html"
+                           dangerouslySetInnerHTML={{ __html: excludedHtml }} />
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
+
             {stopsNamed.length > 0 && (
               <Section
                 id="detail-stops"
@@ -739,6 +825,165 @@
                 <div className="detail-chips">
                   {tour.languages.map((l) => (
                     <span key={l} className="detail-chip detail-chip--lang">{l}</span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {hasRequirements && (
+              <Section
+                id="detail-requirements"
+                title={T({ hant: '請自備 / 穿著', hans: '请自备 / 穿着', en: 'What to bring' })}
+              >
+                <div className="detail-vendor-html"
+                     dangerouslySetInnerHTML={{ __html: requirementsHtml }} />
+              </Section>
+            )}
+
+            {showPickupInfo && (
+              <Section
+                id="detail-pickup"
+                title={T({ hant: '接送服務', hans: '接送服务', en: 'Pickup' })}
+              >
+                <div className="detail-pickup-card">
+                  <Icon name="bus" size={18} color="var(--aurora-deep, #00837A)" />
+                  <div className="detail-pickup-card__body">
+                    <div className="detail-pickup-card__title">
+                      {T({
+                        hant: '提供接送服務',
+                        hans: '提供接送服务',
+                        en: 'Pickup service available',
+                      })}
+                    </div>
+                    <ul className="detail-pickup-card__list">
+                      {pickupInfo.minutesBefore != null && pickupInfo.minutesBefore > 0 && (
+                        <li>
+                          {T({
+                            hant: `預計於出發前 ${pickupInfo.minutesBefore} 分鐘接送`,
+                            hans: `预计于出发前 ${pickupInfo.minutesBefore} 分钟接送`,
+                            en: `Pickup approximately ${pickupInfo.minutesBefore} minutes before departure`,
+                          })}
+                        </li>
+                      )}
+                      {pickupInfo.timeWindowMinutes != null && pickupInfo.timeWindowMinutes > 0 && (
+                        <li>
+                          {T({
+                            hant: `請於接送時段前 ${pickupInfo.timeWindowMinutes} 分鐘準備好`,
+                            hans: `请于接送时段前 ${pickupInfo.timeWindowMinutes} 分钟准备好`,
+                            en: `Be ready ${pickupInfo.timeWindowMinutes} minutes before your pickup window`,
+                          })}
+                        </li>
+                      )}
+                      <li>
+                        {pickupInfo.customAllowed
+                          ? T({
+                              hant: '可指定住宿地點接送',
+                              hans: '可指定住宿地点接送',
+                              en: 'Custom hotel pickup accepted',
+                            })
+                          : T({
+                              hant: '請於預訂時選擇指定接送點',
+                              hans: '请于预订时选择指定接送点',
+                              en: 'Pickup at one of the designated stops (selected when booking)',
+                            })}
+                      </li>
+                      {pickupInfo.noPickupMessage && <li>{pickupInfo.noPickupMessage}</li>}
+                    </ul>
+                  </div>
+                </div>
+              </Section>
+            )}
+
+            {hasAttention && (
+              <Section
+                id="detail-attention"
+                title={T({ hant: '重要注意事項', hans: '重要注意事项', en: 'Good to know' })}
+              >
+                <div className="detail-attention-card">
+                  <Icon name="info" size={18} color="#B98800" />
+                  <div className="detail-vendor-html"
+                       dangerouslySetInnerHTML={{ __html: attentionHtml }} />
+                </div>
+              </Section>
+            )}
+
+            {hasExtras && (
+              <Section
+                id="detail-extras"
+                title={T({ hant: '可加購', hans: '可加购', en: 'Optional add-ons' })}
+              >
+                <ul className="detail-extras-list">
+                  {extras.map((ex) => (
+                    <li key={ex.id} className="detail-extras-item">
+                      <div>
+                        <div className="detail-extras-item__title">{ex.title}</div>
+                        {ex.information && (
+                          <div className="detail-extras-item__info">{ex.information}</div>
+                        )}
+                      </div>
+                      <div className="detail-extras-item__price">
+                        {ex.free
+                          ? T({ hant: '免費', hans: '免费', en: 'Free' })
+                          : (ex.price != null
+                              ? `${formatDisplayPrice(ex.price, displayCurrency, fxRates)}${ex.pricingTypeLabel ? ' · ' + ex.pricingTypeLabel : ''}`
+                              : '—')}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
+
+            {(tour.difficultyLevel || tour.minAge != null || tour.cancellationFreeHours || (tour.activityAttributes && tour.activityAttributes.length > 0)) && (
+              <Section title={T({ hant: '重點資訊', hans: '重点信息', en: 'Quick facts' })}>
+                <div className="detail-facts-grid">
+                  {tour.difficultyLevel && (
+                    <div className="detail-fact">
+                      <Icon name="activity" size={16} />
+                      <div>
+                        <div className="detail-fact__label">{T({ hant: '難度', hans: '难度', en: 'Difficulty' })}</div>
+                        <div className="detail-fact__value">{difficultyLabel(tour.difficultyLevel, T)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {tour.minAge != null && tour.minAge > 0 && (
+                    <div className="detail-fact">
+                      <Icon name="users" size={16} />
+                      <div>
+                        <div className="detail-fact__label">{T({ hant: '年齡限制', hans: '年龄限制', en: 'Min age' })}</div>
+                        <div className="detail-fact__value">
+                          {T({
+                            hant: `${tour.minAge} 歲以上`,
+                            hans: `${tour.minAge} 岁以上`,
+                            en: `${tour.minAge}+ years`,
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {tour.cancellationFreeHours && (
+                    <div className="detail-fact">
+                      <Icon name="shield-check" size={16} />
+                      <div>
+                        <div className="detail-fact__label">{T({ hant: '取消政策', hans: '取消政策', en: 'Cancellation' })}</div>
+                        <div className="detail-fact__value">
+                          {T({
+                            hant: `${tour.cancellationFreeHours} 小時前可免費取消`,
+                            hans: `${tour.cancellationFreeHours} 小时前可免费取消`,
+                            en: `Free up to ${tour.cancellationFreeHours}h before`,
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {(tour.activityAttributes || []).slice(0, 4).map((attr) => (
+                    <div key={attr} className="detail-fact">
+                      <Icon name={attributeIcon(attr)} size={16} />
+                      <div>
+                        <div className="detail-fact__label">{T({ hant: '特色', hans: '特色', en: 'Feature' })}</div>
+                        <div className="detail-fact__value">{attributeLabel(attr, T)}</div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </Section>

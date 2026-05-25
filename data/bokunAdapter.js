@@ -461,6 +461,22 @@
         languages: (activity.languages || [])
           .map((phrase) => guideLanguageLabel(phrase, lang))
           .filter(Boolean),
+        // Rich Bókun product content — passed through as HTML; the renderer
+        // sanitises inline styles before inserting via dangerouslySetInnerHTML.
+        includedHtml: activity.includedHtml || '',
+        excludedHtml: activity.excludedHtml || '',
+        requirementsHtml: activity.requirementsHtml || '',
+        attentionHtml: activity.attentionHtml || '',
+        inclusionsList: activity.inclusionsList || [],
+        exclusionsList: activity.exclusionsList || [],
+        knowBeforeYouGoItems: activity.knowBeforeYouGoItems || [],
+        bookableExtras: activity.bookableExtras || [],
+        pickupInfo: activity.pickupInfo || null,
+        difficultyLevel: activity.difficultyLevel || null,
+        minAge: activity.minAge ?? null,
+        activityAttributes: activity.activityAttributes || [],
+        cancellationFreeHours: activity.cancellationFreeHours ?? null,
+        cancellationPolicyTitle: activity.cancellationPolicyTitle || null,
         raw: activity,
       };
     },

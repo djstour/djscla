@@ -614,6 +614,44 @@
     return [hubLabel, dates, pax].filter(Boolean).join(' · ');
   }
 
+  /**
+   * Strip Bókun-authored inline styles and disallowed tags from vendor HTML
+   * so we can render it inside our design system. Keeps <ul>/<ol>/<li>/<p>/
+   * <strong>/<em>/<br>/<a>; removes <script>/<iframe>/<style>; drops style/
+   * class/onclick attributes; and links are forced to noopener+target=_blank.
+   */
+  function sanitizeVendorHtml(html) {
+    if (!html || typeof html !== 'string') return '';
+    let out = html;
+    out = out.replace(/<\s*(script|style|iframe|object|embed)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+    out = out.replace(/<\s*(script|style|iframe|object|embed|link|meta)\b[^>]*\/?>/gi, '');
+    out = out.replace(/<([a-z0-9]+)\b([^>]*)>/gi, (_, tag, attrs) => {
+      const lower = String(tag).toLowerCase();
+      const allowedTags = new Set(['p', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'br', 'a', 'span', 'div', 'h3', 'h4']);
+      if (!allowedTags.has(lower)) return '';
+      let cleanAttrs = '';
+      if (lower === 'a') {
+        const href = (attrs.match(/\bhref\s*=\s*"([^"]*)"/i) || attrs.match(/\bhref\s*=\s*'([^']*)'/i) || [])[1];
+        if (href && /^(https?:\/\/|mailto:|tel:)/i.test(href)) {
+          cleanAttrs = ` href="${href}" target="_blank" rel="noopener noreferrer"`;
+        }
+      }
+      return `<${lower}${cleanAttrs}>`;
+    });
+    out = out.replace(/<\/([a-z0-9]+)>/gi, (_, tag) => {
+      const lower = String(tag).toLowerCase();
+      const allowedTags = new Set(['p', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'br', 'a', 'span', 'div', 'h3', 'h4']);
+      return allowedTags.has(lower) ? `</${lower}>` : '';
+    });
+    return out.trim();
+  }
+
+  function vendorHtmlIsMeaningful(html) {
+    if (!html) return false;
+    const text = String(html).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+    return text.length > 0;
+  }
+
   // -------------------------------------------------------------------
   // Toast — lightweight imperative notifier rendered into document.body.
   // Used by the trip CTA so adds/removes get on-screen confirmation
@@ -1106,6 +1144,7 @@
     TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
     isWishlisted, toggleWishlist, subscribeWishlist,
     showToast,
+    sanitizeVendorHtml, vendorHtmlIsMeaningful,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,
