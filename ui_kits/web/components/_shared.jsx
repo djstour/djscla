@@ -960,14 +960,30 @@
     if (typeof window === 'undefined') return null;
     const path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
     const params = new URLSearchParams(window.location.search || '');
-    const screen = path === '/tours' || path.startsWith('/tours/')
-      ? 'tours'
-      : path === '/trip' ? 'trip'
-      : path === '/checkout' ? 'checkout'
-      : path === '/journal' ? 'journal'
-      : 'home';
+
+    // /tours/<id> → detail overlay. Accept positive integer ids only so that
+    // future slug-based paths can be added without ambiguity.
+    let activityId = null;
+    const detailMatch = path.match(/^\/tours\/(\d+)$/);
+    let screen;
+    if (detailMatch) {
+      screen = 'detail';
+      activityId = Number(detailMatch[1]);
+    } else if (path === '/tours' || path.startsWith('/tours/')) {
+      screen = 'tours';
+    } else if (path === '/trip') {
+      screen = 'trip';
+    } else if (path === '/checkout') {
+      screen = 'checkout';
+    } else if (path === '/journal') {
+      screen = 'journal';
+    } else {
+      screen = 'home';
+    }
+
     return {
       screen,
+      activityId,
       chip: params.get('chip') || null,
       route: params.get('route') || null,
       supplier: params.get('supplier') || 'all',
@@ -975,7 +991,20 @@
     };
   }
 
-  function buildUrlForState({ screen, chip, route, supplier, q }) {
+  function buildUrlForState({ screen, chip, route, supplier, q, activityId }) {
+    // Detail screen URL is /tours/<id> so the page survives a hard reload and
+    // shareable links land directly on the activity.
+    if (screen === 'detail' && Number.isFinite(Number(activityId)) && Number(activityId) > 0) {
+      const params = new URLSearchParams();
+      if (chip) params.set('chip', chip);
+      if (route) params.set('route', route);
+      if (supplier && supplier !== 'all') params.set('supplier', String(supplier));
+      if (q && String(q).trim()) params.set('q', String(q).trim());
+      const search = params.toString();
+      const detailPath = `/tours/${Number(activityId)}`;
+      return search ? `${detailPath}?${search}` : detailPath;
+    }
+
     const path = URL_PATH_BY_SCREEN[screen] || '/';
     const params = new URLSearchParams();
     if (chip) params.set('chip', chip);

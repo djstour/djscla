@@ -5,7 +5,7 @@
    Persisted to localStorage so refresh keeps the choice. */
 
 (function () {
-  const { useState, useMemo, useEffect } = React;
+  const { useState, useMemo, useEffect, useRef } = React;
   const {
     Icon,
     CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount, formatToursToolbarSummary, formatToursPageTitle,
@@ -35,11 +35,13 @@
     }
 
     const initialUrl = (typeof window !== 'undefined' ? readUrlState() : null) || {
-      screen: 'home', chip: null, route: null, supplier: 'all',
+      screen: 'home', chip: null, route: null, supplier: 'all', activityId: null,
     };
     const [screen, setScreen] = useState(initialUrl.screen);  // home | tours | detail | trip | checkout
-    const [detailActivityId, setDetailActivityId] = useState(null);
-    const [returnScreen, setReturnScreen] = useState('tours');
+    // Pre-seed the detail id from the URL so a hard reload of /tours/<id>
+    // renders the same activity instead of bouncing back to /tours.
+    const [detailActivityId, setDetailActivityId] = useState(initialUrl.activityId || null);
+    const [returnScreen, setReturnScreen] = useState(initialUrl.screen === 'detail' ? 'tours' : 'tours');
 
     const [lang, setLang] = useState(() => {
       const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
@@ -114,6 +116,11 @@
       detailPreview,
     );
 
+    // Tracks how many history entries this session pushed for the detail flow,
+    // so the in-app back button can pop them (preserving browser fwd/back UX)
+    // rather than always forward-pushing a new /tours entry.
+    const detailEntryDepthRef = useRef(0);
+
     function openActivityDetail(tour) {
       window.AuralisUI.prefetchProxiedImage(
         tour.coverImageUrl,
@@ -126,10 +133,16 @@
       setReturnScreen(screen === 'detail' ? returnScreen : screen);
       setDetailActivityId(tour.id);
       setScreen('detail');
+      detailEntryDepthRef.current += 1;
       window.scrollTo(0, 0);
     }
 
     function closeActivityDetail() {
+      if (detailEntryDepthRef.current > 0) {
+        detailEntryDepthRef.current -= 1;
+        window.history.back();
+        return;
+      }
       setDetailActivityId(null);
       setScreen(returnScreen || 'tours');
       window.scrollTo(0, 0);
@@ -150,22 +163,21 @@
 
     // --- URL sync ---------------------------------------------------------
     // pushState on filter / screen changes so the URL reflects what's visible.
-    // Detail screen is intentionally excluded (URL stays at /tours during a
-    // detail overlay; closing returns to the same filtered list).
+    // Detail screen maps to /tours/<id> — surviving hard reload + sharing.
     useEffect(() => {
       if (typeof window === 'undefined') return;
-      if (screen === 'detail') return;
       const next = buildUrlForState({
         screen,
         chip: activeCats[0] || null,
         route: activeRoutes[0] || null,
         supplier: activeSupplier,
         q: searchQuery,
+        activityId: screen === 'detail' ? detailActivityId : null,
       });
       if (currentUrlString() !== next) {
         window.history.pushState(null, '', next);
       }
-    }, [screen, activeCats, activeRoutes, activeSupplier, searchQuery]);
+    }, [screen, activeCats, activeRoutes, activeSupplier, searchQuery, detailActivityId]);
 
     // popstate → re-derive state from URL so back/forward feel native.
     useEffect(() => {
@@ -178,7 +190,11 @@
         setActiveRoutes(s.route ? [s.route] : []);
         setActiveSupplier(s.supplier || 'all');
         setSearchQuery(s.q || '');
-        setDetailActivityId(null);
+        setDetailActivityId(s.screen === 'detail' ? (s.activityId || null) : null);
+        // Keep the depth counter honest when the user uses browser nav.
+        if (s.screen !== 'detail' && detailEntryDepthRef.current > 0) {
+          detailEntryDepthRef.current -= 1;
+        }
       }
       window.addEventListener('popstate', onPop);
       return () => window.removeEventListener('popstate', onPop);
