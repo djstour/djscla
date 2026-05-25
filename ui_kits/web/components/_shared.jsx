@@ -933,15 +933,17 @@
       chip: params.get('chip') || null,
       route: params.get('route') || null,
       supplier: params.get('supplier') || 'all',
+      q: params.get('q') || '',
     };
   }
 
-  function buildUrlForState({ screen, chip, route, supplier }) {
+  function buildUrlForState({ screen, chip, route, supplier, q }) {
     const path = URL_PATH_BY_SCREEN[screen] || '/';
     const params = new URLSearchParams();
     if (chip) params.set('chip', chip);
     if (route) params.set('route', route);
     if (supplier && supplier !== 'all') params.set('supplier', String(supplier));
+    if (q && String(q).trim()) params.set('q', String(q).trim());
     const search = params.toString();
     return search ? `${path}?${search}` : path;
   }
@@ -963,14 +965,14 @@
     activeChip,
     activeRoute,
     activeSupplierLabel,
+    activeQuery,
     hubLabel,
     lang,
   }) {
-    const hasFilter = !!(activeChip || activeRoute || activeSupplierLabel);
+    const queryTrim = String(activeQuery || '').trim();
+    const hasFilter = !!(activeChip || activeRoute || activeSupplierLabel || queryTrim);
     const filtered = Number(filteredCount);
     const contract = Number(contractTotal);
-    // No filter → show contract total (matches supplier "All" pill).
-    // With a filter → show how many actually match.
     const baseCount = hasFilter
       ? (Number.isFinite(filtered) ? filtered : 0)
       : (Number.isFinite(contract) && contract > 0
@@ -985,6 +987,14 @@
       : route
         ? pick(lang, route.label)
         : null;
+
+    if (queryTrim) {
+      return pick(lang, {
+        hant: `${showCount} 個含「${queryTrim}」的行程`,
+        hans: `${showCount} 个含「${queryTrim}」的行程`,
+        en: `${showCount} tours matching "${queryTrim}"`,
+      });
+    }
 
     if (activeSupplierLabel) {
       return pick(lang, {

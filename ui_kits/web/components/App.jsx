@@ -13,7 +13,7 @@
     TRIP_HUBS,
     readUrlState, buildUrlForState, currentUrlString,
     activityVendor, vendorIdsMatch,
-    Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail,
+    Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail, SearchOverlay,
   } = window.AuralisUI;
   const { useActivities } = window.AuralisData;
   const useActivityDetail = window.AuralisData.useActivityDetail || function useActivityDetailStub(_id, _lang, previewVm) {
@@ -141,6 +141,8 @@
     const [activeCats, setActiveCats] = useState(initialUrl.chip ? [initialUrl.chip] : []);
     const [activeRoutes, setActiveRoutes] = useState(initialUrl.route ? [initialUrl.route] : []);
     const [activeFacets, setActiveFacets] = useState([]);
+    const [searchQuery, setSearchQuery] = useState(initialUrl.q || '');
+    const [searchOpen, setSearchOpen] = useState(false);
 
     useEffect(() => {
       saveTripSearch(tripSearch);
@@ -158,11 +160,12 @@
         chip: activeCats[0] || null,
         route: activeRoutes[0] || null,
         supplier: activeSupplier,
+        q: searchQuery,
       });
       if (currentUrlString() !== next) {
         window.history.pushState(null, '', next);
       }
-    }, [screen, activeCats, activeRoutes, activeSupplier]);
+    }, [screen, activeCats, activeRoutes, activeSupplier, searchQuery]);
 
     // popstate → re-derive state from URL so back/forward feel native.
     useEffect(() => {
@@ -174,6 +177,7 @@
         setActiveCats(s.chip ? [s.chip] : []);
         setActiveRoutes(s.route ? [s.route] : []);
         setActiveSupplier(s.supplier || 'all');
+        setSearchQuery(s.q || '');
         setDetailActivityId(null);
       }
       window.addEventListener('popstate', onPop);
@@ -232,6 +236,7 @@
       // Trip-search hub (e.g. departure city) is a soft preference, not a
       // hard filter — handled as a sort priority inside ToursScreen.
       setActiveFacets([]);
+      setSearchQuery('');
       setScreen('tours');
       window.scrollTo(0, 0);
     }
@@ -250,7 +255,26 @@
         <Nav currentScreen={screen} onNav={handleNav}
              cartCount={tripIds.length} lang={lang} onCycleLang={handleLangChange}
              displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency}
-             siteThemeId={siteTheme.id} onSiteThemeChange={handleSiteThemeChange} />
+             siteThemeId={siteTheme.id} onSiteThemeChange={handleSiteThemeChange}
+             onOpenSearch={() => setSearchOpen(true)} />
+
+        <SearchOverlay
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          lang={lang}
+          displayCurrency={displayCurrency}
+          fxRates={fxRates}
+          onOpenDetail={openActivityDetail}
+          onSeeAll={(q) => {
+            setActiveCats([]);
+            setActiveRoutes([]);
+            setActiveSupplier('all');
+            setActiveFacets([]);
+            setSearchQuery(q);
+            setScreen('tours');
+            window.scrollTo(0, 0);
+          }}
+        />
 
         {screen === 'home' && (
           <>
@@ -296,6 +320,8 @@
             onToggleRoute={toggleRoute}
             activeFacets={activeFacets}
             onToggleFacet={toggleFacet}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
             tripSearch={tripSearch}
             onEditTripSearch={() => setScreen('home')}
             lang={lang}
@@ -430,6 +456,7 @@
     activities, loading, loadingMore, hasMore, onLoadMore, error, tripIdSet, onAdd, onRemove, onOpenDetail,
     activeSupplier, onSupplier, activeCats, onToggleCat,
     activeRoutes, onToggleRoute, activeFacets, onToggleFacet,
+    searchQuery, onSearchQueryChange,
     tripSearch, onEditTripSearch,
     lang, catalogTotal, catalogMeta, displayCurrency, fxRates,
   }) {
@@ -446,7 +473,23 @@
 
     const tripFacets = useMemo(() => facetsFromTripSearch(tripSearch), [tripSearch]);
 
-    // Filter activities by supplier (Bókun vendor.id) + categories.
+    // Local debounced mirror so typing feels instant but URL/state changes
+    // only after the user pauses for 220ms.
+    const [searchInput, setSearchInput] = useState(searchQuery || '');
+    useEffect(() => { setSearchInput(searchQuery || ''); }, [searchQuery]);
+    useEffect(() => {
+      if ((searchInput || '') === (searchQuery || '')) return undefined;
+      const t = setTimeout(() => onSearchQueryChange(searchInput.trim()), 220);
+      return () => clearTimeout(t);
+    }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const queryTokens = useMemo(() => {
+      const q = String(searchQuery || '').trim().toLowerCase();
+      if (!q) return [];
+      return q.split(/\s+/).filter(Boolean);
+    }, [searchQuery]);
+
+    // Filter activities by supplier (Bókun vendor.id) + categories + q.
     const filtered = useMemo(() => {
       const matched = [];
       catalogActivities.forEach((vm, idx) => {
@@ -479,6 +522,18 @@
             return;
           }
         }
+
+        if (queryTokens.length > 0) {
+          const vendor = activityVendor(vm) || {};
+          const supplierName = vendor.titleOriginal || vendor.title || vm.supplier || '';
+          const haystack = [
+            vm.title, vm.summary, vm.description, supplierName,
+          ].join(' ').toLowerCase();
+          if (!queryTokens.every((tok) => haystack.includes(tok))) {
+            return;
+          }
+        }
+
         // Trip-search hub (departure city, season) is a soft preference:
         // matching activities sort first, the rest stay in the list.
         const tripScore = tripFacets.length
@@ -489,7 +544,7 @@
 
       matched.sort((a, b) => (b.tripScore - a.tripScore) || (a.idx - b.idx));
       return matched.map((m) => m.vm);
-    }, [catalogActivities, activeSupplier, activeCats, activeRoutes, activeFacets, tripFacets]);
+    }, [catalogActivities, activeSupplier, activeCats, activeRoutes, activeFacets, tripFacets, queryTokens]);
 
     const channelContractTotal = (catalogMeta && catalogMeta.total > 0)
       ? catalogMeta.total
@@ -538,11 +593,20 @@
       activeChip: activeCats[0] || null,
       activeRoute: activeRoutes[0] || null,
       activeSupplierLabel: supplierLabel,
+      activeQuery: searchQuery,
       hubLabel,
       lang,
     });
 
     const activePills = [];
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.trim();
+      activePills.push({
+        kind: 'query', id: 'q',
+        label: T({ hant: `搜尋：「${q}」`, hans: `搜索：「${q}」`, en: `Search: "${q}"` }),
+        onClear: () => onSearchQueryChange(''),
+      });
+    }
     if (activeCats[0]) {
       const c = CATEGORIES.find((x) => x.id === activeCats[0]);
       if (c) activePills.push({ kind: 'chip', id: c.id, label: pick(lang, c.label), onClear: () => onToggleCat(c.id) });
@@ -614,6 +678,28 @@
               )}
               <div className="tours-toolbar tours-toolbar-card">
                 <span className="tours-toolbar-count">{toolbarSummary}</span>
+                <div className="tours-search-field" role="search">
+                  <Icon name="search" size={14} color="var(--fg-3)" />
+                  <input
+                    type="text"
+                    className="tours-search-input"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={T({
+                      hant: '搜尋當前清單…',
+                      hans: '搜索当前列表…',
+                      en: 'Search in this list…',
+                    })}
+                    aria-label={T({ hant: '搜尋當前清單', hans: '搜索当前列表', en: 'Search this list' })}
+                  />
+                  {searchInput && (
+                    <button type="button" className="tours-search-clear"
+                            onClick={() => { setSearchInput(''); onSearchQueryChange(''); }}
+                            aria-label={T({ hant: '清除搜尋', hans: '清除搜索', en: 'Clear search' })}>
+                      <Icon name="x" size={12} />
+                    </button>
+                  )}
+                </div>
                 <div className="tours-sort" role="group" aria-label={T({ hant: '排序', hans: '排序', en: 'Sort' })}>
                   <span className="tours-sort-label">
                     {T({ hant: '排序：', hans: '排序：', en: 'Sort:' })}

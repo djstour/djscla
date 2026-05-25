@@ -115,13 +115,37 @@
   function Nav({
     currentScreen, onNav, cartCount = 0, lang, onCycleLang,
     displayCurrency, onCurrencyChange, siteThemeId, onSiteThemeChange,
+    onOpenSearch,
   }) {
     const T = (opts) => pick(lang, opts);
     const [menuOpen, setMenuOpen] = useState(false);
+    const isMac = typeof navigator !== 'undefined'
+      && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
 
     useEffect(() => {
       setMenuOpen(false);
     }, [currentScreen]);
+
+    useEffect(() => {
+      if (!onOpenSearch) return undefined;
+      function onKey(e) {
+        const k = String(e.key || '').toLowerCase();
+        if (k === 'k' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          onOpenSearch();
+        } else if (k === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          const t = e.target;
+          const tag = t && t.tagName;
+          const editable = t && (tag === 'INPUT' || tag === 'TEXTAREA' || t.isContentEditable);
+          if (!editable) {
+            e.preventDefault();
+            onOpenSearch();
+          }
+        }
+      }
+      window.addEventListener('keydown', onKey);
+      return () => window.removeEventListener('keydown', onKey);
+    }, [onOpenSearch]);
 
     const navItems = [
       { id: 'home',    label: { hant: '探索',     hans: '探索',     en: 'Discover' } },
@@ -183,6 +207,21 @@
         </nav>
 
         <div className="nav-actions">
+          {onOpenSearch && (
+            <button
+              type="button"
+              className="nav-search-trigger"
+              onClick={onOpenSearch}
+              aria-label={T({ hant: '搜尋行程', hans: '搜索行程', en: 'Search tours' })}
+            >
+              <Icon name="search" size={16} />
+              <span className="nav-search-trigger__placeholder">
+                {T({ hant: '搜尋行程…', hans: '搜索行程…', en: 'Search tours…' })}
+              </span>
+              <kbd className="nav-search-trigger__kbd">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+            </button>
+          )}
+
           <div className="nav-toolbar-desktop">
             {onSiteThemeChange && (
               <ThemePicker

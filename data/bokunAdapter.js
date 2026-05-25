@@ -210,6 +210,46 @@
         });
     },
 
+    /**
+     * Lightweight catalog typeahead — hits Supabase via /api/catalog/activities
+     * with the FTS `q` param. Returns view-models so callers can render rows
+     * with the same shape as the rest of the catalog.
+     *
+     * Inflight requests for the same query are coalesced; out-of-order
+     * responses are dropped via a monotonic request token.
+     */
+    searchCatalog(q, opts = {}) {
+      const { lang = 'hant', limit = 8, signal } = opts;
+      const query = String(q || '').trim();
+      if (!query) {
+        return Promise.resolve({ query: '', activities: [], meta: { total: 0 } });
+      }
+      if (typeof fetch === 'undefined') {
+        return Promise.reject(new Error('fetch is not available'));
+      }
+      const qs = new URLSearchParams({
+        lang,
+        q: query,
+        all: 'true',
+        maxItems: String(Math.max(1, Math.min(limit, 24))),
+      });
+      return fetch(`/api/catalog/activities?${qs}`, { signal })
+        .then((res) => res.json().then((data) => ({ res, data })))
+        .then(({ res, data }) => {
+          if (!res.ok) {
+            const err = new Error(data.error || `Search HTTP ${res.status}`);
+            err.status = res.status;
+            throw err;
+          }
+          const raw = Array.isArray(data.activities) ? data.activities : [];
+          return {
+            query,
+            activities: BokunAdapter.toViewModels(raw, lang),
+            meta: data.meta || { total: raw.length },
+          };
+        });
+    },
+
     fetchActivityById(id, opts = {}) {
       const { lang = 'hant' } = opts;
       const numId = Number(id);
