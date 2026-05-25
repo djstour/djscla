@@ -161,9 +161,11 @@
     function goToToursWithFilters(search, { chipId = null, routeId = null } = {}) {
       const normalized = normalizeTripSearch(search || tripSearch);
       setTripSearch(normalized);
-      setActiveFacets(facetsFromTripSearch(normalized));
       setActiveCats(chipId ? [chipId] : []);
       setActiveRoutes(routeId ? [routeId] : []);
+      // Trip-search hub (e.g. departure city) is a soft preference, not a
+      // hard filter — handled as a sort priority inside ToursScreen.
+      setActiveFacets([]);
       setScreen('tours');
       window.scrollTo(0, 0);
     }
@@ -173,12 +175,6 @@
     }
 
     function handleNav(target) {
-      if (target === 'tours') {
-        setActiveFacets((prev) => {
-          const hubFacets = facetsFromTripSearch(tripSearch);
-          return [...new Set([...hubFacets, ...prev])];
-        });
-      }
       setScreen(target);
       if (target !== 'detail') window.scrollTo(0, 0);
     }
@@ -381,12 +377,15 @@
       return [...byId.values()];
     }, [activities]);
 
+    const tripFacets = useMemo(() => facetsFromTripSearch(tripSearch), [tripSearch]);
+
     // Filter activities by supplier (Bókun vendor.id) + categories.
     const filtered = useMemo(() => {
-      return catalogActivities.filter((vm) => {
+      const matched = [];
+      catalogActivities.forEach((vm, idx) => {
         if (activeSupplier !== 'all') {
           const v = activityVendor(vm);
-          if (!vendorIdsMatch(v && v.id, activeSupplier)) return false;
+          if (!vendorIdsMatch(v && v.id, activeSupplier)) return;
         }
         const chipIdsForActivity = vm.chipIds?.length
           ? vm.chipIds
@@ -400,22 +399,30 @@
 
         if (activeCats.length > 0) {
           if (!chipIdsForActivity.length || !activeCats.some((c) => chipIdsForActivity.includes(c))) {
-            return false;
+            return;
           }
         }
         if (activeRoutes.length > 0) {
           if (!routeIdsForActivity.length || !activeRoutes.some((r) => routeIdsForActivity.includes(r))) {
-            return false;
+            return;
           }
         }
         if (activeFacets.length > 0) {
           if (!activeFacets.every((f) => facetIdsForActivity.includes(f))) {
-            return false;
+            return;
           }
         }
-        return true;
+        // Trip-search hub (departure city, season) is a soft preference:
+        // matching activities sort first, the rest stay in the list.
+        const tripScore = tripFacets.length
+          ? tripFacets.reduce((acc, f) => acc + (facetIdsForActivity.includes(f) ? 1 : 0), 0)
+          : 0;
+        matched.push({ vm, idx, tripScore });
       });
-    }, [catalogActivities, activeSupplier, activeCats, activeRoutes, activeFacets]);
+
+      matched.sort((a, b) => (b.tripScore - a.tripScore) || (a.idx - b.idx));
+      return matched.map((m) => m.vm);
+    }, [catalogActivities, activeSupplier, activeCats, activeRoutes, activeFacets, tripFacets]);
 
     const channelContractTotal = (catalogMeta && catalogMeta.total > 0)
       ? catalogMeta.total
