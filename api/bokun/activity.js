@@ -35,6 +35,19 @@ function isFresh(lastSyncedAt) {
   return Number.isFinite(age) && age < FRESHNESS_MS;
 }
 
+/**
+ * Reject cached payloads that pre-date the BookPanel-required fields
+ * (passCapacity, pickupInfo, bookableExtras). Catalog sync hadn't started
+ * persisting these until 2026-05-25, so older `bokun_payload` rows lack the
+ * pricingCategory ages / pickup config / extras the booking UI needs.
+ */
+function hasBookingFields(activity) {
+  if (!activity) return false;
+  if (activity.pickupInfo === undefined) return false;
+  if (activity.bookableExtras === undefined) return false;
+  return true;
+}
+
 async function fetchPickupPlaces(id) {
   try {
     const r = await bokunRequest({ method: 'GET', path: `/activity.json/${id}/pickup-places` });
@@ -87,7 +100,12 @@ module.exports = async function handler(req, res) {
   if (source === 'db') {
     try {
       const cached = await fetchActivityFromDb(id);
-      if (cached && cached.activity && isFresh(cached.lastSyncedAt)) {
+      if (
+        cached
+        && cached.activity
+        && isFresh(cached.lastSyncedAt)
+        && hasBookingFields(cached.activity)
+      ) {
         activity = cached.activity;
         usedSource = 'db';
         lastSyncedAt = cached.lastSyncedAt;
