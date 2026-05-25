@@ -128,6 +128,7 @@
 
   /* Elevated surfaces (cards, nav, inputs) — remapped per site theme */
   --surface-card:    var(--bg-card);
+  --surface-soft:    #F4F7FB;
   --surface-nav:     rgba(255, 255, 255, 0.72);
   --surface-menu:    rgba(255, 255, 255, 0.96);
   --surface-field:   var(--base-0);
@@ -413,6 +414,7 @@ html[data-site-theme="sun"] {
   --glass-border: rgba(255, 255, 255, 0.14);
   --glass-border-soft: rgba(255, 255, 255, 0.09);
   --surface-card: var(--bg-card);
+  --surface-soft: #1A1728;
   --surface-nav: rgba(16, 14, 26, 0.9);
   --surface-menu: rgba(28, 25, 42, 0.98);
   --surface-field: #262238;

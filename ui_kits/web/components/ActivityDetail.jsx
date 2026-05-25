@@ -46,6 +46,14 @@
 
   function cancelLabel(cancelHrs, T) {
     if (cancelHrs == null || cancelHrs <= 0) return null;
+    if (cancelHrs >= 48) {
+      const days = Math.round(cancelHrs / 24);
+      return T({
+        hant: `出發 ${days} 天前可免費取消`,
+        hans: `出发 ${days} 天前可免费取消`,
+        en: `Free cancellation up to ${days} days before departure`,
+      });
+    }
     return T({
       hant: `出發 ${cancelHrs} 小時前可免費取消`,
       hans: `出发 ${cancelHrs} 小时前可免费取消`,
@@ -429,9 +437,12 @@
 
     const safeIndex = Math.min(activePhoto, Math.max(0, galleryPhotos.length - 1));
     const heroUrl = galleryPhotos[safeIndex] || tour.coverImageUrl;
-    const cancelHrs = tour.availability && tour.cancellationCutoffMinutes != null
-      ? Math.round(tour.cancellationCutoffMinutes / 60)
-      : null;
+    // Prefer the new normalized `cancellationFreeHours` (derived from
+    // cancellationPolicy.penaltyRules); fall back to the legacy minutes field
+    // for any older cached payloads that still ship `cancellationCutoffMinutes`.
+    const cancelHrs = Number.isFinite(Number(tour.cancellationFreeHours)) && Number(tour.cancellationFreeHours) > 0
+      ? Number(tour.cancellationFreeHours)
+      : (tour.cancellationCutoffMinutes != null ? Math.round(tour.cancellationCutoffMinutes / 60) : null);
     const cancelText = cancelLabel(cancelHrs, T);
     const hasMultiPrice = tour.priceTable && tour.priceTable.length > 1;
     const stopsNamed = (tour.stops || []).filter((s) => s.name);
@@ -439,11 +450,19 @@
     const stopsVisible = stopsHidden
       ? stopsNamed.slice(0, MOBILE_STOPS_PREVIEW)
       : stopsNamed;
-    const descNeedsCollapse = tour.description && tour.description.length > DESC_PREVIEW_CHARS;
-    const descPreview = descNeedsCollapse && !descExpanded
+    // Bókun ships descriptions as inline-styled HTML (rich paragraphs with
+    // <p>, <br>, vendor styles). Detect that and route through the sanitiser
+    // so paragraphs actually render, instead of collapsing into a wall of text.
+    const descriptionIsHtml = typeof tour.description === 'string' && /<[a-z][\s\S]*?>/i.test(tour.description);
+    const descriptionSanitizedHtml = descriptionIsHtml ? sanitizeVendorHtml(tour.description) : '';
+    const descriptionTextLen = descriptionIsHtml
+      ? descriptionSanitizedHtml.replace(/<[^>]*>/g, '').length
+      : (tour.description || '').length;
+    const descNeedsCollapse = descriptionTextLen > DESC_PREVIEW_CHARS;
+    const descPreview = descNeedsCollapse && !descExpanded && !descriptionIsHtml
       ? `${tour.description.slice(0, DESC_PREVIEW_CHARS).trim()}…`
       : tour.description;
-    const descriptionParts = splitDescription(tour.description, tour.title);
+    const descriptionParts = descriptionIsHtml ? { highlights: [], body: '' } : splitDescription(tour.description, tour.title);
     const mapsUrl = mapsSearchUrl(tour.meetingPoint);
 
     const includedHtml = sanitizeVendorHtml(tour.includedHtml);
@@ -739,9 +758,16 @@
                         ))}
                       </div>
                     )}
-                    <p className={`detail-description${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}>
-                      {descExpanded ? tour.description : (descriptionParts.body || descPreview)}
-                    </p>
+                    {descriptionIsHtml ? (
+                      <div
+                        className={`detail-description detail-description--rich detail-vendor-html${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}
+                        dangerouslySetInnerHTML={{ __html: descriptionSanitizedHtml }}
+                      />
+                    ) : (
+                      <p className={`detail-description${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}>
+                        {descExpanded ? tour.description : (descriptionParts.body || descPreview)}
+                      </p>
+                    )}
                     {descNeedsCollapse && (
                       <button
                         type="button"
@@ -956,7 +982,7 @@
                 title={T({ hant: '重要注意事項', hans: '重要注意事项', en: 'Good to know' })}
               >
                 <div className="detail-attention-card">
-                  <Icon name="info" size={18} color="#B98800" />
+                  <Icon name="info" size={18} color="var(--warning, #FFB347)" />
                   <div className="detail-vendor-html"
                        dangerouslySetInnerHTML={{ __html: attentionHtml }} />
                 </div>
@@ -991,18 +1017,29 @@
                       </div>
                     </div>
                   )}
-                  {tour.cancellationFreeHours && (
+                  {tour.cancellationFreeHours > 0 && (
                     <div className="detail-fact">
-                      <Icon name="shield-check" size={16} />
+                      <Icon name="shield-check" size={16} color="var(--aurora-deep, #00837A)" />
                       <div>
                         <div className="detail-fact__label">{T({ hant: '取消政策', hans: '取消政策', en: 'Cancellation' })}</div>
                         <div className="detail-fact__value">
-                          {T({
-                            hant: `${tour.cancellationFreeHours} 小時前可免費取消`,
-                            hans: `${tour.cancellationFreeHours} 小时前可免费取消`,
-                            en: `Free up to ${tour.cancellationFreeHours}h before`,
-                          })}
+                          {tour.cancellationFreeHours >= 48
+                            ? T({
+                                hant: `${Math.round(tour.cancellationFreeHours / 24)} 天前可免費取消`,
+                                hans: `${Math.round(tour.cancellationFreeHours / 24)} 天前可免费取消`,
+                                en: `Free up to ${Math.round(tour.cancellationFreeHours / 24)} days before`,
+                              })
+                            : T({
+                                hant: `${tour.cancellationFreeHours} 小時前可免費取消`,
+                                hans: `${tour.cancellationFreeHours} 小时前可免费取消`,
+                                en: `Free up to ${tour.cancellationFreeHours}h before`,
+                              })}
                         </div>
+                        {tour.cancellationPolicyTitle && (
+                          <div style={{ font: '500 11px/1.4 var(--font-text)', color: 'var(--fg-3)', marginTop: 2 }}>
+                            {tour.cancellationPolicyTitle}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

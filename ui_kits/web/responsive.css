@@ -1667,6 +1667,45 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   white-space: pre-wrap;
 }
 
+/* Rich (vendor-HTML) description — preserve paragraph rhythm + headings */
+.detail-description--rich {
+  white-space: normal;
+}
+.detail-description--rich p {
+  margin: 0 0 12px;
+}
+.detail-description--rich p:last-child {
+  margin-bottom: 0;
+}
+.detail-description--rich h1,
+.detail-description--rich h2,
+.detail-description--rich h3,
+.detail-description--rich h4 {
+  margin: 18px 0 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--fg-1);
+  line-height: 1.3;
+}
+.detail-description--rich h2 { font-size: 18px; }
+.detail-description--rich h3,
+.detail-description--rich h4 { font-size: 16px; }
+.detail-description--rich ul,
+.detail-description--rich ol {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+.detail-description--rich li {
+  margin-bottom: 4px;
+}
+.detail-description--rich br {
+  /* keep line breaks visible */
+  content: '';
+}
+.detail-description--rich.is-clamped {
+  -webkit-line-clamp: 9;
+}
+
 .detail-highlight-list {
   display: grid;
   gap: 10px;
@@ -3060,18 +3099,23 @@ textarea.detail-book-field {
   display: flex;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(255, 198, 88, 0.12);
-  border-left: 3px solid #B98800;
+  background: var(--warning-soft, rgba(255, 198, 88, 0.12));
+  border-left: 3px solid var(--warning, #B98800);
   border-radius: 8px;
+  color: var(--fg-1);
 }
-.detail-attention-card .detail-vendor-html { flex: 1 1 auto; min-width: 0; }
+.detail-attention-card .detail-vendor-html { flex: 1 1 auto; min-width: 0; color: var(--fg-1); }
+html[data-site-theme="sun"] .detail-attention-card {
+  background: rgba(255, 200, 148, 0.12);
+}
 
 .detail-pickup-card {
   display: flex;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--surface-soft, #F4F7FB);
+  background: var(--surface-soft);
   border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
 }
 .detail-pickup-card__body { flex: 1 1 auto; min-width: 0; }
 .detail-pickup-card__title {
@@ -3197,8 +3241,9 @@ textarea.detail-book-field {
   gap: 10px;
   align-items: flex-start;
   padding: 12px 14px;
-  background: var(--surface-soft, #F4F7FB);
+  background: var(--surface-soft);
   border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
 }
 .detail-fact__label {
   font: 600 11px/1 var(--font-text);
