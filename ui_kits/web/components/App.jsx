@@ -8,8 +8,10 @@
   const { useState, useMemo, useEffect } = React;
   const {
     Icon,
-    CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount, formatToursToolbarSummary,
+    CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount, formatToursToolbarSummary, formatToursPageTitle,
     loadTripSearch, saveTripSearch, normalizeTripSearch, facetsFromTripSearch, formatTripSearchSummary,
+    TRIP_HUBS,
+    readUrlState, buildUrlForState, currentUrlString,
     activityVendor, vendorIdsMatch,
     Nav, Hero, TourCard, TourCardSkeleton, SupplierFilter, MapPanel, TripPanel, Checkout, Footer, ActivityDetail,
   } = window.AuralisUI;
@@ -32,7 +34,10 @@
       setSiteTheme(window.AuralisUI.setSiteThemeById(themeId));
     }
 
-    const [screen, setScreen] = useState('home');  // home | tours | detail | trip | checkout
+    const initialUrl = (typeof window !== 'undefined' ? readUrlState() : null) || {
+      screen: 'home', chip: null, route: null, supplier: 'all',
+    };
+    const [screen, setScreen] = useState(initialUrl.screen);  // home | tours | detail | trip | checkout
     const [detailActivityId, setDetailActivityId] = useState(null);
     const [returnScreen, setReturnScreen] = useState('tours');
 
@@ -132,14 +137,48 @@
     const tripIdSet = useMemo(() => new Set(tripIds), [tripIds]);
 
     const [tripSearch, setTripSearch] = useState(() => loadTripSearch());
-    const [activeSupplier, setActiveSupplier] = useState('all');
-    const [activeCats, setActiveCats] = useState([]);
-    const [activeRoutes, setActiveRoutes] = useState([]);
+    const [activeSupplier, setActiveSupplier] = useState(initialUrl.supplier || 'all');
+    const [activeCats, setActiveCats] = useState(initialUrl.chip ? [initialUrl.chip] : []);
+    const [activeRoutes, setActiveRoutes] = useState(initialUrl.route ? [initialUrl.route] : []);
     const [activeFacets, setActiveFacets] = useState([]);
 
     useEffect(() => {
       saveTripSearch(tripSearch);
     }, [tripSearch]);
+
+    // --- URL sync ---------------------------------------------------------
+    // pushState on filter / screen changes so the URL reflects what's visible.
+    // Detail screen is intentionally excluded (URL stays at /tours during a
+    // detail overlay; closing returns to the same filtered list).
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      if (screen === 'detail') return;
+      const next = buildUrlForState({
+        screen,
+        chip: activeCats[0] || null,
+        route: activeRoutes[0] || null,
+        supplier: activeSupplier,
+      });
+      if (currentUrlString() !== next) {
+        window.history.pushState(null, '', next);
+      }
+    }, [screen, activeCats, activeRoutes, activeSupplier]);
+
+    // popstate → re-derive state from URL so back/forward feel native.
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      function onPop() {
+        const s = readUrlState();
+        if (!s) return;
+        setScreen(s.screen);
+        setActiveCats(s.chip ? [s.chip] : []);
+        setActiveRoutes(s.route ? [s.route] : []);
+        setActiveSupplier(s.supplier || 'all');
+        setDetailActivityId(null);
+      }
+      window.addEventListener('popstate', onPop);
+      return () => window.removeEventListener('popstate', onPop);
+    }, []);
 
     function addToTrip(vm) {
       if (tripIdSet.has(vm.id)) return;
@@ -451,19 +490,54 @@
       lang,
     });
 
+    const supplierOption = activeSupplier !== 'all'
+      ? (catalogActivities.find((vm) => {
+          const v = activityVendor(vm);
+          return v && vendorIdsMatch(v.id, activeSupplier);
+        })) || null
+      : null;
+    const supplierLabel = supplierOption
+      ? (() => { const v = activityVendor(supplierOption); return v && (v.titleOriginal || v.title); })()
+      : null;
+    const hubLabel = (() => {
+      const hub = TRIP_HUBS && tripSearch && TRIP_HUBS.find((h) => h.id === tripSearch.hubId);
+      return hub ? pick(lang, hub.label) : '';
+    })();
+
+    const pageTitle = formatToursPageTitle({
+      filteredCount: filtered.length,
+      contractTotal: contractInScope,
+      activeChip: activeCats[0] || null,
+      activeRoute: activeRoutes[0] || null,
+      activeSupplierLabel: supplierLabel,
+      hubLabel,
+      lang,
+    });
+
+    const activePills = [];
+    if (activeCats[0]) {
+      const c = CATEGORIES.find((x) => x.id === activeCats[0]);
+      if (c) activePills.push({ kind: 'chip', id: c.id, label: pick(lang, c.label), onClear: () => onToggleCat(c.id) });
+    }
+    if (activeRoutes[0]) {
+      const r = ROUTES.find((x) => x.id === activeRoutes[0]);
+      if (r) activePills.push({ kind: 'route', id: r.id, label: pick(lang, r.label), onClear: () => onToggleRoute(r.id) });
+    }
+    if (activeSupplier !== 'all' && supplierLabel) {
+      activePills.push({ kind: 'supplier', id: 'supplier', label: supplierLabel, onClear: () => onSupplier('all') });
+    }
+    activeFacets.forEach((f) => {
+      const facet = FACETS.find((x) => x.id === f);
+      if (facet) activePills.push({ kind: 'facet', id: f, label: pick(lang, facet.label), onClear: () => onToggleFacet(f) });
+    });
+
     return (
       <section className="tours-page">
         <div className="auralis-container">
           <p className="tours-page-kicker">
             {T({ hant: '探索 / 雷克雅維克', hans: '探索 / 雷克雅未克', en: 'Discover / Reykjavík' })}
           </p>
-          <h1 className="tours-page-title">
-            {T({
-              hant: `${countLabel} 個體驗等你挑選`,
-              hans: `${countLabel} 个体验等你挑选`,
-              en:   `${countLabel} experiences in Iceland`,
-            })}
-          </h1>
+          <h1 className="tours-page-title">{pageTitle}</h1>
 
           {error && <BokunErrorBanner error={error} lang={lang} />}
 
@@ -493,6 +567,23 @@
                   {T({ hant: '修改', hans: '修改', en: 'Edit' })}
                 </button>
               </div>
+              {activePills.length > 0 && (
+                <div className="tours-active-filters" role="group"
+                     aria-label={T({ hant: '已套用的篩選', hans: '已应用的筛选', en: 'Active filters' })}>
+                  <span className="tours-active-filters__label">
+                    {T({ hant: '篩選：', hans: '筛选：', en: 'Filtering:' })}
+                  </span>
+                  {activePills.map((pill) => (
+                    <button key={`${pill.kind}-${pill.id}`} type="button"
+                            className="tours-active-filter-pill"
+                            onClick={pill.onClear}
+                            aria-label={T({ hant: `移除 ${pill.label}`, hans: `移除 ${pill.label}`, en: `Remove ${pill.label}` })}>
+                      <span>{pill.label}</span>
+                      <span aria-hidden="true" className="tours-active-filter-pill__x">✕</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="tours-toolbar tours-toolbar-card">
                 <span className="tours-toolbar-count">{toolbarSummary}</span>
                 <div className="tours-sort" role="group" aria-label={T({ hant: '排序', hans: '排序', en: 'Sort' })}>

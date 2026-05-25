@@ -22,6 +22,26 @@
     {
       "source": "/index.html",
       "destination": "/ui_kits/web/index.html"
+    },
+    {
+      "source": "/tours",
+      "destination": "/ui_kits/web/index.html"
+    },
+    {
+      "source": "/tours/:slug*",
+      "destination": "/ui_kits/web/index.html"
+    },
+    {
+      "source": "/journal",
+      "destination": "/ui_kits/web/index.html"
+    },
+    {
+      "source": "/trip",
+      "destination": "/ui_kits/web/index.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/ui_kits/web/index.html"
     }
   ],
   "redirects": [

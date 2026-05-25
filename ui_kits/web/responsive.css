@@ -1282,6 +1282,95 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   display: none;
 }
 
+.category-strip-inner > button {
+  transition: transform var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.category-strip-inner > button:active {
+  transform: scale(0.96) !important;
+}
+
+.category-strip-inner > button:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--accent-1, #6453F2));
+  outline-offset: 3px;
+}
+
+.tours-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--surface-card, #fff);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+.tours-active-filters__label {
+  font: 600 13px/1.3 var(--font-text);
+  color: var(--fg-2);
+  margin-right: 4px;
+}
+
+.tours-active-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 12px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font: 600 13px/1 var(--font-text);
+  color: var(--fg-1);
+  background: var(--base-50);
+  box-shadow: inset 0 0 0 1px var(--border-field);
+  transition: background var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.tours-active-filter-pill:hover {
+  background: var(--base-100, #F0F0F5);
+}
+
+.tours-active-filter-pill:active {
+  transform: scale(0.96);
+}
+
+.tours-active-filter-pill__x {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--fg-2);
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.06);
+}
+
+.tours-active-filter-pill:hover .tours-active-filter-pill__x {
+  background: rgba(0,0,0,0.12);
+  color: var(--fg-1);
+}
+
+@media (max-width: 640px) {
+  .tours-active-filters {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .tours-active-filter-pill {
+    height: 30px;
+    font-size: 12px;
+    padding: 0 8px 0 10px;
+  }
+}
+
 @media (max-width: 640px) {
   .featured-header {
     flex-direction: column;

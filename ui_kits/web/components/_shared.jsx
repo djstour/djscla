@@ -678,6 +678,106 @@
     });
   }
 
+  // -------------------------------------------------------------------
+  // SPA URL routing — single source of truth so back/forward + reload work
+  // and shareable filter links survive across sessions.
+  // -------------------------------------------------------------------
+  const URL_SCREENS = ['home', 'tours', 'trip', 'checkout', 'journal'];
+  const URL_PATH_BY_SCREEN = {
+    home: '/',
+    tours: '/tours',
+    trip: '/trip',
+    checkout: '/checkout',
+    journal: '/journal',
+  };
+
+  function readUrlState() {
+    if (typeof window === 'undefined') return null;
+    const path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+    const params = new URLSearchParams(window.location.search || '');
+    const screen = path === '/tours' || path.startsWith('/tours/')
+      ? 'tours'
+      : path === '/trip' ? 'trip'
+      : path === '/checkout' ? 'checkout'
+      : path === '/journal' ? 'journal'
+      : 'home';
+    return {
+      screen,
+      chip: params.get('chip') || null,
+      route: params.get('route') || null,
+      supplier: params.get('supplier') || 'all',
+    };
+  }
+
+  function buildUrlForState({ screen, chip, route, supplier }) {
+    const path = URL_PATH_BY_SCREEN[screen] || '/';
+    const params = new URLSearchParams();
+    if (chip) params.set('chip', chip);
+    if (route) params.set('route', route);
+    if (supplier && supplier !== 'all') params.set('supplier', String(supplier));
+    const search = params.toString();
+    return search ? `${path}?${search}` : path;
+  }
+
+  function currentUrlString() {
+    if (typeof window === 'undefined') return '/';
+    return `${window.location.pathname}${window.location.search}`;
+  }
+
+  /**
+   * Tours title — adapts to the active filter so the count and headline match.
+   *   141 experiences in Iceland          ← no filter
+   *   22 Northern Lights tours from Reykjavík
+   *   18 Adventure Vikings tours
+   */
+  function formatToursPageTitle({
+    filteredCount,
+    contractTotal,
+    activeChip,
+    activeRoute,
+    activeSupplierLabel,
+    hubLabel,
+    lang,
+  }) {
+    const count = Number(filteredCount);
+    const showCount = Number.isFinite(count) && count > 0
+      ? formatCatalogCount(count, lang)
+      : formatCatalogCount(contractTotal || 0, lang);
+
+    const chip = activeChip ? CATEGORIES.find((c) => c.id === activeChip) : null;
+    const route = activeRoute ? ROUTES.find((r) => r.id === activeRoute) : null;
+    const filterLabel = chip
+      ? pick(lang, chip.label)
+      : route
+        ? pick(lang, route.label)
+        : null;
+
+    if (activeSupplierLabel) {
+      return pick(lang, {
+        hant: `${showCount} 個 ${activeSupplierLabel} 行程`,
+        hans: `${showCount} 个 ${activeSupplierLabel} 行程`,
+        en: `${showCount} ${activeSupplierLabel} tours`,
+      });
+    }
+
+    if (filterLabel) {
+      const fromHub = hubLabel
+        ? pick(lang, { hant: `${hubLabel}出發`, hans: `${hubLabel}出发`, en: `from ${hubLabel}` })
+        : '';
+      return pick(lang, {
+        hant: `${showCount} 個 ${filterLabel} 行程${fromHub ? ` · ${fromHub}` : ''}`,
+        hans: `${showCount} 个 ${filterLabel} 行程${fromHub ? ` · ${fromHub}` : ''}`,
+        en: `${showCount} ${filterLabel} tours${fromHub ? ` ${fromHub}` : ''}`,
+      });
+    }
+
+    return pick(lang, {
+      hant: `${showCount} 個體驗等你挑選`,
+      hans: `${showCount} 个体验等你挑选`,
+      en: `${showCount} experiences in Iceland`,
+    });
+  }
+
   function activityVendor(vm) {
     return (vm && (vm.vendor || (vm.raw && vm.raw.vendor))) || null;
   }
@@ -757,7 +857,8 @@
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     aboveFoldImagePriorityCount, prefersReducedData,
-    CATEGORIES, ROUTES, FACETS, formatCatalogCount, formatToursToolbarSummary,
+    CATEGORIES, ROUTES, FACETS, formatCatalogCount, formatToursToolbarSummary, formatToursPageTitle,
+    readUrlState, buildUrlForState, currentUrlString, URL_PATH_BY_SCREEN,
     TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
