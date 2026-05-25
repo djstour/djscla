@@ -184,9 +184,34 @@
       if (tripIdSet.has(vm.id)) return;
       setTripCache((c) => ({ ...c, [vm.id]: vm }));
       setTripIds(ids => [...ids, vm.id]);
+      const showToast = window.AuralisUI && window.AuralisUI.showToast;
+      if (showToast) {
+        const T = (opts) => window.AuralisUI.pick(lang, opts);
+        showToast({
+          tone: 'success',
+          message: T({
+            hant: `已加入「${vm.title}」`,
+            hans: `已加入「${vm.title}」`,
+            en:   `Added "${vm.title}" to your trip`,
+          }),
+          actionLabel: T({ hant: '查看行程', hans: '查看行程', en: 'View trip' }),
+          onAction: () => { handleNav('checkout'); },
+        });
+      }
     }
     function removeFromTrip(id) {
+      const removed = tripCache[id];
       setTripIds(ids => ids.filter(x => x !== id));
+      const showToast = window.AuralisUI && window.AuralisUI.showToast;
+      if (showToast) {
+        const T = (opts) => window.AuralisUI.pick(lang, opts);
+        const title = removed && removed.title;
+        showToast({
+          message: title
+            ? T({ hant: `已從行程移除「${title}」`, hans: `已从行程移除「${title}」`, en: `Removed "${title}" from trip` })
+            : T({ hant: '已從行程移除', hans: '已从行程移除', en: 'Removed from trip' }),
+        });
+      }
     }
     function toggleCat(id) {
       setActiveCats(cs => cs.includes(id) ? cs.filter(c => c !== id) : [...cs, id]);
@@ -242,7 +267,7 @@
             {error && <div className="auralis-container"><BokunErrorBanner error={error} lang={lang} /></div>}
             <CategoryStrip onSelectCategory={openToursWithChip} lang={lang} />
             <FeaturedSection activities={activities} loading={loading} catalogTotal={catalogTotal}
-                             onView={() => goToToursWithFilters(tripSearch)} onAdd={addToTrip} onOpenDetail={openActivityDetail}
+                             onView={() => goToToursWithFilters(tripSearch)} onAdd={addToTrip} onRemove={removeFromTrip} onOpenDetail={openActivityDetail}
                              tripIdSet={tripIdSet} lang={lang}
                              displayCurrency={displayCurrency} fxRates={fxRates} />
             <Footer lang={lang} />
@@ -259,6 +284,7 @@
             error={error}
             tripIdSet={tripIdSet}
             onAdd={addToTrip}
+            onRemove={removeFromTrip}
             onOpenDetail={openActivityDetail}
             activeSupplier={activeSupplier}
             onSupplier={setActiveSupplier}
@@ -350,7 +376,7 @@
     );
   }
 
-  function FeaturedSection({ activities, loading, catalogTotal, onView, onAdd, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates }) {
+  function FeaturedSection({ activities, loading, catalogTotal, onView, onAdd, onRemove, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
     return (
@@ -385,7 +411,7 @@
           {loading
             ? Array.from({ length: 6 }, (_, i) => <TourCardSkeleton key={i} />)
             : activities.slice(0, 6).map((t, i) => (
-                <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
+                <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
                           inTrip={tripIdSet.has(t.id)} lang={lang}
                           imagePriority={i < window.AuralisUI.aboveFoldImagePriorityCount('featured')}
                           displayCurrency={displayCurrency} fxRates={fxRates} />
@@ -399,7 +425,7 @@
   // ============================================================ TOURS screen ===
 
   function ToursScreen({
-    activities, loading, loadingMore, hasMore, onLoadMore, error, tripIdSet, onAdd, onOpenDetail,
+    activities, loading, loadingMore, hasMore, onLoadMore, error, tripIdSet, onAdd, onRemove, onOpenDetail,
     activeSupplier, onSupplier, activeCats, onToggleCat,
     activeRoutes, onToggleRoute, activeFacets, onToggleFacet,
     tripSearch, onEditTripSearch,
@@ -610,7 +636,7 @@
                     : filtered.length === 0
                     ? <EmptyState lang={lang} />
                     : filtered.map((t, i) => (
-                        <TourCard key={t.id} tour={t} onAdd={onAdd} onView={onOpenDetail}
+                        <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
                                   inTrip={tripIdSet.has(t.id)} lang={lang}
                                   imagePriority={i < window.AuralisUI.aboveFoldImagePriorityCount('tours')}
                                   displayCurrency={displayCurrency} fxRates={fxRates} />

@@ -615,6 +615,101 @@
   }
 
   // -------------------------------------------------------------------
+  // Toast — lightweight imperative notifier rendered into document.body.
+  // Used by the trip CTA so adds/removes get on-screen confirmation
+  // without forcing a global React state plumbing.
+  // -------------------------------------------------------------------
+  function ensureToastStack() {
+    if (typeof document === 'undefined' || !document.body) return null;
+    let el = document.getElementById('auralis-toast-stack');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'auralis-toast-stack';
+      Object.assign(el.style, {
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        zIndex: '9999',
+        display: 'flex',
+        flexDirection: 'column-reverse',
+        gap: '8px',
+        pointerEvents: 'none',
+        maxWidth: 'calc(100vw - 48px)',
+      });
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function showToast({ message, actionLabel, onAction, timeoutMs = 3200, tone = 'default' } = {}) {
+    const stack = ensureToastStack();
+    if (!stack || !message) return () => {};
+
+    const node = document.createElement('div');
+    node.setAttribute('role', 'status');
+    Object.assign(node.style, {
+      pointerEvents: 'auto',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '14px',
+      padding: '12px 16px',
+      borderRadius: '999px',
+      background: tone === 'success' ? '#0A7B4F' : 'var(--fg-1, #11151F)',
+      color: '#fff',
+      font: '600 13px/1.25 var(--font-text, system-ui)',
+      boxShadow: '0 10px 30px rgba(8, 12, 24, 0.28)',
+      opacity: '0',
+      transform: 'translateY(8px)',
+      transition: 'opacity 0.22s ease, transform 0.22s ease',
+      maxWidth: '420px',
+    });
+
+    const text = document.createElement('span');
+    text.textContent = String(message);
+    text.style.whiteSpace = 'nowrap';
+    text.style.overflow = 'hidden';
+    text.style.textOverflow = 'ellipsis';
+    node.appendChild(text);
+
+    let timer;
+    function dismiss() {
+      if (timer) { clearTimeout(timer); timer = null; }
+      node.style.opacity = '0';
+      node.style.transform = 'translateY(8px)';
+      setTimeout(() => { if (node.parentNode) node.parentNode.removeChild(node); }, 220);
+    }
+
+    if (actionLabel && typeof onAction === 'function') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = String(actionLabel);
+      Object.assign(btn.style, {
+        appearance: 'none',
+        border: '0',
+        padding: '6px 12px',
+        borderRadius: '999px',
+        background: 'rgba(255,255,255,0.16)',
+        color: '#fff',
+        cursor: 'pointer',
+        font: 'inherit',
+      });
+      btn.addEventListener('click', () => {
+        try { onAction(); } catch (_) {}
+        dismiss();
+      });
+      node.appendChild(btn);
+    }
+
+    stack.appendChild(node);
+    requestAnimationFrame(() => {
+      node.style.opacity = '1';
+      node.style.transform = 'translateY(0)';
+    });
+    timer = setTimeout(dismiss, timeoutMs);
+    return dismiss;
+  }
+
+  // -------------------------------------------------------------------
   // Wishlist (Set of activity IDs persisted in localStorage)
   // -------------------------------------------------------------------
   const WISHLIST_STORAGE_KEY = 'auralis.wishlist';
@@ -940,6 +1035,7 @@
     readUrlState, buildUrlForState, currentUrlString, URL_PATH_BY_SCREEN,
     TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
     isWishlisted, toggleWishlist, subscribeWishlist,
+    showToast,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,

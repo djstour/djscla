@@ -53,7 +53,7 @@
   }
 
   function TourCard({
-    tour, onAdd, onView, inTrip, compact = false, lang = 'hant',
+    tour, onAdd, onRemove, onView, inTrip, compact = false, lang = 'hant',
     displayCurrency = 'USD', fxRates = { USD: 1 }, imagePriority = false,
   }) {
     const T = (opts) => pick(lang, opts);
@@ -68,6 +68,7 @@
     const coverSrc = tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null;
     const cardRef = useRef(null);
     const [hovered, setHovered] = useState(false);
+    const [ctaHovered, setCtaHovered] = useState(false);
     const [wished, setWished] = useState(() => isWishlisted(tour.id));
 
     useEffect(() => {
@@ -305,14 +306,27 @@
             </div>
             <button
               type="button"
-              className="tour-card__cta"
-              onClick={(e) => { e.stopPropagation(); onAdd && onAdd(tour); }}
-              disabled={inTrip}
+              className={'tour-card__cta' + (inTrip ? ' tour-card__cta--added' : '')}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (inTrip) {
+                  if (onRemove) onRemove(tour.id, tour);
+                } else if (onAdd) {
+                  onAdd(tour);
+                }
+              }}
+              onMouseEnter={() => setCtaHovered(true)}
+              onMouseLeave={() => setCtaHovered(false)}
+              aria-pressed={inTrip}
               style={{
                 height: 34, padding: '0 14px', borderRadius: 999,
-                cursor: inTrip ? 'default' : 'pointer',
-                background: inTrip ? 'var(--success-soft)' : 'transparent',
-                color: inTrip ? '#0A7B4F' : 'var(--fg-1)',
+                cursor: 'pointer',
+                background: inTrip
+                  ? (ctaHovered ? 'var(--coral-soft, #FFE2E5)' : 'var(--success-soft)')
+                  : 'transparent',
+                color: inTrip
+                  ? (ctaHovered ? '#C03A3A' : '#0A7B4F')
+                  : 'var(--fg-1)',
                 border: inTrip ? '1.5px solid transparent' : '1.5px solid var(--fg-1)',
                 font: '600 13px/1 var(--font-text)',
                 display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -320,8 +334,10 @@
               }}
             >
               {inTrip
-                ? <><Icon name="check" size={14} /> {T({ hant: '已加入', hans: '已加入', en: 'Added' })}</>
-                : <><Icon name="plus" size={14} /> {T({ hant: '加入行程', hans: '加入行程', en: 'Add' })}</>}
+                ? (ctaHovered
+                    ? <><Icon name="x" size={14} /> {T({ hant: '移除', hans: '移除', en: 'Remove' })}</>
+                    : <><Icon name="check" size={14} /> {T({ hant: '已加入行程', hans: '已加入行程', en: 'In trip' })}</>)
+                : <><Icon name="plus" size={14} /> {T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })}</>}
             </button>
           </div>
         </div>
