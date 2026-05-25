@@ -96,7 +96,7 @@
 
   // Lucide-icon wrapper. Renders <i data-lucide="name"></i> and calls createIcons
   // on every render so dynamic icons attach correctly.
-  function Icon({ name, size = 18, color, strokeWidth = 1.75, style, className }) {
+  function Icon({ name, size = 18, color, fill, strokeWidth = 1.75, style, className }) {
     const ref = useRef(null);
     useEffect(() => {
       if (window.lucide && ref.current) {
@@ -106,10 +106,16 @@
         ref.current.appendChild(el);
         window.lucide.createIcons({
           nameAttr: 'data-lucide',
-          attrs: { width: size, height: size, 'stroke-width': strokeWidth, ...(color ? { color } : {}) },
+          attrs: {
+            width: size,
+            height: size,
+            'stroke-width': strokeWidth,
+            ...(color ? { color } : {}),
+            ...(fill ? { fill } : {}),
+          },
         });
       }
-    }, [name, size, color, strokeWidth]);
+    }, [name, size, color, fill, strokeWidth]);
     return (
       <span
         ref={ref}
@@ -608,6 +614,51 @@
     return [hubLabel, dates, pax].filter(Boolean).join(' · ');
   }
 
+  // -------------------------------------------------------------------
+  // Wishlist (Set of activity IDs persisted in localStorage)
+  // -------------------------------------------------------------------
+  const WISHLIST_STORAGE_KEY = 'auralis.wishlist';
+  const wishlistListeners = new Set();
+
+  function readWishlistSet() {
+    try {
+      const raw = window.localStorage.getItem(WISHLIST_STORAGE_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return new Set(Array.isArray(arr) ? arr.map(String) : []);
+    } catch (_) {
+      return new Set();
+    }
+  }
+
+  function writeWishlistSet(set) {
+    try {
+      window.localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify([...set]));
+    } catch (_) { /* quota / SSR */ }
+  }
+
+  function isWishlisted(id) {
+    if (!id) return false;
+    return readWishlistSet().has(String(id));
+  }
+
+  function toggleWishlist(id) {
+    if (!id) return false;
+    const set = readWishlistSet();
+    const key = String(id);
+    const next = set.has(key);
+    if (next) set.delete(key); else set.add(key);
+    writeWishlistSet(set);
+    wishlistListeners.forEach((fn) => { try { fn(set); } catch (_) {} });
+    return !next; // returns new "wishlisted" state
+  }
+
+  /** Subscribe a React setter to wishlist changes. Returns unsubscribe fn. */
+  function subscribeWishlist(fn) {
+    wishlistListeners.add(fn);
+    return () => wishlistListeners.delete(fn);
+  }
+
   /** Hero quick picks → Tours filters (keeps hub facet from trip search). */
   const HERO_POPULAR_CHIPS = [
     { chipId: 'aurora' },
@@ -888,6 +939,7 @@
     CATEGORIES, ROUTES, FACETS, formatCatalogCount, formatToursToolbarSummary, formatToursPageTitle,
     readUrlState, buildUrlForState, currentUrlString, URL_PATH_BY_SCREEN,
     TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
+    isWishlisted, toggleWishlist, subscribeWishlist,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,

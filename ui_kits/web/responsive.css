@@ -2709,3 +2709,38 @@ textarea.detail-book-field {
     animation: none;
   }
 }
+
+/* Tour card secondary "Add" CTA — soft brand hover/focus states. */
+.tour-card__cta:not(:disabled):hover {
+  background: var(--gradient-aurora);
+  color: var(--brand-on-gradient);
+  border-color: transparent;
+  box-shadow: var(--shadow-glow-aurora);
+}
+
+.tour-card__cta:not(:disabled):focus-visible {
+  outline: 2px solid var(--brand-primary, #2EFFB8);
+  outline-offset: 2px;
+}
+
+/* Tour card density — tighten layout on small screens so two cards fit per
+   row without losing readability. */
+@media (max-width: 720px) {
+  .tour-card .tour-card__price-amount {
+    font-size: 20px;
+  }
+  .tour-card__cta {
+    height: 32px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .tour-card .tour-card__price-amount {
+    font-size: 18px;
+  }
+  .tour-card .tour-card__price-caption {
+    font-size: 10px;
+  }
+}

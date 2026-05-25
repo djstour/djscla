@@ -8,6 +8,7 @@
   const {
     Icon, formatDisplayPrice, formatDisplayPriceCompact, fakePhoto, PhotoSparkles, pick, proxyImageUrl, prefetchProxiedImage,
     imageProfileForViewport, isMobileViewport, CATEGORIES,
+    isWishlisted, toggleWishlist, subscribeWishlist,
   } = window.AuralisUI;
 
   function TourCardImage({ src, alt, height, fallbackPhoto, priority, hovered }) {
@@ -67,6 +68,12 @@
     const coverSrc = tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null;
     const cardRef = useRef(null);
     const [hovered, setHovered] = useState(false);
+    const [wished, setWished] = useState(() => isWishlisted(tour.id));
+
+    useEffect(() => {
+      const unsub = subscribeWishlist(() => setWished(isWishlisted(tour.id)));
+      return unsub;
+    }, [tour.id]);
 
     const primaryCategory = (() => {
       const ids = Array.isArray(tour.chipIds) ? tour.chipIds : [];
@@ -175,13 +182,34 @@
             </span>
           )}
 
-          <button type="button" className="tour-card__icon-btn" onClick={(e) => e.stopPropagation()} style={{
-            position: 'absolute', top: 12, right: 12,
-            width: 36, height: 36, borderRadius: 999, border: 0, cursor: 'pointer',
-            background: 'var(--glass-medium)', backdropFilter: 'blur(10px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: 'var(--shadow-1)',
-          }}><Icon name="heart" size={16} color="var(--fg-1)" /></button>
+          <button
+            type="button"
+            className="tour-card__icon-btn"
+            aria-pressed={wished}
+            aria-label={pick(lang, {
+              hant: wished ? '從願望清單移除' : '加入願望清單',
+              hans: wished ? '从愿望清单移除' : '加入愿望清单',
+              en:   wished ? 'Remove from wishlist' : 'Add to wishlist',
+            })}
+            onClick={(e) => { e.stopPropagation(); toggleWishlist(tour.id); }}
+            style={{
+              position: 'absolute', top: 12, right: 12,
+              width: 36, height: 36, borderRadius: 999, border: 0, cursor: 'pointer',
+              background: wished ? '#fff' : 'var(--glass-medium)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: 'var(--shadow-1)',
+              transition: 'transform var(--dur-fast) var(--ease-out)',
+              transform: wished ? 'scale(1.04)' : 'scale(1)',
+            }}
+          >
+            <Icon
+              name="heart"
+              size={16}
+              color={wished ? '#FF4D6D' : 'var(--fg-1)'}
+              fill={wished ? '#FF4D6D' : 'none'}
+            />
+          </button>
         </div>
 
         <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
@@ -266,30 +294,34 @@
             </div>
           )}
 
-          <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div className="tour-card__price-row" style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+            <div className="tour-card__price">
+              <div className="tour-card__price-caption" style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {T({ hant: '起', hans: '起', en: 'from' })}
               </div>
-              <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 4 }}>
+              <div className="tour-card__price-amount" style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 4 }}>
                 {formatDisplayPriceCompact(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
               </div>
             </div>
-            <button type="button" onClick={(e) => { e.stopPropagation(); onAdd && onAdd(tour); }}
-                    disabled={inTrip}
-                    style={{
-                      height: 38, padding: inTrip ? '0 12px' : '0 16px', borderRadius: 999, border: 0,
-                      cursor: inTrip ? 'default' : 'pointer',
-                      background: inTrip ? 'var(--success-soft)' : 'var(--gradient-aurora)',
-                      color: inTrip ? '#0A7B4F' : 'var(--brand-on-gradient)',
-                      boxShadow: inTrip ? 'none' : 'var(--shadow-glow-aurora)',
-                      font: '700 13px/1 var(--font-text)',
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      transition: 'all var(--dur-fast) var(--ease-out)',
-                    }}>
+            <button
+              type="button"
+              className="tour-card__cta"
+              onClick={(e) => { e.stopPropagation(); onAdd && onAdd(tour); }}
+              disabled={inTrip}
+              style={{
+                height: 34, padding: '0 14px', borderRadius: 999,
+                cursor: inTrip ? 'default' : 'pointer',
+                background: inTrip ? 'var(--success-soft)' : 'transparent',
+                color: inTrip ? '#0A7B4F' : 'var(--fg-1)',
+                border: inTrip ? '1.5px solid transparent' : '1.5px solid var(--fg-1)',
+                font: '600 13px/1 var(--font-text)',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                transition: 'all var(--dur-fast) var(--ease-out)',
+              }}
+            >
               {inTrip
                 ? <><Icon name="check" size={14} /> {T({ hant: '已加入', hans: '已加入', en: 'Added' })}</>
-                : <>{T({ hant: '加入', hans: '加入', en: 'Add' })} <Icon name="plus" size={14} /></>}
+                : <><Icon name="plus" size={14} /> {T({ hant: '加入行程', hans: '加入行程', en: 'Add' })}</>}
             </button>
           </div>
         </div>
