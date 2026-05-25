@@ -4,6 +4,10 @@ const {
   fetchChannelContractCatalog,
   DEFAULT_ALL_CAP,
 } = require('../../lib/catalog');
+const {
+  fetchCatalogPageFromDb,
+  fetchAllCatalogFromDb,
+} = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
 
@@ -11,6 +15,38 @@ function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+/**
+ * Decide which catalog backend to read from.
+ * - ?source=db|bokun query param (debugging / staged rollout)
+ * - CATALOG_SOURCE env (default 'bokun' for safety until first sync runs)
+ */
+function resolveSource(req) {
+  const requested = (req.query.source || process.env.CATALOG_SOURCE || 'bokun')
+    .toString()
+    .toLowerCase();
+  return requested === 'db' ? 'db' : 'bokun';
+}
+
+async function readFromDb({ fetchAll, vendorId, page, pageSize, maxItems }) {
+  if (fetchAll) {
+    return fetchAllCatalogFromDb({
+      maxItems,
+      vendorId: vendorId && vendorId !== 'all' ? vendorId : undefined,
+    });
+  }
+  return fetchCatalogPageFromDb({ page, pageSize, vendorId });
+}
+
+async function readFromBokun({ fetchAll, vendorId, page, pageSize, uiLang, maxItems }) {
+  if (fetchAll) {
+    if (vendorId && vendorId !== 'all') {
+      return fetchAllCatalogPages({ uiLang, pageSize: Math.min(pageSize, 100), maxItems, vendorId });
+    }
+    return fetchChannelContractCatalog({ uiLang, pageSize: Math.min(pageSize, 100), maxItems });
+  }
+  return fetchCatalogPage({ uiLang, page, pageSize, vendorId });
 }
 
 module.exports = async function handler(req, res) {
@@ -31,24 +67,40 @@ module.exports = async function handler(req, res) {
   const fetchAll = req.query.all === 'true' || req.query.all === '1';
   const maxItems = parseInt(req.query.maxItems || String(DEFAULT_ALL_CAP), 10);
   const full = req.query.full === 'true' || req.query.full === '1';
+  const source = resolveSource(req);
+
+  const opts = { fetchAll, vendorId, page, pageSize, uiLang, maxItems };
 
   try {
-    const { activities, meta } = fetchAll
-      ? (vendorId && vendorId !== 'all'
-        ? await fetchAllCatalogPages({ uiLang, pageSize: Math.min(pageSize, 100), maxItems, vendorId })
-        : await fetchChannelContractCatalog({ uiLang, pageSize: Math.min(pageSize, 100), maxItems }))
-      : await fetchCatalogPage({ uiLang, page, pageSize, vendorId });
+    let result;
+    let usedSource = source;
 
-    const list = full ? activities : activities.map(slimActivityForList);
+    if (source === 'db') {
+      try {
+        result = await readFromDb(opts);
+        if (!result.activities || !result.activities.length) {
+          result = await readFromBokun(opts);
+          usedSource = 'bokun';
+        }
+      } catch (dbErr) {
+        console.warn('[Auralis] catalog DB read failed, falling back to Bókun:', dbErr.message);
+        result = await readFromBokun(opts);
+        usedSource = 'bokun';
+      }
+    } else {
+      result = await readFromBokun(opts);
+    }
+
+    const list = full ? result.activities : result.activities.map(slimActivityForList);
     const translations = await loadTranslationsForActivities(list);
 
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
 
     return res.status(200).json({
-      source: 'bokun',
+      source: usedSource,
       activities: list,
       translations,
-      meta,
+      meta: { ...result.meta, source: usedSource },
     });
   } catch (err) {
     const status = err.code === 'BOKUN_CONFIG' ? 503 : err.status >= 400 && err.status < 600 ? err.status : 502;

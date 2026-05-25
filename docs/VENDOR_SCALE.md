@@ -27,18 +27,20 @@
 
 ---
 
-## Phase B — 數十～數百家供應商
+## Phase B — 數十～數百家供應商（已實作 v1）
 
 **觸發條件：** 全 channel SKU > ~2000，或 UI 載入 `all=true` 逾時 / 記憶體過大。
 
 | 層 | 做法 |
 |----|------|
-| 資料庫 | Supabase：`vendors`、`activities`（`bokun_id`, `vendor_id`, `title_en`, `source_hash`, `updated_at`） |
-| Sync | 定時 job（Vercel Cron / GitHub Action）分頁寫入；記錄 `last_synced_at` |
-| 列表 API | `GET /api/catalog/activities?vendorId=&page=&pageSize=&q=` → **查 DB** |
-| 前台 | Tours 改 **infinite scroll** 或分頁；`meta.total` 來自 DB count |
-| 供應商列表 | `GET /api/catalog/vendors` 來自 `vendors` 表（logo、簡介），非從行程推導 |
-| 翻譯 | 佇列：新品或 `source_hash` 變更 → job；`translations` 加 `vendor_id` 索引 |
+| 資料庫 | Supabase：`vendors`、`activities`（`bokun_activity_id`、`bokun_payload`、`source_hash`、`chip_ids`、`route_ids`、`facet_ids`、`last_synced_at`） |
+| Schema | `supabase/migrations/20260524093000_ota_core.sql` + `20260525025000_catalog_chip_ids.sql`（GIN on chip/route/facet + tsvector on `title_en`） |
+| Sync | `lib/catalogSync.js` → `fetchChannelContractCatalog()` + `source_hash` diff，僅 upsert 變更列；遺失 SKU 標 `is_active=false` |
+| 排程 | Vercel Cron `15 */2 * * *`（`vercel.json`）→ `GET /api/catalog/sync`；Bearer auth 走 `CRON_SECRET`／`CATALOG_SYNC_SECRET` |
+| 列表 API | `GET /api/catalog/activities?source=db&vendorId=…` → 查 Supabase（fallback Bókun on miss）；用 `CATALOG_SOURCE=db` 切換預設來源 |
+| 前台 | Tours 既有 `bokunAdapter` 客戶端不變；`meta.source` 顯示 `db` 表示已走快取路徑 |
+| 翻譯 | 佇列：新品或 `source_hash` 變更 → 既有 `/api/translations/cron` |
+| 待辦 | DB 端的 chip/route/facet/q 篩選 WHERE（目前快取內只做 vendor 過濾與排序） |
 
 ```mermaid
 flowchart LR
@@ -81,7 +83,8 @@ flowchart LR
 | `page`, `pageSize` | 分頁（`pageSize` ≤ 100） |
 | `all` | `true` = 伺服器串頁（受 `maxItems` 限制） |
 | `maxItems` | 與 `all` 合用，預設 2000 |
-| `vendorId` | 可選；目前為**回應後篩選**（Phase B 改 DB WHERE） |
+| `vendorId` | 可選；DB 路徑由 `bokun_payload->vendor->>id` 過濾（Phase B），Bókun 路徑為回應後篩選 |
+| `source` | 可選 `db` \| `bokun`（預設讀 `CATALOG_SOURCE`，再退回 `bokun`） |
 
 回應：
 
