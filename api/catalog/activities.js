@@ -29,14 +29,19 @@ function resolveSource(req) {
   return requested === 'db' ? 'db' : 'bokun';
 }
 
-async function readFromDb({ fetchAll, vendorId, page, pageSize, maxItems }) {
+async function readFromDb(opts) {
+  const { fetchAll, vendorId, page, pageSize, maxItems, chips, routes, facets, q } = opts;
   if (fetchAll) {
     return fetchAllCatalogFromDb({
       maxItems,
       vendorId: vendorId && vendorId !== 'all' ? vendorId : undefined,
+      chips,
+      routes,
+      facets,
+      q,
     });
   }
-  return fetchCatalogPageFromDb({ page, pageSize, vendorId });
+  return fetchCatalogPageFromDb({ page, pageSize, vendorId, chips, routes, facets, q });
 }
 
 async function readFromBokun({ fetchAll, vendorId, page, pageSize, uiLang, maxItems }) {
@@ -69,7 +74,13 @@ module.exports = async function handler(req, res) {
   const full = req.query.full === 'true' || req.query.full === '1';
   const source = resolveSource(req);
 
-  const opts = { fetchAll, vendorId, page, pageSize, uiLang, maxItems };
+  const chips = req.query.chips || req.query.chip;
+  const routes = req.query.routes || req.query.route;
+  const facets = req.query.facets || req.query.facet;
+  const q = req.query.q;
+  const hasServerFilters = !!(chips || routes || facets || q);
+
+  const opts = { fetchAll, vendorId, page, pageSize, uiLang, maxItems, chips, routes, facets, q };
 
   try {
     let result;
@@ -78,7 +89,7 @@ module.exports = async function handler(req, res) {
     if (source === 'db') {
       try {
         result = await readFromDb(opts);
-        if (!result.activities || !result.activities.length) {
+        if (!result.activities || (!result.activities.length && !hasServerFilters && !vendorId)) {
           result = await readFromBokun(opts);
           usedSource = 'bokun';
         }
@@ -88,6 +99,13 @@ module.exports = async function handler(req, res) {
         usedSource = 'bokun';
       }
     } else {
+      if (hasServerFilters) {
+        return res.status(400).json({
+          error: 'Server-side chip/route/facet/q filters require source=db',
+          code: 'CATALOG_FILTER_REQUIRES_DB',
+          hint: 'Add source=db query or set CATALOG_SOURCE=db on Vercel.',
+        });
+      }
       result = await readFromBokun(opts);
     }
 

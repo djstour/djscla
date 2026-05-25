@@ -1,6 +1,13 @@
 const { getActivityById, getQuoteCurrency, applyQuoteCurrency } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
+const { fetchActivityFromDb } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
+
+const DEFAULT_FRESHNESS_MS = 6 * 60 * 60 * 1000;
+const FRESHNESS_MS = Number.isFinite(Number(process.env.CATALOG_DETAIL_TTL_MS))
+  && Number(process.env.CATALOG_DETAIL_TTL_MS) > 0
+  ? Number(process.env.CATALOG_DETAIL_TTL_MS)
+  : DEFAULT_FRESHNESS_MS;
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,6 +20,27 @@ function unwrapActivity(payload) {
   if (payload.id != null || payload.activityId != null) return payload;
   if (payload.activity) return payload.activity;
   return payload;
+}
+
+function resolveSource(req) {
+  const requested = (req.query.source || process.env.CATALOG_SOURCE || 'bokun')
+    .toString()
+    .toLowerCase();
+  return requested === 'db' ? 'db' : 'bokun';
+}
+
+function isFresh(lastSyncedAt) {
+  if (!lastSyncedAt) return false;
+  const age = Date.now() - new Date(lastSyncedAt).getTime();
+  return Number.isFinite(age) && age < FRESHNESS_MS;
+}
+
+async function fetchFromBokun(id, uiLang) {
+  const rawPayload = await getActivityById(id, { uiLang });
+  const raw = unwrapActivity(rawPayload);
+  const quoteCurrency = getQuoteCurrency();
+  const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
+  return { activity, quoteCurrency };
 }
 
 module.exports = async function handler(req, res) {
@@ -32,21 +60,51 @@ module.exports = async function handler(req, res) {
   }
 
   const uiLang = req.query.lang || 'hant';
+  const source = resolveSource(req);
+
+  let activity = null;
+  let usedSource = 'bokun';
+  let lastSyncedAt = null;
+
+  if (source === 'db') {
+    try {
+      const cached = await fetchActivityFromDb(id);
+      if (cached && cached.activity && isFresh(cached.lastSyncedAt)) {
+        activity = cached.activity;
+        usedSource = 'db';
+        lastSyncedAt = cached.lastSyncedAt;
+      }
+    } catch (dbErr) {
+      console.warn('[Auralis] activity DB read failed, falling back to Bókun:', dbErr.message);
+    }
+  }
 
   try {
-    const rawPayload = await getActivityById(id, { uiLang });
-    const raw = unwrapActivity(rawPayload);
-    const quoteCurrency = getQuoteCurrency();
-    const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
+    let quoteCurrency = getQuoteCurrency();
+    if (!activity) {
+      const fresh = await fetchFromBokun(id, uiLang);
+      activity = fresh.activity;
+      quoteCurrency = fresh.quoteCurrency;
+      usedSource = 'bokun';
+    }
+
     const translations = await loadTranslationsForActivities([activity]);
 
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    res.setHeader(
+      'Cache-Control',
+      usedSource === 'db'
+        ? 'public, s-maxage=600, stale-while-revalidate=1800'
+        : 'public, s-maxage=300, stale-while-revalidate=600',
+    );
 
     return res.status(200).json({
-      source: 'bokun',
+      source: usedSource,
       activity,
       translations,
-      meta: { quoteCurrency },
+      meta: {
+        quoteCurrency,
+        ...(usedSource === 'db' ? { lastSyncedAt } : {}),
+      },
     });
   } catch (err) {
     const status = err.code === 'BOKUN_CONFIG' ? 503 : err.status >= 400 && err.status < 600 ? err.status : 502;

@@ -37,10 +37,11 @@
 | Schema | `supabase/migrations/20260524093000_ota_core.sql` + `20260525025000_catalog_chip_ids.sql`（GIN on chip/route/facet + tsvector on `title_en`） |
 | Sync | `lib/catalogSync.js` → `fetchChannelContractCatalog()` + `source_hash` diff，僅 upsert 變更列；遺失 SKU 標 `is_active=false` |
 | 排程 | Vercel Cron `15 */2 * * *`（`vercel.json`）→ `GET /api/catalog/sync`；Bearer auth 走 `CRON_SECRET`／`CATALOG_SYNC_SECRET` |
-| 列表 API | `GET /api/catalog/activities?source=db&vendorId=…` → 查 Supabase（fallback Bókun on miss）；用 `CATALOG_SOURCE=db` 切換預設來源 |
-| 前台 | Tours 既有 `bokunAdapter` 客戶端不變；`meta.source` 顯示 `db` 表示已走快取路徑 |
+| 列表 API | `GET /api/catalog/activities?source=db&vendorId=…&chips=&routes=&facets=&q=` → 查 Supabase（GIN array overlap + tsvector FTS；fallback Bókun on miss） |
+| 供應商 API | `GET /api/catalog/vendors` → 從 `vendors` 表回 logo/簡介/contractCount，第一次同步前自動 fallback `data/bokunVendors.json` |
+| 詳情 API | `GET /api/bokun/activity?id=…` 先讀 `activities.bokun_payload`（若 `last_synced_at` 在 `CATALOG_DETAIL_TTL_MS` 內）；過期或 miss 才打 Bókun |
+| 前台 | Tours 既有 `bokunAdapter` 客戶端不變；`meta.source` 顯示 `db` 表示走快取 |
 | 翻譯 | 佇列：新品或 `source_hash` 變更 → 既有 `/api/translations/cron` |
-| 待辦 | DB 端的 chip/route/facet/q 篩選 WHERE（目前快取內只做 vendor 過濾與排序） |
 
 ```mermaid
 flowchart LR
