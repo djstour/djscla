@@ -48,6 +48,19 @@ function hasBookingFields(activity) {
   return true;
 }
 
+function hasUsablePricing(pricing) {
+  return Array.isArray(pricing)
+    && pricing.some((row) => Number.isFinite(Number(row && row.amount)) && Number(row.amount) > 0);
+}
+
+function hasUsablePrice(activity) {
+  if (!activity) return false;
+  if (hasUsablePricing(activity.pricing)) return true;
+  const next = activity.nextDefaultPrice;
+  if (next && Number.isFinite(Number(next.amount)) && Number(next.amount) > 0) return true;
+  return false;
+}
+
 async function fetchPickupPlaces(id) {
   try {
     const r = await bokunRequest({ method: 'GET', path: `/activity.json/${id}/pickup-places` });
@@ -146,6 +159,26 @@ module.exports = async function handler(req, res) {
       quoteCurrency = fresh.quoteCurrency;
       rawUpstream = fresh.raw;
       usedSource = 'bokun';
+    }
+
+    // /activity.json/{id} doesn't include the "from" price (Bókun only ships
+    // it via the search.json catalog firehose). If the live response lacks a
+    // usable price, graft it from the DB-cached pricing[] / nextDefaultPrice
+    // so the booking sidebar shows a real number instead of "Price loading".
+    if (activity && !hasUsablePrice(activity)) {
+      try {
+        const cached = await fetchActivityFromDb(id);
+        if (cached && cached.activity && hasUsablePrice(cached.activity)) {
+          activity = {
+            ...activity,
+            pricing: hasUsablePricing(cached.activity.pricing) ? cached.activity.pricing : activity.pricing,
+            nextDefaultPrice: cached.activity.nextDefaultPrice || activity.nextDefaultPrice,
+            defaultCurrency: cached.activity.defaultCurrency || activity.defaultCurrency,
+          };
+        }
+      } catch (priceErr) {
+        console.warn('[Auralis] price hydration failed:', priceErr.message);
+      }
     }
 
     if (req.query.debug === 'pickup') {
