@@ -497,6 +497,15 @@
     };
   }
 
+  // OTA-standard pax caps: adults 1–9, children 0–9, group total ≤ 15.
+  const TRIP_PAX_LIMITS = {
+    adultMin: 1,
+    adultMax: 9,
+    childMin: 0,
+    childMax: 9,
+    totalMax: 15,
+  };
+
   function normalizeTripSearch(raw) {
     const base = defaultTripSearch();
     const hubId = raw && TRIP_HUB_IDS.has(raw.hubId) ? raw.hubId : base.hubId;
@@ -505,8 +514,17 @@
     let endDate = (raw && raw.endDate) || base.endDate;
     if (startDate < today) startDate = today;
     if (endDate < startDate) endDate = startDate;
-    const adults = Math.min(6, Math.max(1, Number(raw && raw.adults) || base.adults));
-    const children = Math.min(6, Math.max(0, Number(raw && raw.children) || base.children));
+    let adults = Math.min(
+      TRIP_PAX_LIMITS.adultMax,
+      Math.max(TRIP_PAX_LIMITS.adultMin, Number(raw && raw.adults) || base.adults),
+    );
+    let children = Math.min(
+      TRIP_PAX_LIMITS.childMax,
+      Math.max(TRIP_PAX_LIMITS.childMin, Number(raw && raw.children) || base.children),
+    );
+    if (adults + children > TRIP_PAX_LIMITS.totalMax) {
+      children = Math.max(TRIP_PAX_LIMITS.childMin, TRIP_PAX_LIMITS.totalMax - adults);
+    }
     return { hubId, startDate, endDate, adults, children };
   }
 
@@ -740,7 +758,7 @@
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     aboveFoldImagePriorityCount, prefersReducedData,
     CATEGORIES, ROUTES, FACETS, formatCatalogCount, formatToursToolbarSummary,
-    TRIP_HUBS, HERO_POPULAR_CHIPS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
+    TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,

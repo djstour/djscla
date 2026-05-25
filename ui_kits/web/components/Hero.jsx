@@ -2,28 +2,29 @@
    Used on the Discover screen. */
 
 (function () {
-  const { useMemo, useRef } = React;
+  const { useMemo, useState, useRef } = React;
   const {
-    Icon, pick, formatCatalogCount, TRIP_HUBS, HERO_POPULAR_CHIPS,
-    normalizeTripSearch, todayIsoDate,
+    Icon, pick, formatCatalogCount, TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS,
+    normalizeTripSearch, todayIsoDate, DateRangePicker,
   } = window.AuralisUI;
 
-  function formatHeroDate(iso, lang) {
-    if (!iso) return '';
-    const locale = lang === 'en' ? 'en-GB' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW';
-    return new Date(`${iso}T12:00:00`).toLocaleDateString(locale, {
-      day: 'numeric', month: 'short', year: 'numeric',
-    });
+  function rangeArr(start, end) {
+    const out = [];
+    for (let i = start; i <= end; i += 1) out.push(i);
+    return out;
   }
 
-  function openDatePicker(inputRef) {
-    const el = inputRef && inputRef.current;
-    if (!el) return;
-    if (typeof el.showPicker === 'function') {
-      try { el.showPicker(); return; } catch (e) { /* fall through */ }
-    }
-    el.focus();
-    el.click();
+  function heroDateLocale(lang) {
+    return lang === 'en' ? 'en-GB' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW';
+  }
+
+  function formatHeroDateFull(iso, lang) {
+    if (!iso) return '';
+    return new Date(`${iso}T12:00:00`).toLocaleDateString(heroDateLocale(lang), {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   }
 
   function Hero({
@@ -41,10 +42,12 @@
 
     const search = normalizeTripSearch(tripSearch);
     const minDate = todayIsoDate();
-    const startDateRef = useRef(null);
-    const endDateRef = useRef(null);
+    const [calendarOpen, setCalendarOpen] = useState(false);
+    const datesAnchorRef = useRef(null);
     const adultLabel = T({ hant: '成人', hans: '成人', en: 'Adult' });
     const childLabel = T({ hant: '孩童', hans: '孩童', en: 'Children' });
+    const startDateLabel = formatHeroDateFull(search.startDate, lang);
+    const endDateLabel = formatHeroDateFull(search.endDate, lang);
     const popularLabels = T({
       hant: ['極光', '黃金圈', '藍湖', '自駕'],
       hans: ['极光', '黄金圈', '蓝湖', '自驾'],
@@ -72,16 +75,7 @@
       onTripSearchChange(normalizeTripSearch({ ...search, ...partial }));
     }
 
-    function handleStartDate(value) {
-      const startDate = value || search.startDate;
-      let endDate = search.endDate;
-      if (endDate < startDate) endDate = startDate;
-      patch({ startDate, endDate });
-    }
-
-    function handleEndDate(value) {
-      const endDate = value || search.endDate;
-      const startDate = endDate < search.startDate ? endDate : search.startDate;
+    function handleDateRangeChange({ startDate, endDate }) {
       patch({ startDate, endDate });
     }
 
@@ -139,7 +133,7 @@
             </div>
           </div>
 
-          <div className="glass" style={{ padding: 24, borderRadius: 28 }}>
+          <div className="glass hero-search-panel" style={{ padding: 24, borderRadius: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <Icon name="map-pin" size={16} color="var(--coral)" />
               <span style={{ font: '600 13px/1 var(--font-text)', color: 'var(--fg-2)' }}>
@@ -161,47 +155,43 @@
             </Field>
 
             <div className="hero-search-dates" style={{ marginTop: 10 }}>
-              <Field label={T({ hant: '日期', hans: '日期', en: 'Dates' })} focused>
-                <div className="hero-field__dates">
+              <Field
+                label={T({ hant: '日期', hans: '日期', en: 'Dates' })}
+                focused={calendarOpen}
+                controlClass="hero-field__control--dates"
+              >
+                <div className="hero-field__dates-wrap" ref={datesAnchorRef}>
                   <button
                     type="button"
-                    className="hero-field__date-btn"
-                    onClick={() => openDatePicker(startDateRef)}
+                    className="hero-field__date-range-trigger"
+                    aria-expanded={calendarOpen}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCalendarOpen((open) => !open);
+                    }}
                   >
-                    {formatHeroDate(search.startDate, lang)}
+                    <span className="hero-field__date-range-part">{startDateLabel}</span>
+                    <span className="hero-field__date-sep" aria-hidden="true">→</span>
+                    <span className="hero-field__date-range-part">{endDateLabel}</span>
                   </button>
-                  <span className="hero-field__date-sep" aria-hidden="true">→</span>
-                  <button
-                    type="button"
-                    className="hero-field__date-btn"
-                    onClick={() => openDatePicker(endDateRef)}
-                  >
-                    {formatHeroDate(search.endDate, lang)}
-                  </button>
-                  <input
-                    ref={startDateRef}
-                    type="date"
-                    className="hero-field__date-native"
-                    tabIndex={-1}
-                    min={minDate}
-                    value={search.startDate}
-                    onChange={(e) => handleStartDate(e.target.value)}
-                    aria-label={T({ hant: '出發日', hans: '出发日', en: 'Start date' })}
-                  />
-                  <input
-                    ref={endDateRef}
-                    type="date"
-                    className="hero-field__date-native"
-                    tabIndex={-1}
-                    min={search.startDate}
-                    value={search.endDate}
-                    onChange={(e) => handleEndDate(e.target.value)}
-                    aria-label={T({ hant: '回程日', hans: '回程日', en: 'End date' })}
+                  <DateRangePicker
+                    open={calendarOpen}
+                    anchorRef={datesAnchorRef}
+                    startDate={search.startDate}
+                    endDate={search.endDate}
+                    minDate={minDate}
+                    onChange={handleDateRangeChange}
+                    onClose={() => setCalendarOpen(false)}
+                    lang={lang}
                   />
                 </div>
               </Field>
 
-              <Field label={T({ hant: '旅人', hans: '旅客', en: 'Travelers' })} icon="users">
+              <Field
+                label={T({ hant: '旅人', hans: '旅客', en: 'Travelers' })}
+                icon="users"
+                controlClass="hero-field__control--pax"
+              >
                 <div className="hero-field__pax">
                   <div className="hero-field__pax-row">
                     <span className="hero-field__pax-label">{adultLabel}</span>
@@ -211,9 +201,12 @@
                       onChange={(e) => patch({ adults: Number(e.target.value) })}
                       aria-label={adultLabel}
                     >
-                      {[1, 2, 3, 4, 5, 6].map((n) => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
+                      {rangeArr(TRIP_PAX_LIMITS.adultMin, TRIP_PAX_LIMITS.adultMax).map((n) => {
+                        const disabled = n + search.children > TRIP_PAX_LIMITS.totalMax;
+                        return (
+                          <option key={n} value={n} disabled={disabled}>{n}</option>
+                        );
+                      })}
                     </select>
                   </div>
                   <div className="hero-field__pax-row">
@@ -224,9 +217,12 @@
                       onChange={(e) => patch({ children: Number(e.target.value) })}
                       aria-label={childLabel}
                     >
-                      {[0, 1, 2, 3, 4, 5, 6].map((n) => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
+                      {rangeArr(TRIP_PAX_LIMITS.childMin, TRIP_PAX_LIMITS.childMax).map((n) => {
+                        const disabled = search.adults + n > TRIP_PAX_LIMITS.totalMax;
+                        return (
+                          <option key={n} value={n} disabled={disabled}>{n}</option>
+                        );
+                      })}
                     </select>
                   </div>
                 </div>
@@ -272,19 +268,31 @@
     );
   }
 
-  function Field({ label, icon, focused, children }) {
+  function Field({ label, icon, focused, controlClass = '', children }) {
     const { Icon } = window.AuralisUI;
+    const isPax = controlClass.includes('pax');
+    const isDates = controlClass.includes('dates');
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+      <div className="hero-field" style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <span style={{ font: '600 11px/1 var(--font-text)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--fg-3)' }}>{label}</span>
-        <span className="hero-field__control" style={{
-          height: 48, padding: icon ? '0 14px' : '0 12px', display: 'flex', alignItems: 'center', gap: 10,
-          background: 'var(--surface-field)', borderRadius: 14,
-          boxShadow: focused
-            ? '0 0 0 2px var(--aurora-cyan), 0 0 0 5px rgba(0,213,255,0.22)'
-            : 'inset 0 0 0 1px var(--border-field)',
-        }}>
-          {icon ? <Icon name={icon} size={16} color="var(--fg-3)" /> : null}
+        <span
+          className={`hero-field__control${controlClass ? ` ${controlClass}` : ''}`}
+          style={{
+            height: isPax ? 'auto' : 48,
+            minHeight: 48,
+            padding: icon ? '0 12px' : '0 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isPax ? 8 : 10,
+            background: 'var(--surface-field)',
+            borderRadius: 14,
+            boxShadow: focused
+              ? '0 0 0 2px var(--aurora-cyan), 0 0 0 5px rgba(0,213,255,0.22)'
+              : 'inset 0 0 0 1px var(--border-field)',
+            ...(isDates ? { position: 'relative', overflow: 'visible' } : {}),
+          }}
+        >
+          {icon ? <Icon name={icon} size={16} color="var(--fg-3)" className="hero-field__icon" /> : null}
           {children}
         </span>
       </div>

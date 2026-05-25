@@ -3,7 +3,10 @@
 
 (function () {
   const { useState, useEffect, useRef } = React;
+  const { createPortal } = ReactDOM;
   const { Icon, LANGS, DISPLAY_CURRENCIES, pick, currencyLabel, ThemePicker } = window.AuralisUI;
+
+  const LOCALE_MENU_MAX_H = 288;
 
   const LOCALE_STRIP = {
     display: 'inline-flex',
@@ -60,15 +63,53 @@
     transition: 'background var(--dur-fast) var(--ease-out)',
   };
 
-  function useClickOutside(ref, onClose, enabled) {
+  function useClickOutside(onClose, enabled, ...refs) {
     useEffect(() => {
       if (!enabled) return undefined;
       function onPointerDown(e) {
-        if (ref.current && !ref.current.contains(e.target)) onClose();
+        const nodes = refs.map((r) => r && r.current).filter(Boolean);
+        if (nodes.some((n) => n.contains(e.target))) return;
+        onClose();
       }
-      document.addEventListener('mousedown', onPointerDown);
-      return () => document.removeEventListener('mousedown', onPointerDown);
-    }, [enabled, onClose]);
+      document.addEventListener('mousedown', onPointerDown, true);
+      document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
+      return () => {
+        document.removeEventListener('mousedown', onPointerDown, true);
+        document.removeEventListener('touchstart', onPointerDown, true);
+      };
+    }, [enabled, onClose, ...refs]);
+  }
+
+  /** Fixed menu position for mobile sheet — escapes overflow clipping on TWD/CNY rows. */
+  function useLocaleMenuPlacement(anchorRef, open, { align = 'left', minWidth = 72 } = {}) {
+    const [pos, setPos] = useState(null);
+
+    useEffect(() => {
+      if (!open || !anchorRef?.current) {
+        setPos(null);
+        return undefined;
+      }
+      function place() {
+        const r = anchorRef.current.getBoundingClientRect();
+        const width = minWidth;
+        let left = align === 'right' ? r.right - width : r.left;
+        left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+        let top = r.bottom + 6;
+        if (top + LOCALE_MENU_MAX_H > window.innerHeight - 8) {
+          top = Math.max(8, r.top - LOCALE_MENU_MAX_H - 6);
+        }
+        setPos({ top, left, width });
+      }
+      place();
+      window.addEventListener('resize', place);
+      window.addEventListener('scroll', place, true);
+      return () => {
+        window.removeEventListener('resize', place);
+        window.removeEventListener('scroll', place, true);
+      };
+    }, [open, anchorRef, align, minWidth]);
+
+    return pos;
   }
 
   function Nav({
@@ -214,14 +255,20 @@
               className="theme-picker--compact"
             />
           )}
-          <LangPicker lang={lang} onChange={onLangChange} layout="inline" />
-          <CurrencyPicker
-            lang={lang}
-            value={displayCurrency}
-            onChange={onCurrencyChange}
-            layout="compact"
-            inMobileSheet
-          />
+          <div
+            className="locale-strip locale-strip--mobile-menu"
+            role="group"
+            aria-label={T({ hant: '語言與幣別', hans: '语言与币别', en: 'Language and currency' })}
+          >
+            <LangPicker lang={lang} onChange={onLangChange} inMobileSheet />
+            <span className="locale-divider" aria-hidden="true" />
+            <CurrencyPicker
+              lang={lang}
+              value={displayCurrency}
+              onChange={onCurrencyChange}
+              inMobileSheet
+            />
+          </div>
         </div>
       </div>
     );
@@ -248,12 +295,14 @@
     );
   }
 
-  function LangPicker({ lang, onChange, layout = 'compact' }) {
+  function LangPicker({ lang, onChange, inMobileSheet = false, menuUp = false }) {
     const T = (opts) => pick(lang, opts);
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
+    const menuRef = useRef(null);
 
-    useClickOutside(rootRef, () => setOpen(false), open);
+    useClickOutside(() => setOpen(false), open, rootRef, menuRef);
+    const portalPos = useLocaleMenuPlacement(rootRef, open && inMobileSheet, { align: 'left', minWidth: 72 });
 
     useEffect(() => {
       if (!open) return undefined;
@@ -271,35 +320,22 @@
     };
     const current = LANGS.find((l) => l.id === lang) || LANGS[0];
 
-    if (layout === 'inline') {
-      return (
-        <div className="locale-inline" role="listbox" aria-label={T({ hant: '語言', hans: '语言', en: 'Language' })}>
-          {LANGS.map((l) => {
-            const selected = l.id === lang;
-            return (
-              <button
-                key={l.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                aria-label={pick(lang, titles[l.id])}
-                title={pick(lang, titles[l.id])}
-                className={`locale-inline__btn${selected ? ' is-active' : ''}`}
-                onClick={() => onChange(l.id)}
-              >
-                {l.label}
-              </button>
-            );
-          })}
-        </div>
-      );
-    }
+    const menuStyle = menuUp
+      ? { ...LOCALE_MENU, top: 'auto', bottom: 'calc(100% + 6px)', left: 0, right: 'auto' }
+      : { ...LOCALE_MENU, left: 0 };
 
     return (
-      <div ref={rootRef} style={{ position: 'relative' }}>
+      <div
+        ref={rootRef}
+        className={inMobileSheet ? 'locale-picker-root--sheet' : ''}
+        style={{ position: 'relative' }}
+      >
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={T({
@@ -308,10 +344,11 @@
             en: `Language: ${pick(lang, titles[current.id])}`,
           })}
           title={pick(lang, titles[current.id])}
-          className="locale-picker-btn locale-lang-btn"
+          className={`locale-picker-btn locale-lang-btn${inMobileSheet ? ' locale-lang-btn--sheet' : ''}`}
           style={{
             ...LOCALE_BTN,
-            marginLeft: 2,
+            marginLeft: inMobileSheet ? 0 : 2,
+            marginRight: 0,
             background: open ? 'var(--base-0)' : 'transparent',
             boxShadow: open ? 'inset 0 0 0 1.5px var(--aurora-cyan)' : 'none',
           }}
@@ -319,13 +356,8 @@
           <span>{current.label}</span>
         </button>
 
-        {open && (
-          <div
-            role="listbox"
-            aria-label={T({ hant: '選擇語言', hans: '选择语言', en: 'Choose language' })}
-            className="locale-picker-menu locale-lang-menu"
-            style={{ ...LOCALE_MENU, left: 0 }}
-          >
+        {open && (() => {
+          const menuBody = (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {LANGS.map((l) => {
                 const selected = l.id === lang;
@@ -338,7 +370,8 @@
                     aria-selected={selected}
                     aria-label={name}
                     title={name}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onChange(l.id);
                       setOpen(false);
                     }}
@@ -360,18 +393,49 @@
                 );
               })}
             </div>
-          </div>
-        )}
+          );
+
+          const menuEl = (
+            <div
+              ref={menuRef}
+              role="listbox"
+              aria-label={T({ hant: '選擇語言', hans: '选择语言', en: 'Choose language' })}
+              className={`locale-picker-menu locale-lang-menu${menuUp ? ' locale-picker-menu--up' : ''}${inMobileSheet ? ' locale-picker-menu--portal' : ''}`}
+              style={inMobileSheet && portalPos
+                ? {
+                  position: 'fixed',
+                  top: portalPos.top,
+                  left: portalPos.left,
+                  width: portalPos.width,
+                  zIndex: 200,
+                  maxHeight: LOCALE_MENU_MAX_H,
+                  overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                }
+                : menuStyle}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
+              {menuBody}
+            </div>
+          );
+
+          return inMobileSheet && portalPos && typeof document !== 'undefined'
+            ? createPortal(menuEl, document.body)
+            : menuEl;
+        })()}
       </div>
     );
   }
 
-  function CurrencyPicker({ lang, value, onChange, layout = 'compact', inMobileSheet = false }) {
+  function CurrencyPicker({ lang, value, onChange, inMobileSheet = false, menuUp = false }) {
     const T = (opts) => pick(lang, opts);
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
+    const menuRef = useRef(null);
 
-    useClickOutside(rootRef, () => setOpen(false), open);
+    useClickOutside(() => setOpen(false), open, rootRef, menuRef);
+    const portalPos = useLocaleMenuPlacement(rootRef, open && inMobileSheet, { align: 'right', minWidth: 76 });
 
     useEffect(() => {
       if (!open) return undefined;
@@ -384,11 +448,18 @@
 
     const current = DISPLAY_CURRENCIES.find((c) => c.code === value) || DISPLAY_CURRENCIES[0];
 
+    const menuStyle = menuUp
+      ? { ...LOCALE_MENU, top: 'auto', bottom: 'calc(100% + 6px)', right: 0, left: 'auto' }
+      : { ...LOCALE_MENU, right: 0 };
+
     return (
       <div ref={rootRef} className={inMobileSheet ? 'locale-picker-root--sheet' : ''} style={{ position: 'relative' }}>
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={T({
@@ -408,13 +479,8 @@
           <span>{current.code}</span>
         </button>
 
-        {open && (
-          <div
-            role="listbox"
-            aria-label={T({ hant: '選擇顯示幣別', hans: '选择显示币别', en: 'Choose display currency' })}
-            className="locale-picker-menu locale-currency-menu"
-            style={{ ...LOCALE_MENU, right: 0 }}
-          >
+        {open && (() => {
+          const menuBody = (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {DISPLAY_CURRENCIES.map((c) => {
                 const selected = c.code === value;
@@ -426,7 +492,8 @@
                     aria-selected={selected}
                     aria-label={pick(lang, c.name)}
                     title={pick(lang, c.name)}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onChange(c.code);
                       setOpen(false);
                     }}
@@ -448,8 +515,37 @@
                 );
               })}
             </div>
-          </div>
-        )}
+          );
+
+          const menuEl = (
+            <div
+              ref={menuRef}
+              role="listbox"
+              aria-label={T({ hant: '選擇顯示幣別', hans: '选择显示币别', en: 'Choose display currency' })}
+              className={`locale-picker-menu locale-currency-menu${menuUp ? ' locale-picker-menu--up' : ''}${inMobileSheet ? ' locale-picker-menu--portal' : ''}`}
+              style={inMobileSheet && portalPos
+                ? {
+                  position: 'fixed',
+                  top: portalPos.top,
+                  left: portalPos.left,
+                  width: portalPos.width,
+                  zIndex: 200,
+                  maxHeight: LOCALE_MENU_MAX_H,
+                  overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                }
+                : menuStyle}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
+              {menuBody}
+            </div>
+          );
+
+          return inMobileSheet && portalPos && typeof document !== 'undefined'
+            ? createPortal(menuEl, document.body)
+            : menuEl;
+        })()}
       </div>
     );
   }

@@ -10,6 +10,13 @@
   const DESC_PREVIEW_CHARS = 320;
   const MOBILE_STOPS_PREVIEW = 3;
   const COMPACT_HEADER_SCROLL = 180;
+  // Bókun rarely exposes a per-category cap; OTA-standard fallback is 15.
+  const DETAIL_PAX_MAX = 15;
+  function paxRange(start, end) {
+    const out = [];
+    for (let i = start; i <= end; i += 1) out.push(i);
+    return out;
+  }
 
   function mapsSearchUrl(meetingPoint) {
     if (!meetingPoint) return null;
@@ -232,8 +239,8 @@
     });
     const [selectedStartTime, setSelectedStartTime] = useState('');
     const [guestCounts, setGuestCounts] = useState(() => ({
-      adults: Math.min(6, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
-      children: Math.min(6, Math.max(0, Number(initialGuestCounts?.children) || 0)),
+      adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
+      children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
     }));
     const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
     const [availabilityOpen, setAvailabilityOpen] = useState(false);
@@ -267,8 +274,8 @@
       setSelectedDate(fromTrip || nextIsoDate(14));
       setSelectedStartTime('');
       setGuestCounts({
-        adults: Math.min(6, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
-        children: Math.min(6, Math.max(0, Number(initialGuestCounts?.children) || 0)),
+        adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
+        children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
       });
       setAvailabilityState({ loading: false, error: '', data: null });
       setAvailabilityOpen(false);
@@ -955,7 +962,7 @@
                       onChange={(e) => onGuestCounts((prev) => ({ ...prev, adults: Number(e.target.value) }))}
                       className="detail-book-field"
                     >
-                      {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
+                      {paxRange(1, DETAIL_PAX_MAX).map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -965,7 +972,7 @@
                       onChange={(e) => onGuestCounts((prev) => ({ ...prev, children: Number(e.target.value) }))}
                       className="detail-book-field"
                     >
-                      {[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+                      {paxRange(0, DETAIL_PAX_MAX).map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </label>
                 </div>
