@@ -189,11 +189,9 @@
         const T = (opts) => window.AuralisUI.pick(lang, opts);
         showToast({
           tone: 'success',
-          message: T({
-            hant: `已加入「${vm.title}」`,
-            hans: `已加入「${vm.title}」`,
-            en:   `Added "${vm.title}" to your trip`,
-          }),
+          icon: 'check',
+          message: T({ hant: '已加入行程', hans: '已加入行程', en: 'Added to your trip' }),
+          description: vm.title,
           actionLabel: T({ hant: '查看行程', hans: '查看行程', en: 'View trip' }),
           onAction: () => { handleNav('checkout'); },
         });
@@ -205,11 +203,15 @@
       const showToast = window.AuralisUI && window.AuralisUI.showToast;
       if (showToast) {
         const T = (opts) => window.AuralisUI.pick(lang, opts);
-        const title = removed && removed.title;
         showToast({
-          message: title
-            ? T({ hant: `已從行程移除「${title}」`, hans: `已从行程移除「${title}」`, en: `Removed "${title}" from trip` })
-            : T({ hant: '已從行程移除', hans: '已从行程移除', en: 'Removed from trip' }),
+          icon: 'trash-2',
+          message: T({ hant: '已從行程移除', hans: '已从行程移除', en: 'Removed from trip' }),
+          description: removed && removed.title,
+          actionLabel: removed ? T({ hant: '復原', hans: '复原', en: 'Undo' }) : null,
+          onAction: removed ? () => {
+            setTripCache((c) => ({ ...c, [removed.id]: removed }));
+            setTripIds((ids) => (ids.includes(removed.id) ? ids : [...ids, removed.id]));
+          } : null,
         });
       }
     }

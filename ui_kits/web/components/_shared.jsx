@@ -641,7 +641,10 @@
     return el;
   }
 
-  function showToast({ message, actionLabel, onAction, timeoutMs = 3200, tone = 'default' } = {}) {
+  function showToast({
+    message, description, icon, actionLabel, onAction,
+    timeoutMs = 3600, tone = 'default',
+  } = {}) {
     const stack = ensureToastStack();
     if (!stack || !message) return () => {};
 
@@ -649,27 +652,79 @@
     node.setAttribute('role', 'status');
     Object.assign(node.style, {
       pointerEvents: 'auto',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '14px',
-      padding: '12px 16px',
-      borderRadius: '999px',
-      background: tone === 'success' ? '#0A7B4F' : 'var(--fg-1, #11151F)',
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '12px',
+      padding: '14px 16px',
+      borderRadius: '14px',
+      background: tone === 'success' ? '#0A7B4F' : '#1A1F2E',
       color: '#fff',
-      font: '600 13px/1.25 var(--font-text, system-ui)',
-      boxShadow: '0 10px 30px rgba(8, 12, 24, 0.28)',
+      boxShadow: '0 12px 36px rgba(8, 12, 24, 0.32)',
       opacity: '0',
       transform: 'translateY(8px)',
       transition: 'opacity 0.22s ease, transform 0.22s ease',
-      maxWidth: '420px',
+      width: 'min(420px, 92vw)',
+      boxSizing: 'border-box',
     });
 
-    const text = document.createElement('span');
-    text.textContent = String(message);
-    text.style.whiteSpace = 'nowrap';
-    text.style.overflow = 'hidden';
-    text.style.textOverflow = 'ellipsis';
-    node.appendChild(text);
+    if (icon) {
+      const iconWrap = document.createElement('span');
+      Object.assign(iconWrap.style, {
+        flex: '0 0 auto',
+        width: '24px', height: '24px',
+        borderRadius: '999px',
+        display: 'inline-flex',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(255,255,255,0.16)',
+        marginTop: '1px',
+      });
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', icon);
+      iconWrap.appendChild(el);
+      node.appendChild(iconWrap);
+      if (window.lucide) {
+        window.lucide.createIcons({
+          nameAttr: 'data-lucide',
+          attrs: { width: 14, height: 14, 'stroke-width': 2.4, color: '#fff' },
+        });
+      }
+    }
+
+    const col = document.createElement('div');
+    Object.assign(col.style, {
+      flex: '1 1 auto',
+      minWidth: '0',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2px',
+    });
+
+    const title = document.createElement('div');
+    title.textContent = String(message);
+    Object.assign(title.style, {
+      font: '600 13px/1.4 var(--font-text, system-ui)',
+      color: '#fff',
+    });
+    col.appendChild(title);
+
+    if (description) {
+      const desc = document.createElement('div');
+      desc.textContent = String(description);
+      Object.assign(desc.style, {
+        font: '500 12px/1.45 var(--font-text, system-ui)',
+        color: 'rgba(255,255,255,0.78)',
+        display: '-webkit-box',
+        WebkitLineClamp: '2',
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        wordBreak: 'break-word',
+      });
+      // Some browsers (older Safari) want kebab-case; assign defensively.
+      desc.style.setProperty('-webkit-line-clamp', '2');
+      desc.style.setProperty('-webkit-box-orient', 'vertical');
+      col.appendChild(desc);
+    }
+    node.appendChild(col);
 
     let timer;
     function dismiss() {
@@ -684,15 +739,20 @@
       btn.type = 'button';
       btn.textContent = String(actionLabel);
       Object.assign(btn.style, {
+        flex: '0 0 auto',
         appearance: 'none',
         border: '0',
-        padding: '6px 12px',
+        padding: '7px 12px',
         borderRadius: '999px',
-        background: 'rgba(255,255,255,0.16)',
+        background: 'rgba(255,255,255,0.18)',
         color: '#fff',
         cursor: 'pointer',
-        font: 'inherit',
+        font: '600 12px/1.2 var(--font-text, system-ui)',
+        marginTop: '1px',
+        whiteSpace: 'nowrap',
       });
+      btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.28)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(255,255,255,0.18)'; });
       btn.addEventListener('click', () => {
         try { onAction(); } catch (_) {}
         dismiss();
