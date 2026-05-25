@@ -739,10 +739,17 @@
     hubLabel,
     lang,
   }) {
-    const count = Number(filteredCount);
-    const showCount = Number.isFinite(count) && count > 0
-      ? formatCatalogCount(count, lang)
-      : formatCatalogCount(contractTotal || 0, lang);
+    const hasFilter = !!(activeChip || activeRoute || activeSupplierLabel);
+    const filtered = Number(filteredCount);
+    const contract = Number(contractTotal);
+    // No filter → show contract total (matches supplier "All" pill).
+    // With a filter → show how many actually match.
+    const baseCount = hasFilter
+      ? (Number.isFinite(filtered) ? filtered : 0)
+      : (Number.isFinite(contract) && contract > 0
+        ? contract
+        : (Number.isFinite(filtered) ? filtered : 0));
+    const showCount = formatCatalogCount(baseCount, lang);
 
     const chip = activeChip ? CATEGORIES.find((c) => c.id === activeChip) : null;
     const route = activeRoute ? ROUTES.find((r) => r.id === activeRoute) : null;
