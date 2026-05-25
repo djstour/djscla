@@ -472,6 +472,7 @@
         knowBeforeYouGoItems: activity.knowBeforeYouGoItems || [],
         bookableExtras: activity.bookableExtras || [],
         pickupInfo: activity.pickupInfo || null,
+        passCapacity: activity.passCapacity ?? null,
         difficultyLevel: activity.difficultyLevel || null,
         minAge: activity.minAge ?? null,
         activityAttributes: activity.activityAttributes || [],

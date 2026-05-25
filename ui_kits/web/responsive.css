@@ -3121,6 +3121,72 @@ textarea.detail-book-field {
   white-space: nowrap;
 }
 
+/* Booking-panel extras (checkbox list) — mirrors Bókun back-office layout. */
+.detail-extras-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.detail-extras-fieldset > legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+.detail-extras-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.detail-extras-checklist__item {
+  margin: 0;
+}
+.detail-extras-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--base-100, #EEF1F7);
+  border-radius: 10px;
+  background: var(--surface-card, #fff);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.detail-extras-checkbox:hover {
+  background: var(--base-50, #F7F8FC);
+  border-color: var(--base-200, #E4E9F2);
+}
+.detail-extras-checkbox input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--aurora-deep, #00837A);
+  cursor: pointer;
+}
+.detail-extras-checkbox__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.detail-extras-checkbox__title {
+  font: 600 13px/1.35 var(--font-text);
+  color: var(--fg-1);
+}
+.detail-extras-checkbox__price {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--fg-2);
+}
+.detail-book-helper {
+  margin-top: 2px;
+}
+
 .detail-facts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

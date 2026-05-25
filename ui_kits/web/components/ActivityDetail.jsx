@@ -105,6 +105,35 @@
     return (activity?.raw?.pricingCategories || []).find(matcher) || null;
   }
 
+  /**
+   * Derive the Adult / Child pricing categories from the tour's `pricingCategories`
+   * list so the BookPanel can render proper "Adult (13-99)" / "Child (6-12)" labels
+   * and feed Bókun's availability API with the right category IDs.
+   */
+  function resolvePaxCategories(tour) {
+    const list = tour?.raw?.pricingCategories || [];
+    const adultMatcher = (c) =>
+      c.defaultCategory
+      || c.ticketCategory === 'ADULT'
+      || /adult/i.test(c.title || c.fullTitle || '');
+    const childMatcher = (c) =>
+      c.ticketCategory === 'CHILD'
+      || /child|youth|kid/i.test(c.title || c.fullTitle || '');
+    const adult = list.find(adultMatcher) || list[0] || null;
+    const child = list.find(childMatcher) || null;
+    return { adult, child };
+  }
+
+  function paxCategoryLabel(cat) {
+    if (!cat) return '';
+    if (cat.fullTitle) return cat.fullTitle;
+    const title = cat.title || (cat.ticketCategory === 'CHILD' ? 'Child' : 'Adult');
+    const min = cat.minAge ?? '';
+    const max = cat.maxAge ?? '';
+    if (min === '' && max === '') return title;
+    return `${title} (${min} - ${max})`;
+  }
+
   function escapeRegex(text) {
     return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
@@ -281,6 +310,8 @@
       adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
       children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
     }));
+    const [selectedPickupId, setSelectedPickupId] = useState('');
+    const [selectedExtras, setSelectedExtras] = useState({});
     const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
     const [availabilityOpen, setAvailabilityOpen] = useState(false);
     const [stickyBarVisible, setStickyBarVisible] = useState(false);
@@ -316,6 +347,8 @@
         adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
         children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
       });
+      setSelectedPickupId('');
+      setSelectedExtras({});
       setAvailabilityState({ loading: false, error: '', data: null });
       setAvailabilityOpen(false);
       setStickyBarVisible(false);
@@ -423,8 +456,24 @@
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
     const extras = Array.isArray(tour.bookableExtras) ? tour.bookableExtras : [];
     const hasExtras = extras.length > 0;
+    const optionalExtras = extras.filter((ex) => !ex.included && (!ex.selectionType || ex.selectionType === 'OPTIONAL'));
     const pickupInfo = tour.pickupInfo || null;
     const showPickupInfo = pickupInfo && pickupInfo.enabled;
+    const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
+    const pickupIncluded = pickupInfo?.rate?.pricingType === 'INCLUDED_IN_PRICE';
+    // Per-booking pax ceiling — Bókun back office uses this as the dropdown cap.
+    const paxCap = Number.isFinite(Number(tour.passCapacity)) && Number(tour.passCapacity) > 0
+      ? Number(tour.passCapacity)
+      : DETAIL_PAX_MAX;
+    const { adult: adultCategory, child: childCategory } = resolvePaxCategories(tour);
+    const guestTotalLive = guestCounts.adults + guestCounts.children;
+    // Client-side extras subtotal so the booking summary mirrors Bókun's "Total".
+    const extrasSubtotal = optionalExtras.reduce((sum, ex) => {
+      if (!selectedExtras[ex.id]) return sum;
+      const unit = Number(ex.price) || 0;
+      if (ex.pricedPerPerson) return sum + unit * Math.max(1, guestTotalLive);
+      return sum + unit;
+    }, 0);
 
     const anchorItems = [
       tour.description && { id: 'detail-about', label: T({ hant: '介紹', hans: '介绍', en: 'About' }) },
@@ -436,6 +485,8 @@
       showPickupInfo && { id: 'detail-pickup', label: T({ hant: '接送', hans: '接送', en: 'Pickup' }) },
       tour.startTimes && tour.startTimes.length > 0 && { id: 'detail-times', label: T({ hant: '時段', hans: '时段', en: 'Times' }) },
     ].filter(Boolean);
+    // `hasExtras` flag retained for future use; extras now live in BookPanel.
+    void hasExtras;
 
     function scrollToSection(id) {
       const el = document.getElementById(id);
@@ -459,6 +510,9 @@
 
       setAvailabilityState({ loading: true, error: '', data: null });
       try {
+        const extrasPayload = Object.entries(selectedExtras)
+          .filter(([, on]) => on)
+          .map(([id]) => ({ id: Number(id), quantity: 1 }));
         const res = await fetch('/api/availability/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -468,6 +522,8 @@
             startTimeId: selectedStartTime || undefined,
             lang,
             pax,
+            extras: extrasPayload,
+            pickupPlaceId: selectedPickupId ? Number(selectedPickupId) : null,
           }),
         });
         const data = await res.json();
@@ -907,32 +963,6 @@
               </Section>
             )}
 
-            {hasExtras && (
-              <Section
-                id="detail-extras"
-                title={T({ hant: '可加購', hans: '可加购', en: 'Optional add-ons' })}
-              >
-                <ul className="detail-extras-list">
-                  {extras.map((ex) => (
-                    <li key={ex.id} className="detail-extras-item">
-                      <div>
-                        <div className="detail-extras-item__title">{ex.title}</div>
-                        {ex.information && (
-                          <div className="detail-extras-item__info">{ex.information}</div>
-                        )}
-                      </div>
-                      <div className="detail-extras-item__price">
-                        {ex.free
-                          ? T({ hant: '免費', hans: '免费', en: 'Free' })
-                          : (ex.price != null
-                              ? `${formatDisplayPrice(ex.price, displayCurrency, fxRates)}${ex.pricingTypeLabel ? ' · ' + ex.pricingTypeLabel : ''}`
-                              : '—')}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            )}
 
             {(tour.difficultyLevel || tour.minAge != null || tour.cancellationFreeHours || (tour.activityAttributes && tour.activityAttributes.length > 0)) && (
               <Section title={T({ hant: '重點資訊', hans: '重点信息', en: 'Quick facts' })}>
@@ -1010,6 +1040,18 @@
             onSelectedStartTime={setSelectedStartTime}
             guestCounts={guestCounts}
             onGuestCounts={setGuestCounts}
+            adultCategory={adultCategory}
+            childCategory={childCategory}
+            paxCap={paxCap}
+            pickupInfo={pickupInfo}
+            pickupPlaces={pickupPlaces}
+            pickupIncluded={pickupIncluded}
+            selectedPickupId={selectedPickupId}
+            onSelectedPickupId={setSelectedPickupId}
+            optionalExtras={optionalExtras}
+            selectedExtras={selectedExtras}
+            onSelectedExtras={setSelectedExtras}
+            extrasSubtotal={extrasSubtotal}
             stickyBarVisible={stickyBarVisible}
             availabilityState={availabilityState}
             availabilityOpen={availabilityOpen}
@@ -1041,7 +1083,10 @@
   function BookPanel({
     tour, T, displayCurrency, fxRates, priceUsd, loading, cancelText, hasMultiPrice, inTrip, onAdd, trip,
     isMobile, onOpenPrices, selectedDate, onSelectedDate, selectedStartTime, onSelectedStartTime, guestCounts,
-    onGuestCounts, stickyBarVisible, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
+    onGuestCounts, adultCategory, childCategory, paxCap,
+    pickupInfo, pickupPlaces, pickupIncluded, selectedPickupId, onSelectedPickupId,
+    optionalExtras, selectedExtras, onSelectedExtras, extrasSubtotal,
+    stickyBarVisible, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
     inquirySubmitting, inquiryStatus, onSubmitInquiry,
   }) {
     const priceLabel = priceUsd != null
@@ -1199,28 +1244,111 @@
                     </select>
                   </label>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: childCategory ? '1fr 1fr' : '1fr', gap: 10 }}>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="detail-book-label">{T({ hant: '成人', hans: '成人', en: 'Adults' })}</span>
+                    <span className="detail-book-label">
+                      {adultCategory
+                        ? paxCategoryLabel(adultCategory)
+                        : T({ hant: '成人', hans: '成人', en: 'Adults' })}
+                    </span>
                     <select
                       value={guestCounts.adults}
                       onChange={(e) => onGuestCounts((prev) => ({ ...prev, adults: Number(e.target.value) }))}
                       className="detail-book-field"
                     >
-                      {paxRange(1, DETAIL_PAX_MAX).map((n) => <option key={n} value={n}>{n}</option>)}
+                      {paxRange(1, paxCap).map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </label>
+                  {childCategory && (
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span className="detail-book-label">{paxCategoryLabel(childCategory)}</span>
+                      <select
+                        value={guestCounts.children}
+                        onChange={(e) => onGuestCounts((prev) => ({ ...prev, children: Number(e.target.value) }))}
+                        className="detail-book-field"
+                      >
+                        {paxRange(0, paxCap).map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </label>
+                  )}
+                </div>
+
+                {pickupInfo && pickupInfo.enabled && pickupPlaces.length > 0 && (
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="detail-book-label">{T({ hant: '孩童', hans: '孩童', en: 'Children' })}</span>
+                    <span className="detail-book-label">
+                      {T({ hant: '選擇上車地點', hans: '选择上车地点', en: 'Select your pick-up option' })}
+                    </span>
                     <select
-                      value={guestCounts.children}
-                      onChange={(e) => onGuestCounts((prev) => ({ ...prev, children: Number(e.target.value) }))}
+                      value={selectedPickupId}
+                      onChange={(e) => onSelectedPickupId(e.target.value)}
                       className="detail-book-field"
                     >
-                      {paxRange(0, DETAIL_PAX_MAX).map((n) => <option key={n} value={n}>{n}</option>)}
+                      <option value="">
+                        {T({ hant: '— 請選擇 —', hans: '— 请选择 —', en: '— Choose a stop —' })}
+                      </option>
+                      {pickupPlaces.map((p) => (
+                        <option key={p.id} value={String(p.id)}>{p.title}</option>
+                      ))}
                     </select>
+                    <span className="detail-book-helper" style={{ font: '500 12px/1.4 var(--font-text)', color: 'var(--fg-2)' }}>
+                      {pickupIncluded
+                        ? T({ hant: '（已含於票價）', hans: '（已含于票价）', en: '(included in price)' })
+                        : T({ hant: '可能加收接送費，下方總價會自動更新', hans: '可能加收接送费，下方总价会自动更新', en: 'May add a pickup fee — total updates below' })}
+                    </span>
                   </label>
-                </div>
+                )}
+
+                {optionalExtras && optionalExtras.length > 0 && (
+                  <fieldset className="detail-extras-fieldset">
+                    <legend className="detail-book-label">
+                      {T({ hant: '加購項目', hans: '加购项目', en: 'Extras' })}
+                    </legend>
+                    <ul className="detail-extras-checklist">
+                      {optionalExtras.map((ex) => {
+                        const checked = !!selectedExtras[ex.id];
+                        const adultPax = Math.max(1, guestCounts.adults);
+                        const childPax = Math.max(0, guestCounts.children);
+                        const unit = Number(ex.price) || 0;
+                        let priceLabel;
+                        if (ex.free) {
+                          priceLabel = T({ hant: '免費', hans: '免费', en: 'Free' });
+                        } else if (ex.pricedPerPerson) {
+                          const parts = [];
+                          if (adultCategory) {
+                            parts.push(`${paxCategoryLabel(adultCategory).split(' (')[0]} ${formatDisplayPrice(unit, displayCurrency, fxRates)}`);
+                          }
+                          if (childCategory && childPax > 0) {
+                            parts.push(`${paxCategoryLabel(childCategory).split(' (')[0]} ${formatDisplayPrice(unit, displayCurrency, fxRates)}`);
+                          }
+                          priceLabel = parts.join(' · ');
+                        } else {
+                          priceLabel = formatDisplayPrice(unit, displayCurrency, fxRates);
+                        }
+                        return (
+                          <li key={ex.id} className="detail-extras-checklist__item">
+                            <label className="detail-extras-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => onSelectedExtras((prev) => ({
+                                  ...prev,
+                                  [ex.id]: e.target.checked,
+                                }))}
+                              />
+                              <span className="detail-extras-checkbox__body">
+                                <span className="detail-extras-checkbox__title">{ex.title}</span>
+                                {priceLabel && (
+                                  <span className="detail-extras-checkbox__price">{priceLabel}</span>
+                                )}
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </fieldset>
+                )}
+
                 <button
                   type="button"
                   className="detail-book-prices-link"
@@ -1255,8 +1383,25 @@
                     <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-2)' }}>
                       {selectedDate} · {guestTotal} {T({ hant: '位旅客', hans: '位旅客', en: 'traveler(s)' })}
                     </div>
-                    <div style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)' }}>
-                      {formatDisplayPrice(availabilityState.data.total, displayCurrency, fxRates)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', font: '500 13px/1.4 var(--font-text)', color: 'var(--fg-2)' }}>
+                        <span>{T({ hant: '基礎票價', hans: '基础票价', en: 'Base fare' })}</span>
+                        <span>{formatDisplayPrice(availabilityState.data.total, displayCurrency, fxRates)}</span>
+                      </div>
+                      {extrasSubtotal > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', font: '500 13px/1.4 var(--font-text)', color: 'var(--fg-2)' }}>
+                          <span>{T({ hant: '加購', hans: '加购', en: 'Extras' })}</span>
+                          <span>+{formatDisplayPrice(extrasSubtotal, displayCurrency, fxRates)}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 4 }}>
+                        <span style={{ font: '600 13px/1.4 var(--font-text)', color: 'var(--fg-1)' }}>
+                          {T({ hant: '總價', hans: '总价', en: 'Total' })}
+                        </span>
+                        <span style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)' }}>
+                          {formatDisplayPrice((Number(availabilityState.data.total) || 0) + (Number(extrasSubtotal) || 0), displayCurrency, fxRates)}
+                        </span>
+                      </div>
                     </div>
                     {Array.isArray(availabilityState.data.warnings) && availabilityState.data.warnings.length > 0 && (
                       <div style={{ font: '500 12px/1.5 var(--font-text)', color: 'var(--coral)' }}>

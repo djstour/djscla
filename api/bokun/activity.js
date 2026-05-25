@@ -35,9 +35,27 @@ function isFresh(lastSyncedAt) {
   return Number.isFinite(age) && age < FRESHNESS_MS;
 }
 
+async function fetchPickupPlaces(id) {
+  try {
+    const r = await bokunRequest({ method: 'GET', path: `/activity.json/${id}/pickup-places` });
+    if (r && Array.isArray(r.pickupPlaces)) return r.pickupPlaces;
+    if (Array.isArray(r)) return r;
+    return [];
+  } catch (err) {
+    console.warn(`[Auralis] pickup-places fetch failed for ${id}:`, err.message);
+    return [];
+  }
+}
+
 async function fetchFromBokun(id, uiLang) {
-  const rawPayload = await getActivityById(id, { uiLang });
+  const [rawPayload, pickupPlaces] = await Promise.all([
+    getActivityById(id, { uiLang }),
+    fetchPickupPlaces(id),
+  ]);
   const raw = unwrapActivity(rawPayload);
+  if (raw && typeof raw === 'object' && pickupPlaces.length) {
+    raw.pickupPlaces = pickupPlaces;
+  }
   const quoteCurrency = getQuoteCurrency();
   const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
   return { activity, quoteCurrency, raw };
@@ -73,6 +91,28 @@ module.exports = async function handler(req, res) {
         activity = cached.activity;
         usedSource = 'db';
         lastSyncedAt = cached.lastSyncedAt;
+        // Pickup-places aren't part of the search.json firehose that catalog
+        // sync uses, so hydrate them on demand here. Cheap (~150ms) and stable.
+        const needsPickup = activity.pickupInfo
+          && activity.pickupInfo.enabled
+          && (!Array.isArray(activity.pickupInfo.places) || activity.pickupInfo.places.length === 0);
+        if (needsPickup) {
+          const places = await fetchPickupPlaces(id);
+          if (places.length) {
+            const next = places.map((p) => ({
+              id: p.id,
+              title: (p.title || '').trim(),
+              type: p.type || 'OTHER',
+              askForRoomNumber: !!p.askForRoomNumber,
+              address: p.location?.address || p.address || '',
+              city: p.location?.city || '',
+            })).filter((p) => p.id != null && p.title);
+            activity = {
+              ...activity,
+              pickupInfo: { ...activity.pickupInfo, places: next },
+            };
+          }
+        }
       }
     } catch (dbErr) {
       console.warn('[Auralis] activity DB read failed, falling back to Bókun:', dbErr.message);
