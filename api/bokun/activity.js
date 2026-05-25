@@ -1,4 +1,4 @@
-const { getActivityById, getQuoteCurrency, applyQuoteCurrency } = require('../../lib/bokun');
+const { getActivityById, getQuoteCurrency, applyQuoteCurrency, bokunRequest } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
@@ -88,6 +88,36 @@ module.exports = async function handler(req, res) {
       quoteCurrency = fresh.quoteCurrency;
       rawUpstream = fresh.raw;
       usedSource = 'bokun';
+    }
+
+    if (req.query.debug === 'pickup') {
+      const candidates = [
+        `/activity.json/${id}/pickup-places`,
+        `/activity.json/${id}/pickupPlaces`,
+        `/pickup-place.json/activity/${id}`,
+        `/pickup-place.json/activity-id/${id}`,
+        `/booking-channel.json/activity/${id}/pickup-places`,
+      ];
+      const results = {};
+      for (const p of candidates) {
+        try {
+          const r = await bokunRequest({ method: 'GET', path: p });
+          results[p] = { ok: true, shape: Array.isArray(r) ? `array(${r.length})` : (r && typeof r === 'object' ? Object.keys(r).slice(0, 12) : typeof r), sample: Array.isArray(r) ? r.slice(0, 2) : r };
+        } catch (e) {
+          results[p] = { ok: false, error: e.message, status: e.status };
+        }
+      }
+      return res.status(200).json({ debug: 'pickup endpoint scan', results });
+    }
+
+    if (req.query.debug === 'extras' && rawUpstream) {
+      return res.status(200).json({
+        debug: 'extras full',
+        bookableExtras: rawUpstream.bookableExtras,
+        rates: rawUpstream.rates,
+        pricingCategories: rawUpstream.pricingCategories,
+        passCapacity: rawUpstream.passCapacity,
+      });
     }
 
     if (req.query.debug === 'raw' && rawUpstream) {
