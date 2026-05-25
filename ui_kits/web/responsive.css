@@ -692,22 +692,28 @@ button.hero-popular-chip:hover {
   .nav-mobile-sheet.is-open {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: stretch;
+    gap: 2px;
     position: absolute;
     top: calc(100% + 8px);
     right: var(--page-pad-x);
     left: auto;
-    width: min(280px, calc(100vw - 2 * var(--page-pad-x)));
+    width: min(208px, calc(100vw - 2 * var(--page-pad-x)));
     max-height: min(70vh, 520px);
     overflow-y: auto;
     margin-top: 0;
-    padding: 12px;
+    padding: 10px;
     border-radius: 16px;
     background: var(--surface-menu);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-shadow: var(--shadow-3), inset 0 0 0 1px var(--glass-border);
     z-index: 60;
+  }
+
+  .nav-mobile-sheet__link {
+    text-align: right;
+    padding: 9px 12px !important;
   }
 
   .nav-mobile-settings {

@@ -164,7 +164,9 @@
           {navItems.map((item) => {
             const active = currentScreen === item.id;
             return (
-              <a key={`m-${item.id}`} href="#" style={linkStyle(active)}
+              <a key={`m-${item.id}`} href="#"
+                 className={`nav-mobile-sheet__link${active ? ' is-active' : ''}`}
+                 style={linkStyle(active)}
                  onClick={(e) => { e.preventDefault(); onNav(item.id); setMenuOpen(false); }}>
                 {T(item.label)}
               </a>
