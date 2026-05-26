@@ -1,7 +1,7 @@
 /* ActivityDetail — full product page from Bókun GET /activity.json/{id}. */
 
 (function () {
-  const { useState, useEffect, useRef, useCallback } = React;
+  const { useState, useEffect, useMemo, useRef, useCallback } = React;
   const {
     Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl,
     useResponsiveImageProfile, useMobileViewport,
@@ -188,6 +188,10 @@
       const fromTrip = initialDate && initialDate >= min ? initialDate : null;
       return fromTrip || nextIsoDate(14);
     });
+    // Day-level Bókun availability snapshot for the currently selected date.
+    // Bubbled up by MonthAvailabilityCalendar and used to filter the TIME
+    // dropdown to slots that actually exist on that day.
+    const [selectedDayInfo, setSelectedDayInfo] = useState(null);
     const [selectedStartTime, setSelectedStartTime] = useState('');
     const [guestCounts, setGuestCounts] = useState(() => ({
       adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
@@ -314,6 +318,62 @@
       });
     }, [galleryPhotos.length]);
 
+    // ⚠️ All hooks below run on every render — keep them ABOVE the
+    // `if (!tour) return …` early-returns or React throws #310 (hooks order).
+    // Per-day times derived from the calendar payload. Falls back to the
+    // generic tour.startTimes when the calendar hasn't surfaced a snapshot
+    // yet (e.g. initial page render before MonthAvailabilityCalendar fetches).
+    const dayAvailableTimes = useMemo(() => {
+      if (selectedDayInfo && Array.isArray(selectedDayInfo.times) && selectedDayInfo.times.length) {
+        return selectedDayInfo.times
+          .filter((t) => !t.soldOut)
+          .map((t) => ({
+            id: t.startTimeId,
+            startTime: t.startTime,
+            label: t.label || t.startTime,
+            capacityRemaining: t.capacityRemaining,
+          }));
+      }
+      const startTimes = (tour && tour.startTimes) || [];
+      return startTimes.map((st, i) => ({
+        id: st.id ?? st.startTimeId ?? null,
+        startTime: st.label || (st.hour != null
+          ? `${String(st.hour).padStart(2, '0')}:${String(st.minute || 0).padStart(2, '0')}`
+          : String(i)),
+        label: st.label || (st.hour != null
+          ? `${String(st.hour).padStart(2, '0')}:${String(st.minute || 0).padStart(2, '0')}`
+          : null),
+        capacityRemaining: null,
+      }));
+    }, [selectedDayInfo, tour && tour.startTimes]);
+
+    // Auto-trigger the availability check whenever the booking inputs change.
+    // Debounced 400ms so quickly toggling adults / extras doesn't spam Bókun.
+    // The user can still manually re-trigger via the "Check availability"
+    // button (kept as both an affordance and a "retry" path on errors).
+    const extrasKey = useMemo(() => {
+      return Object.entries(selectedExtras)
+        .filter(([, on]) => on)
+        .map(([id]) => id)
+        .sort()
+        .join(',');
+    }, [selectedExtras]);
+    useEffect(() => {
+      if (!tour || !selectedDate || !guestCounts.adults) return undefined;
+      const handle = setTimeout(() => { checkAvailability(); }, 400);
+      return () => clearTimeout(handle);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      tour && tour.id,
+      selectedDate,
+      selectedStartTime,
+      guestCounts.adults,
+      guestCounts.children,
+      selectedPickupId,
+      extrasKey,
+      lang,
+    ]);
+
     const onHeroTouchStart = (e) => {
       touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     };
@@ -399,6 +459,107 @@
       return sum + unit;
     }, 0);
 
+    // ---- Quick facts (mirrors Bókun back office "Quick facts" sidebar) ---
+    // Bókun's product page surfaces a 2-column box at the bottom with
+    // Experience type / Duration / Booking in advance / Difficulty /
+    // Know before you go / Categories / Live tour guide. We piece the
+    // same value set together from the structured enums on the activity
+    // payload so vendors don't have to maintain duplicate content.
+    const enumLabel = (group, code) => {
+      if (!code) return '';
+      const map = (window.AuralisData && window.AuralisData.BOKUN_TRANSLATIONS && window.AuralisData.BOKUN_TRANSLATIONS[group]) || null;
+      const overlay = map && map[code];
+      if (overlay && overlay[lang]) return overlay[lang];
+      if (overlay && overlay.en) return overlay.en;
+      return String(code).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    };
+    const experienceType = enumLabel('ACTIVITY_TYPE', tour.activityType);
+    const difficultyLabel = enumLabel('DIFFICULTY', tour.difficultyLevel);
+
+    // Booking cutoff: compose a human-readable string from whichever of
+    // days/hours/minutes/weeks Bókun populated. We pluralise minimally so
+    // EN reads naturally ("1 hour" / "2 hours") while CJK stays simple.
+    const cutoffParts = [];
+    const cutoffPush = (n, hant, hans, en, enPl) => {
+      if (!Number.isFinite(Number(n)) || Number(n) <= 0) return;
+      const val = Number(n);
+      cutoffParts.push(T({
+        hant: `${val} ${hant}`,
+        hans: `${val} ${hans}`,
+        en: `${val} ${val === 1 ? en : enPl}`,
+      }));
+    };
+    cutoffPush(tour.bookingCutoffWeeks, '週',   '周',   'week',   'weeks');
+    cutoffPush(tour.bookingCutoffDays,  '天',   '天',   'day',    'days');
+    cutoffPush(tour.bookingCutoffHours, '小時', '小时', 'hour',   'hours');
+    cutoffPush(tour.bookingCutoffMinutes, '分鐘', '分钟', 'minute', 'minutes');
+    const bookingCutoffText = cutoffParts.length
+      ? T({
+          hant: `截止：${cutoffParts.join(' ')}`,
+          hans: `截止：${cutoffParts.join(' ')}`,
+          en: `Cut off: ${cutoffParts.join(' ')}`,
+        })
+      : '';
+
+    // Combine ACTIVITY_CATEGORY + ACTIVITY_ATTRIBUTE chips (same visual row
+    // in Bókun). De-dupe in case a vendor tags the same theme twice.
+    const categoryChips = [];
+    (tour.activityCategories || []).forEach((c) => {
+      const lbl = enumLabel('ACTIVITY_CATEGORY', c);
+      if (lbl && !categoryChips.includes(lbl)) categoryChips.push(lbl);
+    });
+    (tour.activityAttributes || []).forEach((c) => {
+      const lbl = enumLabel('ACTIVITY_ATTRIBUTE', c);
+      if (lbl && !categoryChips.includes(lbl)) categoryChips.push(lbl);
+    });
+    (tour.categoryLabels || []).forEach((lbl) => {
+      if (lbl && !categoryChips.includes(lbl)) categoryChips.push(lbl);
+    });
+
+    // "Know before you go" — Bókun auto-prefixes "Minimum age of participants is: N"
+    // when the activity has a minAge but vendor didn't write a custom item, so we
+    // do the same to keep parity.
+    const knowItems = [];
+    if (Number.isFinite(Number(tour.minAge)) && Number(tour.minAge) > 0) {
+      knowItems.push(T({
+        hant: `最低年齡：${tour.minAge} 歲`,
+        hans: `最低年龄：${tour.minAge} 岁`,
+        en: `Minimum age of participants is: ${tour.minAge}`,
+      }));
+    }
+    (tour.knowBeforeYouGoItems || []).forEach((item) => {
+      const text = typeof item === 'string' ? item : (item?.text || item?.label || '');
+      if (text && !knowItems.includes(text)) knowItems.push(text);
+    });
+
+    // Live tour guide — prefer guidanceTypes' pre-localised displayLanguages,
+    // fall back to the raw `languages` codes via GUIDE_LANGUAGE overlay.
+    const liveGuideNames = [];
+    (tour.guidanceTypes || []).forEach((g) => {
+      (g.displayLanguages || []).forEach((d) => {
+        if (d && !liveGuideNames.includes(d)) liveGuideNames.push(d);
+      });
+    });
+    if (liveGuideNames.length === 0 && Array.isArray(tour.languages)) {
+      tour.languages.forEach((code) => {
+        const lbl = window.AuralisData?.BokunAdapter?.guideLanguageLabel
+          ? window.AuralisData.BokunAdapter.guideLanguageLabel(code, lang)
+          : enumLabel('GUIDE_LANGUAGE', code);
+        if (lbl && !liveGuideNames.includes(lbl)) liveGuideNames.push(lbl);
+      });
+    }
+
+    const quickFacts = [
+      experienceType && { label: T({ hant: '行程類型', hans: '行程类型', en: 'Experience type' }), value: experienceType },
+      tour.durationText && { label: T({ hant: '時長', hans: '时长', en: 'Duration' }), value: tour.durationText },
+      bookingCutoffText && { label: T({ hant: '預訂提前期', hans: '预订提前期', en: 'Booking in advance' }), value: bookingCutoffText },
+      difficultyLabel && { label: T({ hant: '體能難度', hans: '体能难度', en: 'Physical difficulty level' }), value: difficultyLabel },
+      knowItems.length > 0 && { label: T({ hant: '出發前須知', hans: '出发前须知', en: 'Know before you go' }), valueItems: knowItems },
+      categoryChips.length > 0 && { label: T({ hant: '分類', hans: '分类', en: 'Categories' }), valueChips: categoryChips },
+      liveGuideNames.length > 0 && { label: T({ hant: '隨團導遊語言', hans: '随团导游语言', en: 'Live tour guide' }), value: liveGuideNames.join(', ') },
+    ].filter(Boolean);
+    const hasQuickFacts = quickFacts.length > 0;
+
     const anchorItems = [
       tour.description && { id: 'detail-about', label: 'Description' },
       hasIncluded && { id: 'detail-included', label: 'Included' },
@@ -407,6 +568,7 @@
       hasRequirements && { id: 'detail-requirements', label: 'Requirements' },
       hasAttention && { id: 'detail-attention', label: 'Attention' },
       hasCancellationPolicy && { id: 'detail-cancellation', label: 'Cancellation policy' },
+      hasQuickFacts && { id: 'detail-quick-facts', label: 'Quick facts' },
       tour.meetingPoint && { id: 'detail-meeting', label: 'Meeting point' },
       showPickupInfo && { id: 'detail-pickup', label: 'Pick-up' },
       tour.startTimes && tour.startTimes.length > 0 && { id: 'detail-times', label: 'Start times' },
@@ -466,6 +628,22 @@
           totalUsd,
         },
       };
+    }
+
+    // Wrapper used by the calendar so we can snapshot the day's per-time
+    // availability and reset selectedStartTime if it's no longer offered on
+    // the new day.
+    function handleSelectedDate(iso, dayInfo) {
+      setSelectedDate(iso);
+      setSelectedDayInfo(dayInfo || null);
+      if (dayInfo && Array.isArray(dayInfo.times) && selectedStartTime) {
+        const allowed = new Set(
+          dayInfo.times.filter((t) => !t.soldOut).map((t) => String(t.startTimeId)),
+        );
+        if (!allowed.has(String(selectedStartTime))) {
+          setSelectedStartTime('');
+        }
+      }
     }
 
     async function checkAvailability() {
@@ -889,11 +1067,51 @@
               </Section>
             )}
 
+            {hasQuickFacts && (
+              <Section
+                id="detail-quick-facts"
+                title={T({ hant: '快速資訊', hans: '快速资讯', en: 'Quick facts' })}
+              >
+                <div className="detail-facts-card">
+                  <div className="detail-facts-grid">
+                    {quickFacts.map((f, i) => {
+                      // Categories spans the full row — Bókun does the same so
+                      // long chip lists don't squeeze a sibling value out.
+                      const fullRow = f.valueChips || (f.valueItems && f.valueItems.length > 1);
+                      return (
+                        <div key={i} className={`detail-fact${fullRow ? ' detail-fact--full' : ''}`}>
+                          <div className="detail-fact__label">{f.label}</div>
+                          {f.valueChips ? (
+                            <div className="detail-fact__chips">
+                              {f.valueChips.map((chip, ci) => (
+                                <span key={ci} className="detail-chip">{chip}</span>
+                              ))}
+                            </div>
+                          ) : f.valueItems ? (
+                            f.valueItems.length === 1 ? (
+                              <div className="detail-fact__value">{f.valueItems[0]}</div>
+                            ) : (
+                              <ul className="detail-fact__items">
+                                {f.valueItems.map((it, ii) => (<li key={ii}>{it}</li>))}
+                              </ul>
+                            )
+                          ) : (
+                            <div className="detail-fact__value">{f.value}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Section>
+            )}
+
           </div>
 
           <BookPanel
             tour={tour}
             T={T}
+            lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
             priceUsd={resolvePriceUsd(tour)}
@@ -905,7 +1123,8 @@
             isMobile={isMobile}
             onOpenPrices={() => setPriceSheetOpen(true)}
             selectedDate={selectedDate}
-            onSelectedDate={setSelectedDate}
+            onSelectedDate={handleSelectedDate}
+            dayAvailableTimes={dayAvailableTimes}
             selectedStartTime={selectedStartTime}
             onSelectedStartTime={setSelectedStartTime}
             guestCounts={guestCounts}
@@ -950,8 +1169,9 @@
   }
 
   function BookPanel({
-    tour, T, displayCurrency, fxRates, priceUsd, loading, hasMultiPrice, inTrip, onAddSelection, trip,
-    isMobile, onOpenPrices, selectedDate, onSelectedDate, selectedStartTime, onSelectedStartTime, guestCounts,
+    tour, T, lang, displayCurrency, fxRates, priceUsd, loading, hasMultiPrice, inTrip, onAddSelection, trip,
+    isMobile, onOpenPrices, selectedDate, onSelectedDate, dayAvailableTimes,
+    selectedStartTime, onSelectedStartTime, guestCounts,
     onGuestCounts, adultCategory, childCategory, paxCap,
     pickupInfo, pickupPlaces, selectedPickupId, onSelectedPickupId,
     optionalExtras, selectedExtras, onSelectedExtras, extrasSubtotal,
@@ -965,7 +1185,25 @@
         : T({ hant: '價格載入中', hans: '价格加载中', en: 'Price loading' }));
     const guestTotal = guestCounts.adults + guestCounts.children;
     const showAvailabilityPanel = !isMobile || availabilityOpen;
-    const showInquiryPanel = !isMobile || inquiryOpen;
+    // Concierge form is collapsed by default on both desktop AND mobile —
+    // it's a high-LTV escape hatch for users with complex needs, not a
+    // competing primary funnel. Show only after the user opts in via the
+    // "Plan with a concierge" toggle below the booking CTA.
+    const showInquiryPanel = inquiryOpen;
+
+    // Smoothly bring the concierge form into view when the user opens it,
+    // so the affordance doesn't appear to "do nothing" when the form is
+    // below the fold on shorter viewports.
+    const inquiryFormRef = useRef(null);
+    useEffect(() => {
+      if (!inquiryOpen) return;
+      const node = inquiryFormRef.current;
+      if (!node) return;
+      const id = requestAnimationFrame(() => {
+        node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      return () => cancelAnimationFrame(id);
+    }, [inquiryOpen]);
     const mobileAvailabilitySummary = availabilityState.data
       ? `${selectedDate} · ${formatDisplayPrice(availabilityState.data.total, displayCurrency, fxRates)}`
       : T({ hant: '選日期、時段與人數', hans: '选日期、时段与人数', en: 'Date, time, and travelers' });
@@ -1010,16 +1248,6 @@
             </div>
           )}
 
-          <button
-            type="button"
-            className="detail-book-cta"
-            onClick={onAddSelection}
-          >
-            {inTrip
-              ? <><Icon name="check" size={18} /> {T({ hant: '更新行程設定', hans: '更新行程设置', en: 'Update trip settings' })}</>
-              : <>{T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })} <Icon name="plus" size={18} /></>}
-          </button>
-
           {isMobile && (
             <button
               type="button"
@@ -1028,7 +1256,7 @@
             >
               <span className="detail-book-disclosure__copy">
                 <span className="detail-book-disclosure__title">
-                  {T({ hant: '查可售與總價', hans: '查可售与总价', en: 'Check availability' })}
+                  {T({ hant: '預訂明細', hans: '预订明细', en: 'Booking details' })}
                 </span>
                 <span className="detail-book-disclosure__meta">{mobileAvailabilitySummary}</span>
               </span>
@@ -1040,43 +1268,99 @@
             <div className={`detail-book-section${isMobile ? ' is-mobile' : ''}`}>
               {isMobile && (
                 <div className="detail-book-section__eyebrow">
-                  {T({ hant: '檢查可售狀態', hans: '检查可售状态', en: 'Check availability' })}
+                  {T({ hant: '預訂明細', hans: '预订明细', en: 'Booking details' })}
                 </div>
               )}
               <div className="detail-book-extra" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {!isMobile && (
                   <div className="detail-book-extra__title">
-                    {T({ hant: '檢查可售狀態', hans: '检查可售状态', en: 'Check availability' })}
+                    {T({ hant: '預訂明細', hans: '预订明细', en: 'Booking details' })}
                   </div>
                 )}
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span className="detail-book-label">{T({ hant: '日期', hans: '日期', en: 'Date' })}</span>
-                  <input
-                    type="date"
-                    min={todayIso()}
-                    value={selectedDate}
-                    onChange={(e) => onSelectedDate(e.target.value)}
-                    className="detail-book-field"
-                  />
-                </label>
-                {tour.startTimes && tour.startTimes.length > 0 && (
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="detail-book-label">{T({ hant: '時段', hans: '时段', en: 'Time' })}</span>
-                    <select
-                      value={selectedStartTime}
-                      onChange={(e) => onSelectedStartTime(e.target.value)}
+                <div className="detail-book-calendar">
+                  <span className="detail-book-label detail-book-calendar__eyebrow">
+                    {T({ hant: '日期', hans: '日期', en: 'Date' })}
+                  </span>
+                  {window.AuralisUI.MonthAvailabilityCalendar ? (
+                    <window.AuralisUI.MonthAvailabilityCalendar
+                      activityId={tour.id}
+                      value={selectedDate}
+                      onChange={(iso, dayInfo) => onSelectedDate(iso, dayInfo)}
+                      lang={lang}
+                    />
+                  ) : (
+                    <input
+                      type="date"
+                      min={todayIso()}
+                      value={selectedDate}
+                      onChange={(e) => onSelectedDate(e.target.value, null)}
                       className="detail-book-field"
-                    >
-                      {(tour.startTimes || []).map((st, i) => {
-                        const value = String(st.id ?? st.startTimeId ?? st.label ?? i);
-                        const label = st.label || (st.hour != null
-                          ? `${String(st.hour).padStart(2, '0')}:${String(st.minute || 0).padStart(2, '0')}`
-                          : value);
-                        return <option key={value} value={value}>{label}</option>;
-                      })}
-                    </select>
-                  </label>
-                )}
+                    />
+                  )}
+                  {selectedDate && (
+                    <div className="detail-book-calendar__selected" aria-live="polite">
+                      {T({ hant: '已選日期', hans: '已选日期', en: 'Selected' })}：
+                      <strong>{new Date(`${selectedDate}T00:00:00`).toLocaleDateString(
+                        lang === 'en' ? 'en-GB' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW',
+                        { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' },
+                      )}</strong>
+                    </div>
+                  )}
+                </div>
+                {(() => {
+                  const times = Array.isArray(dayAvailableTimes) ? dayAvailableTimes : [];
+                  if (times.length === 0) return null;
+                  // Render Bókun-style "HH:MM · external label" so vendors that
+                  // attach a marketing label (e.g. "9:30pm NL - Sept 2026 onwards")
+                  // don't hide the actual departure time from the customer.
+                  const formatTime = (st) => {
+                    const time = (st.startTime || '').trim();
+                    const lbl = (st.label || '').trim();
+                    if (time && lbl && lbl !== time) return `${time} · ${lbl}`;
+                    return lbl || time || '—';
+                  };
+                  const onlyOne = times.length === 1;
+                  return (
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span className="detail-book-label">
+                        {T({ hant: '時段', hans: '时段', en: 'Time' })}
+                      </span>
+                      {onlyOne ? (
+                        <div className="detail-book-field detail-book-field--readonly" aria-readonly="true">
+                          {formatTime(times[0])}
+                          {times[0].capacityRemaining != null && times[0].capacityRemaining <= 8 && (
+                            <span className="detail-book-time-low">
+                              {T({
+                                hant: `剩 ${times[0].capacityRemaining} 位`,
+                                hans: `剩 ${times[0].capacityRemaining} 位`,
+                                en: `${times[0].capacityRemaining} left`,
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedStartTime}
+                          onChange={(e) => onSelectedStartTime(e.target.value)}
+                          className="detail-book-field"
+                        >
+                          <option value="">
+                            {T({ hant: '— 自動選擇 —', hans: '— 自动选择 —', en: '— Auto —' })}
+                          </option>
+                          {times.map((st, i) => {
+                            const value = String(st.id != null ? st.id : st.label || st.startTime || i);
+                            const baseLabel = formatTime(st);
+                            const cap = st.capacityRemaining;
+                            const tail = cap != null && cap <= 8
+                              ? `  ·  ${T({ hant: `剩 ${cap}`, hans: `剩 ${cap}`, en: `${cap} left` })}`
+                              : '';
+                            return <option key={value} value={value}>{`${baseLabel}${tail}`}</option>;
+                          })}
+                        </select>
+                      )}
+                    </label>
+                  );
+                })()}
                 <div style={{ display: 'grid', gridTemplateColumns: childCategory ? '1fr 1fr' : '1fr', gap: 10 }}>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <span className="detail-book-label">
@@ -1182,20 +1466,28 @@
                   </fieldset>
                 )}
 
-                <button
-                  type="button"
-                  className="detail-book-prices-link"
-                  onClick={onCheckAvailability}
-                  disabled={availabilityState.loading}
-                  style={{ display: 'inline-flex', justifyContent: 'center', width: '100%' }}
-                >
-                  {availabilityState.loading
-                    ? T({ hant: '查詢中…', hans: '查询中…', en: 'Checking…' })
-                    : T({ hant: '查看可售與價格', hans: '查看可售与价格', en: 'Check availability' })}
-                </button>
+                {/* Passive availability status. Auto-check fires whenever the
+                    booking inputs change (see ActivityDetail useEffect), so
+                    we no longer need a manual "Check availability" button on
+                    the happy path. Loading / error states still get surfaced
+                    inline; errors keep a small Retry affordance. */}
+                {availabilityState.loading && (
+                  <div className="detail-book-status detail-book-status--loading" role="status" aria-live="polite">
+                    <span className="detail-book-status__dot" aria-hidden="true" />
+                    {T({ hant: '查詢即時可售狀態…', hans: '查询即时可售状态…', en: 'Checking real-time availability…' })}
+                  </div>
+                )}
                 {availabilityState.error && (
-                  <div style={{ color: 'var(--coral)', font: '500 12px/1.5 var(--font-text)' }}>
-                    {availabilityState.error}
+                  <div className="detail-book-status detail-book-status--error" role="alert">
+                    <span>{availabilityState.error}</span>
+                    <button
+                      type="button"
+                      className="detail-book-status__retry"
+                      onClick={onCheckAvailability}
+                      disabled={availabilityState.loading}
+                    >
+                      {T({ hant: '重試', hans: '重试', en: 'Retry' })}
+                    </button>
                   </div>
                 )}
                 {availabilityState.data && (
@@ -1247,6 +1539,19 @@
             </div>
           )}
 
+          {/* Primary CTA — placed AFTER the booking config + live result so
+              users commit only once they've seen availability & total price.
+              Industry convention (Bókun, GetYourGuide, Klook, Viator). */}
+          <button
+            type="button"
+            className="detail-book-cta"
+            onClick={onAddSelection}
+          >
+            {inTrip
+              ? <><Icon name="check" size={18} /> {T({ hant: '更新行程設定', hans: '更新行程设置', en: 'Update trip settings' })}</>
+              : <>{T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })} <Icon name="plus" size={18} /></>}
+          </button>
+
           {isMobile && (
             <button
               type="button"
@@ -1277,7 +1582,7 @@
           )}
 
           {showInquiryPanel && (
-            <div className={`detail-book-section${isMobile ? ' is-mobile' : ''}`}>
+            <div ref={inquiryFormRef} className={`detail-book-section${isMobile ? ' is-mobile' : ''}`}>
               {isMobile && (
                 <div className="detail-book-section__eyebrow">
                   {T({ hant: '讓我們協助你安排', hans: '让我们协助你安排', en: 'Let us help plan it' })}

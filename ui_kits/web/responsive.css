@@ -2064,6 +2064,268 @@ textarea.detail-book-field {
   color: var(--fg-3);
 }
 
+.detail-book-field--readonly {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--surface-soft);
+  color: var(--fg-1);
+  cursor: default;
+}
+
+.detail-book-time-low {
+  font: 600 11px/1 var(--font-text);
+  color: var(--coral, #FF5A6A);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--coral-soft, rgba(255, 90, 106, 0.12));
+}
+
+/* ── Month availability calendar (sidebar booking widget) ────────────────── */
+.detail-book-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-book-calendar__eyebrow {
+  /* Inherits .detail-book-label styling. */
+  margin-bottom: 2px;
+}
+
+.detail-book-calendar__selected {
+  font: 500 12px/1.45 var(--font-text);
+  color: var(--fg-2);
+}
+
+.detail-book-calendar__selected strong {
+  color: var(--fg-1);
+  font-weight: 600;
+}
+
+.month-cal {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.month-cal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.month-cal__title {
+  flex: 1;
+  text-align: center;
+  font: 700 14px/1 var(--font-display);
+  color: var(--fg-1);
+  text-transform: capitalize;
+  letter-spacing: -0.01em;
+}
+
+.month-cal__nav {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--surface-card);
+  color: var(--fg-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.month-cal__nav:hover:not(:disabled) {
+  background: var(--base-100);
+}
+
+.month-cal__nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.month-cal__dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.month-cal__dow {
+  text-align: center;
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+  padding: 4px 0;
+  text-transform: uppercase;
+}
+
+.month-cal__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.month-cal__row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.month-cal__cell {
+  position: relative;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  font: 500 13px/1 var(--font-text);
+  color: var(--fg-1);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.month-cal__cell--empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.month-cal__cell--past {
+  color: var(--fg-3);
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.month-cal__cell--loading,
+.month-cal__cell--unknown {
+  background: var(--surface-card);
+  color: var(--fg-2);
+}
+
+.month-cal__cell--available {
+  background: var(--success-soft, rgba(46, 255, 184, 0.18));
+  color: var(--fg-1);
+  font-weight: 600;
+}
+
+.month-cal__cell--available:hover:not(.is-selected) {
+  background: var(--success, #2EFFB8);
+  color: #0A2A1E;
+}
+
+.month-cal__cell--sold_out {
+  background: var(--surface-card);
+  color: var(--fg-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  cursor: not-allowed;
+}
+
+.month-cal__cell.is-selected {
+  background: var(--gradient-aurora);
+  color: var(--brand-on-gradient, #0A2A1E);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--fg-1, #11151F) inset, 0 4px 12px rgba(0, 213, 255, 0.28);
+}
+
+.month-cal__cell:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.55);
+}
+
+/* Tiny "X left" pip on cells with low remaining capacity. Hides the digit
+   on the smallest cells (mobile) and lets it bleed via aria-hidden + title
+   tooltip. */
+.month-cal__cell-low {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--coral, #FF5A6A);
+  color: #fff;
+  font: 700 9px/14px var(--font-text);
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.month-cal__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 2px;
+  font: 500 11px/1.2 var(--font-text);
+  color: var(--fg-3);
+}
+
+.month-cal__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.month-cal__legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.month-cal__legend-swatch--available {
+  background: var(--success-soft, rgba(46, 255, 184, 0.18));
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+.month-cal__legend-swatch--sold_out {
+  background: var(--surface-card);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  position: relative;
+}
+
+.month-cal__legend-swatch--sold_out::after {
+  content: '';
+  position: absolute;
+  inset: 50% 2px auto 2px;
+  height: 1px;
+  background: var(--fg-3);
+  transform: translateY(-0.5px);
+}
+
+.month-cal__error {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--coral, #FF5A6A);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .month-cal {
+    padding: 10px;
+  }
+  .month-cal__cell {
+    font-size: 14px;
+  }
+}
+
 .detail-price-row {
   display: flex;
   justify-content: space-between;
@@ -3342,30 +3604,99 @@ html[data-site-theme="sun"] .detail-attention-card {
   margin-top: 2px;
 }
 
+/* Passive availability status (replaces the old "Check availability" button
+ * now that the panel auto-refreshes on every input change). */
+.detail-book-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 13px/1.45 var(--font-text);
+  padding: 8px 2px;
+}
+.detail-book-status--loading { color: var(--fg-2); }
+.detail-book-status--error {
+  color: var(--coral, #E16A6A);
+  flex-wrap: wrap;
+  justify-content: space-between;
+  background: rgba(225, 106, 106, 0.08);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.detail-book-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--aurora-deep, #00837A);
+  box-shadow: 0 0 0 0 rgba(0, 131, 122, 0.55);
+  animation: detailBookStatusPulse 1.2s ease-out infinite;
+}
+.detail-book-status__retry {
+  background: transparent;
+  border: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: 600 12px/1 var(--font-text);
+  color: var(--coral, #E16A6A);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.detail-book-status__retry:hover { background: rgba(225, 106, 106, 0.12); }
+.detail-book-status__retry:disabled { opacity: 0.5; cursor: default; }
+@keyframes detailBookStatusPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(0, 131, 122, 0.55); }
+  70%  { box-shadow: 0 0 0 10px rgba(0, 131, 122, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(0, 131, 122, 0); }
+}
+
+/* Quick facts — single Bókun-style card with a 2-column inner grid. Each
+ * fact is just a label + value pair (no individual borders) so the whole
+ * block reads as one summary, not seven separate chips. */
+.detail-facts-card {
+  background: var(--surface-soft);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  padding: 24px 28px;
+}
 .detail-facts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+  row-gap: 22px;
 }
 .detail-fact {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 12px 14px;
-  background: var(--surface-soft);
-  border-radius: 12px;
-  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.detail-fact--full {
+  grid-column: 1 / -1;
 }
 .detail-fact__label {
-  font: 600 11px/1 var(--font-text);
-  letter-spacing: 0.06em;
+  font: 600 11px/1.2 var(--font-text);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-3);
-  margin-bottom: 4px;
 }
 .detail-fact__value {
-  font: 600 14px/1.3 var(--font-display);
+  font: 600 15px/1.4 var(--font-display);
   color: var(--fg-1);
+}
+.detail-fact__items {
+  margin: 0;
+  padding-left: 18px;
+  font: 600 14px/1.5 var(--font-display);
+  color: var(--fg-1);
+}
+.detail-fact__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+@media (max-width: 720px) {
+  .detail-facts-card { padding: 20px 18px; }
+  .detail-facts-grid { grid-template-columns: 1fr; column-gap: 0; row-gap: 18px; }
+  .detail-fact--full { grid-column: auto; }
 }
 
 /* Tour card image shimmer (shared with TourCard.jsx) */

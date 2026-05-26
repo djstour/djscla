@@ -50,6 +50,8 @@ async function handler(req, res) {
       uiLang: body.uiLang || 'hant',
       deactivateMissing: body.deactivateMissing !== false,
       syncImages: body.syncImages,
+      forceDetail: body.forceDetail === true,
+      ...(Number.isFinite(Number(body.maxDetailPerRun)) ? { maxDetailPerRun: Number(body.maxDetailPerRun) } : {}),
     });
 
     return res.status(200).json(summary);

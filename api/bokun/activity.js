@@ -211,6 +211,37 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    if (req.query.debug === 'quickfacts' && rawUpstream) {
+      const pick = (k) => rawUpstream[k];
+      return res.status(200).json({
+        debug: 'quickfacts raw',
+        sample: {
+          productCategory: pick('productCategory'),
+          activityCategories: pick('activityCategories'),
+          activityType: pick('activityType'),
+          categories: pick('categories'),
+          keywords: pick('keywords'),
+          tagGroups: pick('tagGroups'),
+          activityAttributes: pick('activityAttributes'),
+          difficultyLevel: pick('difficultyLevel'),
+          durationText: pick('durationText'),
+          minAge: pick('minAge'),
+          bookingType: pick('bookingType'),
+          bookingCutoff: pick('bookingCutoff'),
+          bookingCutoffMinutes: pick('bookingCutoffMinutes'),
+          bookingCutoffHours: pick('bookingCutoffHours'),
+          bookingCutoffDays: pick('bookingCutoffDays'),
+          bookingCutoffWeeks: pick('bookingCutoffWeeks'),
+          cutoffType: pick('cutoffType'),
+          languages: pick('languages'),
+          guidanceTypes: pick('guidanceTypes'),
+          meetingType: pick('meetingType'),
+          knowBeforeYouGoItems: pick('knowBeforeYouGoItems'),
+          passCapacity: pick('passCapacity'),
+        },
+      });
+    }
+
     if (req.query.debug === 'raw' && rawUpstream) {
       const keys = Object.keys(rawUpstream).sort();
       const sizes = {};

@@ -214,8 +214,53 @@
     LIMITED:           { hant: '名額有限',   hans: '名额有限',   en: 'Limited spots' },
   };
 
+  // ------------------------------------ "Quick facts" enum translations --
+  // Bókun ships these as upper-case codes on the activity payload (e.g.
+  // ACTIVITY_TYPE, DIFFICULTY, ACTIVITY_CATEGORY, ATTRIBUTE). The mapping is
+  // intentionally narrow — extend it as new vendor codes show up in production.
+  const ACTIVITY_TYPE = {
+    DAY_TOUR_OR_ACTIVITY: { hant: '一日行程／活動', hans: '一日行程/活动', en: 'Day tour / activity' },
+    MULTI_DAY_TOUR:       { hant: '多日行程',       hans: '多日行程',       en: 'Multi-day tour' },
+    TRANSFER:             { hant: '接駁',           hans: '接驳',           en: 'Transfer' },
+    RENTAL:               { hant: '租賃',           hans: '租赁',           en: 'Rental' },
+    ATTRACTION:           { hant: '景點門票',       hans: '景点门票',       en: 'Attraction' },
+  };
+
+  const DIFFICULTY = {
+    EASY:      { hant: '輕鬆',     hans: '轻松',     en: 'Easy' },
+    MODERATE:  { hant: '中等',     hans: '中等',     en: 'Moderate' },
+    CHALLENGING: { hant: '具挑戰', hans: '具挑战',   en: 'Challenging' },
+    HARD:      { hant: '困難',     hans: '困难',     en: 'Hard' },
+    EXTREME:   { hant: '極具挑戰', hans: '极具挑战', en: 'Extreme' },
+  };
+
+  const ACTIVITY_CATEGORY = {
+    ADVENTURE:           { hant: '冒險',       hans: '冒险',       en: 'Adventure' },
+    BUS_OR_MINIVAN_TOUR: { hant: '巴士／小巴', hans: '巴士/小巴',   en: 'Bus / minivan tour' },
+    NATURE:              { hant: '自然',       hans: '自然',       en: 'Nature' },
+    SIGHTSEEING:         { hant: '觀光',       hans: '观光',       en: 'Sightseeing' },
+    CULTURE:             { hant: '文化',       hans: '文化',       en: 'Culture' },
+    FOOD_AND_DRINK:      { hant: '美食',       hans: '美食',       en: 'Food & drink' },
+    WATER_ACTIVITY:      { hant: '水上活動',   hans: '水上活动',   en: 'Water activity' },
+    WILDLIFE:            { hant: '野生動物',   hans: '野生动物',   en: 'Wildlife' },
+    WALKING_TOUR:        { hant: '步行行程',   hans: '步行行程',   en: 'Walking tour' },
+    HIKING:              { hant: '健行',       hans: '徒步',       en: 'Hiking' },
+  };
+
+  const ACTIVITY_ATTRIBUTE = {
+    FAMILY_FRIENDLY: { hant: '親子友善', hans: '亲子友善', en: 'Family friendly' },
+    ECO_FRIENDLY:    { hant: '環境友善', hans: '环境友善', en: 'Eco friendly' },
+    OUTDOOR:         { hant: '戶外',     hans: '户外',     en: 'Outdoor' },
+    INDOOR:          { hant: '室內',     hans: '室内',     en: 'Indoor' },
+    ACCESSIBLE:      { hant: '無障礙',   hans: '无障碍',   en: 'Accessible' },
+    PET_FRIENDLY:    { hant: '寵物友善', hans: '宠物友善', en: 'Pet friendly' },
+    PRIVATE:         { hant: '私人',     hans: '私人',     en: 'Private' },
+    SMALL_GROUP:     { hant: '小團',     hans: '小团',     en: 'Small group' },
+  };
+
   window.AuralisData = window.AuralisData || {};
   window.AuralisData.BOKUN_TRANSLATIONS = {
     ACTIVITIES, VENDOR, TAG, CATEGORY, PRICING_CATEGORY, WARNING, GUIDE_LANGUAGE,
+    ACTIVITY_TYPE, DIFFICULTY, ACTIVITY_CATEGORY, ACTIVITY_ATTRIBUTE,
   };
 })();
