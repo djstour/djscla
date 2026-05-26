@@ -6,10 +6,14 @@
     "stop:dev": "sh -c 'for p in 3000 3001 3002 8765; do lsof -tiTCP:$p -sTCP:LISTEN | xargs kill -9 2>/dev/null || true; done'",
     "preview:static": "python3 -m http.server 8765",
     "deploy": "npx --yes vercel --prod",
+    "backfill:owned-images": "node scripts/backfill-owned-images.js",
     "enrich:chips": "node scripts/enrich-chip-ids.js",
     "enrich:chips:api": "node scripts/enrich-chip-ids-from-api.js"
   },
   "dependencies": {
     "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "vercel": "^54.4.1"
   }
 }

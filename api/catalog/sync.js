@@ -7,7 +7,7 @@ const { syncCatalog } = require('../../lib/catalogSync');
  *       or CATALOG_SYNC_SECRET as fallback for manual runs.
  *
  * GET  → run sync with default options
- * POST → accepts { uiLang?, deactivateMissing? } in JSON body
+ * POST → accepts { uiLang?, deactivateMissing?, syncImages? } in JSON body
  */
 function checkCronAuth(req) {
   const secret = (
@@ -49,6 +49,7 @@ async function handler(req, res) {
     const summary = await syncCatalog({
       uiLang: body.uiLang || 'hant',
       deactivateMissing: body.deactivateMissing !== false,
+      syncImages: body.syncImages,
     });
 
     return res.status(200).json(summary);

@@ -27,6 +27,22 @@ Tune widths in `imageProfileForViewport()`.
 2. Background job: fetch originals, generate responsive derivatives, upload to **owned storage/CDN**.
 3. Frontend serves first-party URLs; Bókun S3 becomes ingest-only.
 
+### First-party derivative sync
+
+The first implementation is now wired into catalog sync:
+
+1. Set `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, and `SUPABASE_IMAGE_BUCKET`.
+2. Enable `CATALOG_SYNC_IMAGES=1`.
+3. Run `POST /api/catalog/sync` with `{ "syncImages": true }` or let cron pick it up from env.
+
+During sync we generate and upload:
+
+- `card.webp` for `TourCard`
+- `hero.webp` for detail hero
+- `gallery.webp` for detail thumb strip / compact image slots
+
+The UI prefers owned derivatives when present and falls back to `/api/media/thumb` only for activities that have not been mirrored yet.
+
 See also [VENDOR_SCALE.md](./VENDOR_SCALE.md) Phase B for catalog sync timing.
 
 ## Mobile detail UX note
