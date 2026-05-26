@@ -8,7 +8,8 @@
     "deploy": "npx --yes vercel --prod",
     "backfill:owned-images": "node scripts/backfill-owned-images.js",
     "enrich:chips": "node scripts/enrich-chip-ids.js",
-    "enrich:chips:api": "node scripts/enrich-chip-ids-from-api.js"
+    "enrich:chips:api": "node scripts/enrich-chip-ids-from-api.js",
+    "patch:pricing": "node scripts/patch-pricing-from-search.js"
   },
   "dependencies": {
     "sharp": "^0.33.5"
