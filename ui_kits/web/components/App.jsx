@@ -777,20 +777,18 @@
                 </div>
               </div>
 
-              <div className="grid-cards-2">
-                {loading
-                  ? Array.from({ length: 4 }, (_, i) => <TourCardSkeleton key={i} />)
-                  : error
-                    ? <CatalogErrorState error={error} lang={lang} />
-                    : filtered.length === 0
-                    ? <EmptyState lang={lang} />
-                    : filtered.map((t, i) => (
-                        <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
-                                  inTrip={tripIdSet.has(t.id)} lang={lang}
-                                  imagePriority={i < window.AuralisUI.aboveFoldImagePriorityCount('tours')}
-                                  displayCurrency={displayCurrency} fxRates={fxRates} />
-                      ))}
-              </div>
+              <ToursGrid
+                loading={loading}
+                error={error}
+                filtered={filtered}
+                tripIdSet={tripIdSet}
+                onAdd={onAdd}
+                onRemove={onRemove}
+                onOpenDetail={onOpenDetail}
+                lang={lang}
+                displayCurrency={displayCurrency}
+                fxRates={fxRates}
+              />
 
               {hasMore && !loading && (
                 <div className="tours-load-more">
@@ -805,6 +803,86 @@
           </div>
         </div>
       </section>
+    );
+  }
+
+  // Progressive Tours grid — only mounts a window of cards at a time so iOS
+  // Chrome doesn't OOM under the weight of ~140+ cards mounting at once.
+  // Uses an IntersectionObserver sentinel near the end of the rendered slice
+  // to expand the window as the user scrolls.
+  const TOURS_GRID_INITIAL = 24;
+  const TOURS_GRID_BATCH = 24;
+
+  function ToursGrid({ loading, error, filtered, tripIdSet, onAdd, onRemove, onOpenDetail, lang, displayCurrency, fxRates }) {
+    const [visibleCount, setVisibleCount] = useState(TOURS_GRID_INITIAL);
+    const sentinelRef = useRef(null);
+    const totalCount = filtered.length;
+
+    useEffect(() => {
+      setVisibleCount(TOURS_GRID_INITIAL);
+    }, [totalCount, lang]);
+
+    useEffect(() => {
+      if (visibleCount >= totalCount) return undefined;
+      if (typeof IntersectionObserver === 'undefined') {
+        setVisibleCount(totalCount);
+        return undefined;
+      }
+      const node = sentinelRef.current;
+      if (!node) return undefined;
+      const obs = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            setVisibleCount((c) => Math.min(c + TOURS_GRID_BATCH, totalCount));
+          }
+        },
+        { rootMargin: '600px 0px', threshold: 0.01 },
+      );
+      obs.observe(node);
+      return () => obs.disconnect();
+    }, [visibleCount, totalCount]);
+
+    if (loading) {
+      return (
+        <div className="grid-cards-2">
+          {Array.from({ length: 4 }, (_, i) => <TourCardSkeleton key={i} />)}
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="grid-cards-2">
+          <CatalogErrorState error={error} lang={lang} />
+        </div>
+      );
+    }
+    if (totalCount === 0) {
+      return (
+        <div className="grid-cards-2">
+          <EmptyState lang={lang} />
+        </div>
+      );
+    }
+
+    const slice = filtered.slice(0, visibleCount);
+    const priorityCount = (window.AuralisUI && window.AuralisUI.aboveFoldImagePriorityCount)
+      ? window.AuralisUI.aboveFoldImagePriorityCount('tours')
+      : 4;
+
+    return (
+      <React.Fragment>
+        <div className="grid-cards-2">
+          {slice.map((t, i) => (
+            <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
+                      inTrip={tripIdSet.has(t.id)} lang={lang}
+                      imagePriority={i < priorityCount}
+                      displayCurrency={displayCurrency} fxRates={fxRates} />
+          ))}
+        </div>
+        {visibleCount < totalCount && (
+          <div ref={sentinelRef} aria-hidden="true" style={{ height: 1, marginTop: 16 }} />
+        )}
+      </React.Fragment>
     );
   }
 

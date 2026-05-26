@@ -3348,6 +3348,69 @@ html[data-site-theme="sun"] .detail-attention-card {
   }
 }
 
+/* Tour card glass overlays.
+ * iOS Safari/Chrome create one GPU compositing layer per `backdrop-filter`.
+ * With ~140 cards and 2 glass elements per card, the resulting ~280 layers
+ * cause Tour grid OOM crashes on iOS. We keep blur on desktop where it's
+ * safe and fall back to a solid translucent background on small screens. */
+.tour-card-category-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px 6px 8px;
+  border-radius: 999px;
+  background: var(--glass-medium);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  color: var(--fg-1);
+  font: 600 11px/1 var(--font-text);
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-1);
+}
+
+.tour-card-heart-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  background: var(--glass-medium);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.tour-card-heart-btn.is-wished {
+  background: #fff;
+  transform: scale(1.04);
+}
+
+@media (max-width: 900px) {
+  .tour-card-category-pill,
+  .tour-card-heart-btn {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.92);
+  }
+  html[data-site-theme="sun"] .tour-card-category-pill,
+  html[data-site-theme="sun"] .tour-card-heart-btn {
+    background: rgba(28, 24, 44, 0.88);
+  }
+  .tour-card-heart-btn.is-wished {
+    background: #fff;
+  }
+}
+
 /* Tour card secondary "Add" CTA — soft brand hover/focus states. */
 .tour-card__cta:not(:disabled):hover {
   background: var(--gradient-aurora);

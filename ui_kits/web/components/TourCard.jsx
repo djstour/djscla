@@ -173,15 +173,7 @@
           )}
 
           {!tour.badge && primaryCategory && (
-            <span style={{
-              position: 'absolute', top: 12, left: 12,
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '6px 10px 6px 8px', borderRadius: 999,
-              background: 'var(--glass-medium)', backdropFilter: 'blur(10px)',
-              color: 'var(--fg-1)', font: '600 11px/1 var(--font-text)',
-              letterSpacing: '0.02em',
-              boxShadow: 'var(--shadow-1)',
-            }}>
+            <span className="tour-card-category-pill">
               <Icon name={primaryCategory.icon} size={12} />
               {pick(lang, primaryCategory.label)}
             </span>
@@ -189,7 +181,7 @@
 
           <button
             type="button"
-            className="tour-card__icon-btn"
+            className={`tour-card__icon-btn tour-card-heart-btn${wished ? ' is-wished' : ''}`}
             aria-pressed={wished}
             aria-label={pick(lang, {
               hant: wished ? '從願望清單移除' : '加入願望清單',
@@ -197,16 +189,6 @@
               en:   wished ? 'Remove from wishlist' : 'Add to wishlist',
             })}
             onClick={(e) => { e.stopPropagation(); toggleWishlist(tour.id); }}
-            style={{
-              position: 'absolute', top: 12, right: 12,
-              width: 36, height: 36, borderRadius: 999, border: 0, cursor: 'pointer',
-              background: wished ? '#fff' : 'var(--glass-medium)',
-              backdropFilter: 'blur(10px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: 'var(--shadow-1)',
-              transition: 'transform var(--dur-fast) var(--ease-out)',
-              transform: wished ? 'scale(1.04)' : 'scale(1)',
-            }}
           >
             <Icon
               name="heart"
