@@ -180,6 +180,11 @@
     const imgProfile = useResponsiveImageProfile();
     const isMobile = useMobileViewport();
     const [activePhoto, setActivePhoto] = useState(0);
+    // Lightbox state — full-screen photo modal (Trip.com / Klook / Booking.com
+    // pattern). Decoupled from `activePhoto` so the hero can keep its own
+    // selection while the modal navigates independently.
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
     const [compactHeader, setCompactHeader] = useState(false);
     const [descExpanded, setDescExpanded] = useState(false);
     const [priceSheetOpen, setPriceSheetOpen] = useState(false);
@@ -245,6 +250,8 @@
       const min = todayIso();
       const fromTrip = initialDate && initialDate >= min ? initialDate : null;
       setActivePhoto(0);
+      setLightboxOpen(false);
+      setLightboxIndex(0);
       setDescExpanded(false);
       setPriceSheetOpen(false);
       setCompactHeader(false);
@@ -766,6 +773,18 @@
           onTouchEnd={onHeroTouchEnd}
         >
           <DetailHeroImage fastUrl={heroFastUrl} hiUrl={heroHiUrl} placeholderKey={tour.photo} />
+          {/* Click anywhere on the hero photo to open the full-screen
+              lightbox (Trip.com / Booking.com / Airbnb convention). The
+              button sits above the scrim but below the top bar / caption
+              so back/counter chips remain interactive. */}
+          {galleryPhotos.length > 0 && (
+            <button
+              type="button"
+              className="detail-hero-open-lightbox"
+              onClick={() => { setLightboxIndex(safeIndex); setLightboxOpen(true); }}
+              aria-label={T({ hant: '檢視所有照片', hans: '查看所有照片', en: 'View all photos' })}
+            />
+          )}
           <div className="detail-hero-scrim" aria-hidden="true" />
 
           {/* Top bar: back + counter */}
@@ -777,6 +796,23 @@
               </div>
             )}
           </div>
+
+          {/* Floating "View all photos" button — explicit affordance for
+              users who don't realise the hero is clickable. */}
+          {galleryPhotos.length > 1 && (
+            <button
+              type="button"
+              className="detail-hero-gallery-btn"
+              onClick={() => { setLightboxIndex(safeIndex); setLightboxOpen(true); }}
+            >
+              <Icon name="grid" size={14} />
+              {T({
+                hant: `檢視全部 ${galleryPhotos.length} 張照片`,
+                hans: `查看全部 ${galleryPhotos.length} 张照片`,
+                en: `View all ${galleryPhotos.length} photos`,
+              })}
+            </button>
+          )}
 
           {/* Caption: title + meta overlaid at bottom */}
           <div className="detail-hero-caption auralis-container">
@@ -828,7 +864,11 @@
                   aria-selected={selected}
                   aria-label={T({ hant: `照片 ${i + 1}`, hans: `照片 ${i + 1}`, en: `Photo ${i + 1}` })}
                   className={`detail-photo-row__btn${selected ? ' is-active' : ''}`}
+                  // Single click swaps the hero (existing snappy behavior);
+                  // double click opens the full lightbox at that photo.
+                  // A small "expand" icon is also shown on the active thumb.
                   onClick={() => setActivePhoto(i)}
+                  onDoubleClick={() => { setLightboxIndex(i); setLightboxOpen(true); }}
                 >
                   <img
                     src={thumbSrc}
@@ -1162,6 +1202,18 @@
             displayCurrency={displayCurrency}
             fxRates={fxRates}
             onClose={() => setPriceSheetOpen(false)}
+          />
+        )}
+
+        {lightboxOpen && galleryPhotos.length > 0 && (
+          <PhotoLightbox
+            photos={galleryPhotos}
+            index={lightboxIndex}
+            setIndex={setLightboxIndex}
+            onClose={() => setLightboxOpen(false)}
+            tour={tour}
+            lang={lang}
+            T={T}
           />
         )}
       </div>
@@ -1708,6 +1760,155 @@
         </div>
       </div>
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PhotoLightbox — full-screen photo gallery modal mirroring Trip.com /
+  // Booking.com / Airbnb. Renders via createPortal so the overlay escapes
+  // the sticky booking sidebar's stacking context.
+  //  • Esc closes • ←/→ navigates • body scroll is locked while open
+  //  • Thumbnail strip auto-scrolls to keep the active thumb visible
+  //  • Large image uses heroUrl/sourceUrl (full quality) instead of card-size
+  // ─────────────────────────────────────────────────────────────────────────
+  function PhotoLightbox({ photos, index, setIndex, onClose, tour, lang, T }) {
+    const total = photos.length;
+    const safe = Math.min(Math.max(0, index), total - 1);
+    const current = photos[safe] || {};
+    // Own profile lookup so the lightbox can proxy missing largeUrl variants
+    // without leaking the parent's hook state across the React tree.
+    const imgProfile = useResponsiveImageProfile();
+
+    const stripRef = useRef(null);
+    const goPrev = useCallback(() => setIndex((i) => (i - 1 + total) % total), [setIndex, total]);
+    const goNext = useCallback(() => setIndex((i) => (i + 1) % total), [setIndex, total]);
+
+    // Keyboard + body-scroll lock.
+    useEffect(() => {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const onKey = (e) => {
+        if (e.key === 'Escape') onClose();
+        else if (e.key === 'ArrowLeft') goPrev();
+        else if (e.key === 'ArrowRight') goNext();
+      };
+      window.addEventListener('keydown', onKey);
+      return () => {
+        document.body.style.overflow = prev;
+        window.removeEventListener('keydown', onKey);
+      };
+    }, [onClose, goPrev, goNext]);
+
+    // Keep the active thumbnail centered as user navigates.
+    useEffect(() => {
+      const strip = stripRef.current;
+      if (!strip) return;
+      const node = strip.querySelector(`[data-thumb-index="${safe}"]`);
+      if (node && typeof node.scrollIntoView === 'function') {
+        node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }, [safe]);
+
+    const largeUrl = current.heroUrl
+      || current.sourceUrl
+      || (current.sourceUrl ? proxyImageUrl(current.sourceUrl, imgProfile.heroHi) : null)
+      || current.galleryUrl
+      || current.cardUrl
+      || null;
+    const caption = current.description || current.alternateText || tour?.title || '';
+
+    const modal = (
+      <div
+        className="detail-lightbox"
+        role="dialog"
+        aria-modal="true"
+        aria-label={T({ hant: '行程照片', hans: '行程照片', en: 'Tour photos' })}
+        onClick={onClose}
+      >
+        <div className="detail-lightbox__topbar">
+          <div className="detail-lightbox__counter" aria-live="polite">{safe + 1} / {total}</div>
+          <button
+            type="button"
+            className="detail-lightbox__close"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            aria-label={T({ hant: '關閉', hans: '关闭', en: 'Close' })}
+          >
+            <Icon name="x" size={20} />
+          </button>
+        </div>
+
+        <div className="detail-lightbox__stage" onClick={(e) => e.stopPropagation()}>
+          {total > 1 && (
+            <button
+              type="button"
+              className="detail-lightbox__nav detail-lightbox__nav--prev"
+              onClick={goPrev}
+              aria-label={T({ hant: '上一張', hans: '上一张', en: 'Previous photo' })}
+            >
+              <Icon name="chevron-left" size={28} />
+            </button>
+          )}
+          {largeUrl ? (
+            <img
+              src={largeUrl}
+              alt={caption}
+              className="detail-lightbox__image"
+              draggable={false}
+              decoding="async"
+              loading="eager"
+            />
+          ) : (
+            <div className="detail-lightbox__placeholder" aria-hidden="true" />
+          )}
+          {total > 1 && (
+            <button
+              type="button"
+              className="detail-lightbox__nav detail-lightbox__nav--next"
+              onClick={goNext}
+              aria-label={T({ hant: '下一張', hans: '下一张', en: 'Next photo' })}
+            >
+              <Icon name="chevron-right" size={28} />
+            </button>
+          )}
+        </div>
+
+        {caption && (
+          <div className="detail-lightbox__caption" onClick={(e) => e.stopPropagation()}>
+            {caption}
+          </div>
+        )}
+
+        {total > 1 && (
+          <div
+            ref={stripRef}
+            className="detail-lightbox__strip"
+            onClick={(e) => e.stopPropagation()}
+            role="tablist"
+          >
+            {photos.map((p, i) => {
+              const thumb = p.galleryUrl
+                || p.cardUrl
+                || (p.sourceUrl ? proxyImageUrl(p.sourceUrl, imgProfile.gallery) : null);
+              return (
+                <button
+                  key={(p.sourceUrl || p.heroUrl || 'p') + i}
+                  type="button"
+                  data-thumb-index={i}
+                  className={`detail-lightbox__thumb${i === safe ? ' is-active' : ''}`}
+                  onClick={() => setIndex(i)}
+                  aria-label={T({ hant: `照片 ${i + 1}`, hans: `照片 ${i + 1}`, en: `Photo ${i + 1}` })}
+                  aria-selected={i === safe}
+                  role="tab"
+                >
+                  {thumb && <img src={thumb} alt="" draggable={false} loading="lazy" decoding="async" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+
+    return ReactDOM.createPortal(modal, document.body);
   }
 
   function Section({ id, title, children }) {
