@@ -1446,79 +1446,148 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   text-overflow: ellipsis;
 }
 
+/* ── Hero ──────────────────────────────────────────────────────────────── */
 .detail-hero {
   position: relative;
-  height: clamp(220px, 36vw, 360px);
+  height: clamp(300px, 54vh, 560px);
   overflow: hidden;
   touch-action: pan-y pinch-zoom;
 }
 
+/* Dual-gradient scrim: light top (back btn legibility) + strong bottom (title) */
 .detail-hero-scrim {
   position: absolute;
   inset: 0;
+  z-index: 1;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(17, 21, 31, 0.15) 0%, rgba(17, 21, 31, 0.55) 100%);
+  background:
+    linear-gradient(180deg,
+      rgba(17,21,31,0.42) 0%,
+      rgba(17,21,31,0)    22%,
+      rgba(17,21,31,0)    48%,
+      rgba(17,21,31,0.72) 78%,
+      rgba(17,21,31,0.94) 100%
+    );
 }
 
-.detail-hero-top {
-  position: relative;
-  z-index: 2;
-  padding-top: 24px;
-  padding-bottom: 24px;
+.detail-hero-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(20px, 3vw, 28px) var(--page-pad-x) 0;
 }
 
 .detail-hero-counter {
-  position: absolute;
-  top: 16px;
-  right: var(--page-pad-x);
-  z-index: 3;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(17, 21, 31, 0.55);
+  background: rgba(17,21,31,0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #fff;
   font: 600 12px/1 var(--font-text);
   letter-spacing: 0.04em;
 }
 
-.detail-photo-strip {
+/* Caption: title + facts pinned to hero bottom */
+.detail-hero-caption {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 0; left: 0; right: 0;
   z-index: 3;
+  padding-bottom: clamp(20px, 3vw, 32px);
+  max-width: none;
+}
+
+.detail-hero-badge {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--gradient-sun);
+  color: #fff;
+  font: 700 10px/1 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-glow-sun);
+}
+
+.detail-hero-title {
+  margin: 0 0 10px;
+  font: 700 clamp(22px, 3.8vw, 50px)/1.04 var(--font-display);
+  color: #fff;
+  letter-spacing: -0.025em;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.28);
+  max-width: 20ch;
+}
+
+.detail-hero-facts {
   display: flex;
-  gap: 8;
-  max-width: 90%;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+}
+
+.detail-hero-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255,255,255,0.88);
+  font: 500 13px/1 var(--font-text);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+}
+
+.detail-hero-fact b {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── Photo row ─────────────────────────────────────────────────────────── */
+.detail-photo-row {
+  display: flex;
+  gap: 8px;
   overflow-x: auto;
-  padding: 0 8px;
+  padding: 14px var(--page-pad-x);
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--base-100);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
 
-.detail-photo-thumb-btn {
+.detail-photo-row::-webkit-scrollbar { display: none; }
+
+.detail-photo-row__btn {
   flex-shrink: 0;
+  width: 148px;
+  height: 96px;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
-  background: transparent;
-  box-shadow: inset 0 0 0 2px var(--border-field);
   overflow: hidden;
-  opacity: 0.88;
-  transition: opacity var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  background: var(--base-100);
+  box-shadow: 0 0 0 2px transparent;
+  scroll-snap-align: start;
+  transition: box-shadow var(--dur-fast) var(--ease-out);
 }
 
-.detail-photo-thumb-btn.is-selected {
-  opacity: 1;
-  box-shadow: 0 0 0 2px var(--surface-card), 0 0 0 4px var(--aurora-cyan);
+.detail-photo-row__btn.is-active {
+  box-shadow: 0 0 0 2.5px var(--aurora-cyan);
 }
 
-.detail-photo-thumb {
+.detail-photo-row__img {
   display: block;
-  width: 72px;
-  height: 48px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: center;
-  background: var(--base-100);
+  transition: transform 0.38s var(--ease-out);
+}
+
+.detail-photo-row__btn:hover .detail-photo-row__img {
+  transform: scale(1.07);
 }
 
 .detail-back-btn {
@@ -1866,8 +1935,18 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
 .detail-sticky-book__card {
   background: var(--surface-card);
   border-radius: 24px;
-  padding: 24px;
+  padding: 0 24px 24px;
   box-shadow: var(--shadow-3);
+  overflow: hidden;
+  position: relative;
+}
+
+.detail-sticky-book__card::before {
+  content: '';
+  display: block;
+  height: 4px;
+  margin: 0 -24px 20px;
+  background: var(--gradient-aurora);
 }
 
 .detail-book-label {
@@ -2155,10 +2234,13 @@ textarea.detail-book-field {
     grid-template-columns: 1fr;
   }
 
-  /* Single column; booking bar stays at document end until ≤640 fixed bottom. */
   .detail-sticky-book {
     position: static;
     top: auto;
+  }
+
+  .detail-hero {
+    height: clamp(280px, 50vh, 440px);
   }
 }
 
@@ -2168,7 +2250,21 @@ textarea.detail-book-field {
   }
 
   .detail-hero {
-    height: clamp(200px, 52vw, 272px);
+    height: clamp(260px, 52vh, 360px);
+  }
+
+  .detail-hero-title {
+    font-size: clamp(20px, 5.5vw, 28px);
+    max-width: none;
+    margin-bottom: 8px;
+  }
+
+  .detail-hero-facts {
+    gap: 4px 12px;
+  }
+
+  .detail-hero-fact {
+    font-size: 12px;
   }
 
   .detail-hero-back {
@@ -2181,36 +2277,15 @@ textarea.detail-book-field {
     pointer-events: none;
   }
 
-  .detail-page-title {
-    font-size: clamp(24px, 6.4vw, 30px);
-    line-height: 1.06;
-    max-width: none;
+  .detail-photo-row {
+    padding: 10px 12px;
+    gap: 6px;
   }
 
-  .detail-meta {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .detail-meta__ellipsis {
-    max-width: min(280px, 85vw);
-  }
-
-  .detail-photo-strip {
-    bottom: 12px;
-    max-width: 94%;
-  }
-
-  .detail-photo-thumb {
-    width: 56px;
-    height: 40px;
-  }
-
-  .detail-photo-thumb-btn {
-    min-width: 56px;
-    min-height: 44px;
-    touch-action: manipulation;
+  .detail-photo-row__btn {
+    width: 108px;
+    height: 70px;
+    border-radius: 9px;
   }
 
   .detail-layout {
@@ -2231,7 +2306,7 @@ textarea.detail-book-field {
 
   .detail-sticky-book__card {
     border-radius: 20px;
-    padding: 24px 18px 20px;
+    padding: 0 18px 20px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -3307,3 +3382,530 @@ html[data-site-theme="sun"] .detail-attention-card {
     font-size: 10px;
   }
 }
+
+/* ================================================================== */
+/* MOBILE SUPPLEMENT — v2 (2026-05)                                    */
+/* All rules below are additive; existing rules above are preserved.   */
+/* ================================================================== */
+
+/* ------------------------------------------------------------------ */
+/* SupplierFilter accordion — CSS-driven, no JS mobile detection needed */
+/* Desktop: all sections always visible (filter-section__body shown).  */
+/* Mobile ≤640px: sections collapse via max-height transition.        */
+/* ------------------------------------------------------------------ */
+.supplier-filter__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.supplier-filter__title {
+  margin: 0;
+  font: 600 18px/1 var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: -0.01em;
+}
+
+.supplier-filter__active-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--gradient-aurora);
+  color: var(--brand-on-gradient);
+  font: 700 11px/1 var(--font-text);
+}
+
+/* Filter section structural styles */
+.filter-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: default;
+  /* pointer-events suppressed on desktop; enabled on mobile via media query */
+  pointer-events: none;
+}
+
+.filter-section__title {
+  margin: 0;
+  font: 600 12px/1 var(--font-text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.filter-section__head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.filter-section__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--aurora-cyan);
+  color: #11151F;
+  font: 700 10px/1 var(--font-text);
+}
+
+.filter-section__chevron {
+  display: none; /* hidden on desktop */
+  color: var(--fg-3);
+  transition: transform 0.22s ease;
+  flex-shrink: 0;
+}
+
+.filter-section__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* Body — always visible on desktop */
+.filter-section__body {
+  margin-top: 10px;
+  overflow: visible;
+}
+
+/* ---- Mobile accordion ≤ 640px ---- */
+@media (max-width: 640px) {
+  .filter-section__head {
+    cursor: pointer;
+    pointer-events: auto;
+    min-height: 44px; /* iOS touch target */
+    padding: 8px 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .filter-section__chevron {
+    display: inline-flex;
+  }
+
+  /* Body collapsed by default on mobile */
+  .filter-section__body {
+    max-height: 0;
+    overflow: hidden;
+    margin-top: 0;
+    transition: max-height 0.28s ease-out;
+  }
+
+  /* Body open when section has .is-open */
+  .filter-section.is-open .filter-section__body {
+    max-height: 560px;
+    margin-top: 8px;
+    transition: max-height 0.3s ease-in;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero — mobile search panel                                          */
+/* ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  /* Glass search panel — override inline padding */
+  .hero-search-panel {
+    padding: 16px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Hero copy + CTA stacking */
+  .hero-copy-cta-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .hero-copy-cta-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Hero heading — more aggressive clamp */
+  .hero-headline {
+    font-size: clamp(32px, 9.5vw, 56px) !important;
+  }
+
+  /* Hero lead text */
+  .hero-lead {
+    font-size: 15px !important;
+    margin-top: 14px !important;
+  }
+
+  /* Hero section minimum height */
+  .hero-section {
+    min-height: 460px;
+  }
+
+  /* Hero inner: no side padding bleed on very narrow */
+  .hero-inner {
+    padding-left: max(16px, var(--page-pad-x));
+    padding-right: max(16px, var(--page-pad-x));
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-headline {
+    font-size: clamp(28px, 8.5vw, 44px) !important;
+  }
+
+  .hero-section {
+    min-height: 420px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Checkout — mobile single-column layout + safe area                  */
+/* ------------------------------------------------------------------ */
+.checkout-section {
+  min-height: 480px;
+  background: var(--brand-surface);
+  padding-top: clamp(24px, 5vw, 40px);
+  padding-bottom: calc(clamp(24px, 5vw, 40px) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 640px) {
+  /* Main section */
+  .checkout-section {
+    padding-top: 20px !important;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: auto !important;
+  }
+
+  /* Stepper */
+  .checkout-stepper {
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+
+  .checkout-stepper > * {
+    min-width: 90px !important;
+    flex: 1 1 90px;
+    padding: 0 10px !important;
+    height: 40px !important;
+    font-size: 12px !important;
+    gap: 6px !important;
+  }
+
+  /* Step label text — hide on smallest */
+  .checkout-step-label {
+    display: none;
+  }
+
+  /* Main content panel */
+  .checkout-panel {
+    border-radius: 20px !important;
+    padding: 20px !important;
+  }
+
+  .checkout-panel h2 {
+    font-size: 22px !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* Payment method grid → 3 cols tighter */
+  .checkout-method-grid {
+    gap: 8px !important;
+  }
+
+  .checkout-method-btn {
+    height: 64px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Summary card */
+  .checkout-summary {
+    position: static !important;
+    top: auto !important;
+    padding: 18px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Done step */
+  .checkout-done {
+    padding: 28px 20px !important;
+    border-radius: 20px !important;
+  }
+
+  .checkout-done h2 {
+    font-size: 28px !important;
+  }
+
+  /* Done CTA row */
+  .checkout-done-ctas {
+    flex-direction: column !important;
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  .checkout-done-ctas button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Stat cards in done step */
+  .checkout-stat {
+    padding: 10px 14px !important;
+    min-width: 80px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout-stepper > * {
+    min-width: 76px !important;
+    height: 36px !important;
+    font-size: 11px !important;
+    padding: 0 8px !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Trip map — compact on mobile (map above panel)                      */
+/* ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .trip-map-shell {
+    /* Shorter total height — map is decorative, panel is primary */
+    min-height: 0 !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* SVG map becomes a fixed-height band at the top */
+  .trip-map-svg {
+    position: relative !important;
+    height: 200px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  /* Inner stack below the map */
+  .trip-map-inner {
+    position: relative !important;
+    z-index: 1;
+    min-height: 0 !important;
+    padding: 0 var(--page-pad-x) calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+  }
+
+  .trip-panel {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 16px !important;
+    border-radius: 20px !important;
+    /* Slight negative margin to overlap map bottom edge */
+    margin-top: -20px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .trip-panel h3 {
+    font-size: 22px !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Category strip — small phone sizing                                  */
+/* ------------------------------------------------------------------ */
+@media (max-width: 480px) {
+  .category-strip-inner > button {
+    width: 110px !important;
+    height: 80px !important;
+    border-radius: 14px !important;
+    gap: 8px !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Tours page — mobile toolbar + load more                             */
+/* ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .tours-page {
+    padding-top: 16px;
+  }
+
+  .tours-page-kicker {
+    display: none;
+  }
+
+  .tours-load-more-btn {
+    height: 44px;
+    padding: 0 24px;
+    font-size: 13px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Footer — safe area bottom                                           */
+/* ------------------------------------------------------------------ */
+.footer-section {
+  padding-bottom: calc(clamp(40px, 8vw, 60px) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ------------------------------------------------------------------ */
+/* Touch target enforcement — all interactive elements >= 44px          */
+/* Use targeted classes instead of long :not() chain (Chrome crash risk)*/
+/* ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  /* Primary CTAs */
+  .detail-book-cta,
+  .trip-panel-cta,
+  .tours-load-more-btn,
+  .detail-mini-header__back,
+  .tours-trip-context__edit {
+    min-height: 44px;
+  }
+
+  /* Hero + search CTAs */
+  .hero-inner button[style*="height: 54"],
+  .hero-inner button[style*="height: 52"],
+  .search-overlay__footer {
+    min-height: 44px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Checkout section wrapper — override inline style via class hook      */
+/* ------------------------------------------------------------------ */
+/* Checkout.jsx renders <section className="auralis-section"> with
+   inline paddingTop/paddingBottom. We target .auralis-section that
+   contains .checkout-grid or .checkout-stepper to override safely. */
+@media (max-width: 640px) {
+  .auralis-section:has(.checkout-stepper) {
+    padding-top: 20px !important;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: auto !important;
+  }
+
+  /* Stepper items — override inline styles */
+  .checkout-stepper > div {
+    height: 40px !important;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
+    gap: 6px !important;
+    flex: 1 1 80px !important;
+    min-width: 0 !important;
+  }
+
+  .checkout-stepper > div span:last-child {
+    font-size: 11px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Review / Pay left panel */
+  .checkout-grid > div:first-child {
+    border-radius: 20px !important;
+    padding: 18px !important;
+  }
+
+  /* Checkout h2 */
+  .checkout-grid > div:first-child h2 {
+    font-size: 22px !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* Payment method grid */
+  .checkout-grid > div:first-child > div[style*="grid-template-columns"] {
+    gap: 8px !important;
+  }
+
+  .checkout-grid > div:first-child > div[style*="grid-template-columns"] > button {
+    height: 64px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Summary card */
+  .checkout-grid > div:last-child {
+    position: static !important;
+    padding: 18px !important;
+    border-radius: 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout-stepper > div {
+    height: 36px !important;
+    padding: 0 8px !important;
+  }
+
+  /* Hide step label text, keep number badge */
+  .checkout-stepper > div span:last-child {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero — override inline styles via structural selectors              */
+/* The glass search panel has padding: 24 inline; override on mobile.  */
+/* ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  /* Glass div inside .hero-inner — the search panel */
+  .hero-inner > div.glass {
+    padding: 16px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Hero h1 inline font override */
+  .hero-inner h1.hero-headline {
+    font-size: clamp(30px, 9vw, 52px) !important;
+    margin-top: 10px !important;
+  }
+
+  /* Hero lead paragraph */
+  .hero-inner p.hero-lead {
+    font-size: 15px !important;
+    margin-top: 12px !important;
+    max-width: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Safe area — Hero bottom (iOS)                                        */
+/* ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .hero-section {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* TripPanel h3 on mobile                                              */
+/* ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .trip-panel > div > h3 {
+    font-size: 22px !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 480px — small phone category strip                                  */
+/* ------------------------------------------------------------------ */
+@media (max-width: 480px) {
+  .category-strip {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+}
+
+/* ================================================================== */
+/* END MOBILE SUPPLEMENT v2                                            */
+/* ================================================================== */

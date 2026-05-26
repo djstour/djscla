@@ -240,7 +240,11 @@
   }
 
   function tripTotalUsd(trip) {
-    return (trip || []).reduce((s, t) => s + (Number(t.priceUsd ?? t.price) || 0), 0);
+    return (trip || []).reduce((s, t) => {
+      const selectionTotal = Number(t.tripPricing && t.tripPricing.totalUsd);
+      if (Number.isFinite(selectionTotal) && selectionTotal > 0) return s + selectionTotal;
+      return s + (Number(t.priceUsd ?? t.price) || 0);
+    }, 0);
   }
 
   // ------------------------------------------------------------------
@@ -893,7 +897,7 @@
 
   function prefetchProxiedImage(url, opts = { w: 520, q: 78 }) {
     const href = proxyImageUrl(url, opts);
-    if (!href || href === url) return;
+    if (!href) return;
     if (typeof document === 'undefined') return;
     if (document.querySelector(`link[rel="preload"][href="${href}"]`)) return;
     const link = document.createElement('link');

@@ -45,22 +45,23 @@
 <body data-screen-label="Auralis Web · 極光旅">
 <div id="root"></div>
 
-<script type="text/babel" src="components/_shared.jsx"></script>
-<script type="text/babel" src="components/Nav.jsx"></script>
-<script type="text/babel" src="components/DateRangePicker.jsx"></script>
-<script type="text/babel" src="components/Hero.jsx"></script>
-<script type="text/babel" src="components/TourCard.jsx"></script>
-<script type="text/babel" src="components/SearchOverlay.jsx"></script>
-<script type="text/babel" src="components/ActivityDetail.jsx"></script>
-<script type="text/babel" src="components/SupplierFilter.jsx"></script>
-<script type="text/babel" src="components/TripPanel.jsx"></script>
-<script type="text/babel" src="components/Checkout.jsx"></script>
-<script type="text/babel" src="components/Footer.jsx"></script>
-<script type="text/babel" src="components/App.jsx"></script>
-<script type="text/babel">
+<script type="text/babel" data-presets="react" src="components/_shared.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/Nav.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/DateRangePicker.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/Hero.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/TourCard.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/SearchOverlay.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/ActivityDetail.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/SupplierFilter.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/TripPanel.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/Checkout.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/Footer.jsx"></script>
+<script type="text/babel" data-presets="react" src="components/App.jsx"></script>
+<script type="text/babel" data-presets="react">
   // Mount once all components are registered. Because Babel scripts load
   // sequentially, App.jsx runs last and registers AuralisApp on window.
   ReactDOM.createRoot(document.getElementById('root')).render(<window.AuralisApp />);
 </script>
+
 </body>
 </html>

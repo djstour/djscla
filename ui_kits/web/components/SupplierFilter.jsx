@@ -1,7 +1,7 @@
 /* SupplierFilter — left rail on the Tours screen; SupplierStrip — vendor pills above results. */
 
 (function () {
-  const { useMemo } = React;
+  const { useMemo, useState, useCallback } = React;
   const {
     Icon, CATEGORIES, ROUTES, FACETS, getSupplierOptions, formatDisplayPrice, pick, vendorIdsMatch,
   } = window.AuralisUI;
@@ -90,6 +90,19 @@
   }) {
     const T = (opts) => pick(lang, opts);
 
+    // Mobile accordion: track which sections are open
+    const [openSections, setOpenSections] = useState({
+      supplier: true,
+      category: true,
+      routes: false,
+      more: false,
+      price: false,
+    });
+
+    const toggleSection = useCallback((key) => {
+      setOpenSections((s) => ({ ...s, [key]: !s[key] }));
+    }, []);
+
     const priceRange = useMemo(() => {
       const prices = activities
         .map((a) => Number(a.priceUsd ?? a.price))
@@ -98,15 +111,31 @@
       return { min: Math.min(...prices), max: Math.max(...prices) };
     }, [activities]);
 
+    // Count active filters for badge
+    const activeCatCount = activeCats.length;
+    const activeRouteCount = activeRoutes.length;
+    const activeFacetCount = activeFacets.length;
+    const activeSupplierCount = activeSupplier !== 'all' ? 1 : 0;
+
     return (
       <aside className="supplier-filter">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ margin: 0, font: '600 18px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.01em' }}>
+        <div className="supplier-filter__header">
+          <h3 className="supplier-filter__title">
             {T({ hant: '篩選', hans: '筛选', en: 'Filters' })}
           </h3>
+          {(activeCatCount + activeRouteCount + activeFacetCount + activeSupplierCount) > 0 && (
+            <span className="supplier-filter__active-badge">
+              {activeCatCount + activeRouteCount + activeFacetCount + activeSupplierCount}
+            </span>
+          )}
         </div>
 
-        <Section title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })}>
+        <Section
+          title={T({ hant: '供應商', hans: '供应商', en: 'Supplier' })}
+          badge={activeSupplierCount}
+          open={openSections.supplier}
+          onToggle={() => toggleSection('supplier')}
+        >
           <SupplierStrip
             activities={activities}
             activeSupplier={activeSupplier}
@@ -118,7 +147,12 @@
           />
         </Section>
 
-        <Section title={T({ hant: '體驗類型', hans: '体验类型', en: 'Experience' })}>
+        <Section
+          title={T({ hant: '體驗類型', hans: '体验类型', en: 'Experience' })}
+          badge={activeCatCount}
+          open={openSections.category}
+          onToggle={() => toggleSection('category')}
+        >
           <div className="filter-chip-list filter-chip-list--stack">
             {CATEGORIES.map((c) => {
               const active = activeCats.includes(c.id);
@@ -133,7 +167,12 @@
           </div>
         </Section>
 
-        <Section title={T({ hant: '經典路線', hans: '经典路线', en: 'Routes' })}>
+        <Section
+          title={T({ hant: '經典路線', hans: '经典路线', en: 'Routes' })}
+          badge={activeRouteCount}
+          open={openSections.routes}
+          onToggle={() => toggleSection('routes')}
+        >
           <div className="filter-chip-list">
             {ROUTES.map((r) => {
               const active = activeRoutes.includes(r.id);
@@ -146,7 +185,12 @@
           </div>
         </Section>
 
-        <Section title={T({ hant: '進階', hans: '进阶', en: 'More' })}>
+        <Section
+          title={T({ hant: '進階', hans: '进阶', en: 'More' })}
+          badge={activeFacetCount}
+          open={openSections.more}
+          onToggle={() => toggleSection('more')}
+        >
           <div className="filter-chip-list">
             {FACETS.map((f) => {
               const active = activeFacets.includes(f.id);
@@ -160,7 +204,11 @@
         </Section>
 
         {priceRange && (
-          <Section title={T({ hant: '價格範圍（目錄）', hans: '价格范围（目录）', en: 'Price range (catalog)' })}>
+          <Section
+            title={T({ hant: '價格範圍', hans: '价格范围', en: 'Price range' })}
+            open={openSections.price}
+            onToggle={() => toggleSection('price')}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', font: '600 13px/1 var(--font-text)', color: 'var(--fg-1)' }}>
               <span>{formatDisplayPrice(priceRange.min, displayCurrency, fxRates)}</span>
               <span>{formatDisplayPrice(priceRange.max, displayCurrency, fxRates)}</span>
@@ -171,16 +219,32 @@
     );
   }
 
-  function Section({ title, subtitle, children }) {
+  /* Section — always rendered; accordion chevron is CSS-only on mobile. */
+  function Section({ title, badge, open, onToggle, children }) {
     return (
-      <div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-          <h4 style={{ margin: 0, font: '600 12px/1 var(--font-text)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--fg-3)' }}>
-            {title}
-          </h4>
-          {subtitle && <span style={{ font: '500 10px/1 var(--font-text)', color: 'var(--fg-4)' }}>{subtitle}</span>}
+      <div className={`filter-section${open ? ' is-open' : ''}`}>
+        <button
+          type="button"
+          className="filter-section__head"
+          onClick={onToggle}
+          aria-expanded={open}
+        >
+          <h4 className="filter-section__title">{title}</h4>
+          <div className="filter-section__head-right">
+            {badge > 0 && (
+              <span className="filter-section__badge">{badge}</span>
+            )}
+            <span className={`filter-section__chevron${open ? ' is-open' : ''}`} aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" strokeWidth="2"
+                   stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="2,4 6,8 10,4"/>
+              </svg>
+            </span>
+          </div>
+        </button>
+        <div className="filter-section__body">
+          {children}
         </div>
-        {children}
       </div>
     );
   }

@@ -260,9 +260,11 @@
                 {results.map((vm, i) => {
                   const vendor = (vm.vendor || (vm.raw && vm.raw.vendor)) || {};
                   const supplier = vendor.titleOriginal || vendor.title || vm.supplier;
-                  const cover = vm.coverImageUrl
-                    ? proxyImageUrl(vm.coverImageUrl, { w: 96, q: 70 })
-                    : null;
+                  const cover = vm.coverImageGalleryUrl
+                    || vm.coverImageCardUrl
+                    || (vm.coverImageUrl
+                      ? proxyImageUrl(vm.coverImageUrl, { w: 96, q: 70 })
+                      : null);
                   const active = i === activeIdx;
                   return (
                     <li

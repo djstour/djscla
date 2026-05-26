@@ -23,6 +23,23 @@
   const STORAGE_KEY = 'auralis.lang';
   const CURRENCY_KEY = 'auralis.currency';
 
+  function enrichTripItem(vm, selection) {
+    if (!vm) return null;
+    if (!selection) return vm;
+    return {
+      ...vm,
+      tripDate: selection.date || null,
+      tripStartTimeId: selection.startTimeId || null,
+      tripStartTimeLabel: selection.startTimeLabel || null,
+      tripGuests: selection.guests || null,
+      tripPickupPlaceId: selection.pickupPlaceId ?? null,
+      tripPickupTitle: selection.pickupTitle || null,
+      tripExtras: Array.isArray(selection.extras) ? selection.extras : [],
+      tripPricing: selection.pricing || null,
+      tripLastQuotedAt: selection.quotedAt || null,
+    };
+  }
+
   function App() {
     const [siteTheme, setSiteTheme] = useState(() => window.AuralisUI.getInitialSiteTheme());
 
@@ -98,10 +115,16 @@
     // without us touching trip state.
     const [tripIds, setTripIds] = useState([]);
     const [tripCache, setTripCache] = useState({});
+    const [tripSelections, setTripSelections] = useState({});
 
     const trip = useMemo(
-      () => tripIds.map((id) => activities.find((a) => a.id === id) || tripCache[id]).filter(Boolean),
-      [tripIds, activities, tripCache]
+      () => tripIds
+        .map((id) => {
+          const vm = activities.find((a) => a.id === id) || tripCache[id];
+          return enrichTripItem(vm, tripSelections[id]);
+        })
+        .filter(Boolean),
+      [tripIds, activities, tripCache, tripSelections]
     );
 
     const detailPreview = useMemo(
@@ -123,7 +146,7 @@
 
     function openActivityDetail(tour) {
       window.AuralisUI.prefetchProxiedImage(
-        tour.coverImageUrl,
+        tour.coverImageCardUrl || tour.coverImageUrl,
         window.AuralisUI.imageProfileForViewport().prefetch,
       );
       if (window.AuralisData && window.AuralisData.BokunAdapter) {
@@ -200,17 +223,25 @@
       return () => window.removeEventListener('popstate', onPop);
     }, []);
 
-    function addToTrip(vm) {
-      if (tripIdSet.has(vm.id)) return;
+    function addToTrip(vm, opts = {}) {
+      const alreadyInTrip = tripIdSet.has(vm.id);
+      const booking = opts && opts.booking ? opts.booking : null;
       setTripCache((c) => ({ ...c, [vm.id]: vm }));
-      setTripIds(ids => [...ids, vm.id]);
+      if (booking) {
+        setTripSelections((current) => ({ ...current, [vm.id]: booking }));
+      }
+      if (!alreadyInTrip) {
+        setTripIds((ids) => [...ids, vm.id]);
+      }
       const showToast = window.AuralisUI && window.AuralisUI.showToast;
       if (showToast) {
         const T = (opts) => window.AuralisUI.pick(lang, opts);
         showToast({
           tone: 'success',
           icon: 'check',
-          message: T({ hant: '已加入行程', hans: '已加入行程', en: 'Added to your trip' }),
+          message: alreadyInTrip
+            ? T({ hant: '已更新行程設定', hans: '已更新行程设置', en: 'Trip settings updated' })
+            : T({ hant: '已加入行程', hans: '已加入行程', en: 'Added to your trip' }),
           description: vm.title,
           actionLabel: T({ hant: '查看行程', hans: '查看行程', en: 'View trip' }),
           onAction: () => { handleNav('checkout'); },
@@ -220,6 +251,12 @@
     function removeFromTrip(id) {
       const removed = tripCache[id];
       setTripIds(ids => ids.filter(x => x !== id));
+      setTripSelections((current) => {
+        if (!(id in current)) return current;
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
       const showToast = window.AuralisUI && window.AuralisUI.showToast;
       if (showToast) {
         const T = (opts) => window.AuralisUI.pick(lang, opts);
@@ -231,6 +268,9 @@
           onAction: removed ? () => {
             setTripCache((c) => ({ ...c, [removed.id]: removed }));
             setTripIds((ids) => (ids.includes(removed.id) ? ids : [...ids, removed.id]));
+            if (tripSelections[id]) {
+              setTripSelections((current) => ({ ...current, [removed.id]: tripSelections[id] }));
+            }
           } : null,
         });
       }
@@ -360,8 +400,9 @@
             lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
-            initialDate={tripSearch.startDate}
-            initialGuestCounts={{ adults: tripSearch.adults, children: tripSearch.children }}
+            initialDate={(tripSelections[detailActivityId] && tripSelections[detailActivityId].date) || tripSearch.startDate}
+            initialGuestCounts={(tripSelections[detailActivityId] && tripSelections[detailActivityId].guests) || { adults: tripSearch.adults, children: tripSearch.children }}
+            initialBookingSelection={tripSelections[detailActivityId] || null}
           />
         )}
 
@@ -380,7 +421,11 @@
           <Checkout
             trip={trip}
             onBack={() => setScreen('trip')}
-            onPaid={() => { setTripIds([]); setScreen('home'); }}
+            onPaid={() => {
+              setTripIds([]);
+              setTripSelections({});
+              setScreen('home');
+            }}
             lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}

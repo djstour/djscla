@@ -65,7 +65,9 @@
       ? { w: Math.min(imgProfile.card.w, 360), q: imgProfile.card.q }
       : imgProfile.card;
     const mobile = isMobileViewport();
-    const coverSrc = tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null;
+    const coverSrc = tour.coverImageCardUrl
+      || tour.coverImageGalleryUrl
+      || (tour.coverImageUrl ? proxyImageUrl(tour.coverImageUrl, cardThumb) : null);
     const cardRef = useRef(null);
     const [hovered, setHovered] = useState(false);
     const [ctaHovered, setCtaHovered] = useState(false);
@@ -87,14 +89,16 @@
 
     function prefetchCardAssets() {
       if (!onView) return;
-      if (tour.coverImageUrl) prefetchProxiedImage(tour.coverImageUrl, imgProfile.prefetch);
+      if (tour.coverImageCardUrl || tour.coverImageUrl) {
+        prefetchProxiedImage(tour.coverImageCardUrl || tour.coverImageUrl, imgProfile.prefetch);
+      }
       if (window.AuralisData && window.AuralisData.BokunAdapter) {
         window.AuralisData.BokunAdapter.prefetchActivityById(tour.id, { lang });
       }
     }
 
     useEffect(() => {
-      if (!onView || !tour.coverImageUrl || !cardRef.current) return undefined;
+      if (!onView || !(tour.coverImageCardUrl || tour.coverImageUrl) || !cardRef.current) return undefined;
       if (typeof IntersectionObserver === 'undefined') return undefined;
       const obs = new IntersectionObserver(
         (entries) => {
@@ -107,7 +111,7 @@
       );
       obs.observe(cardRef.current);
       return () => obs.disconnect();
-    }, [tour.coverImageUrl, onView]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [tour.coverImageCardUrl, tour.coverImageUrl, onView]); // eslint-disable-line react-hooks/exhaustive-deps
 
     function openDetail(e) {
       if (onView) onView(tour);

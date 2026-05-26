@@ -9,7 +9,6 @@
   } = window.AuralisUI;
 
   const DESC_PREVIEW_CHARS = 320;
-  const MOBILE_STOPS_PREVIEW = 3;
   const COMPACT_HEADER_SCROLL = 180;
   // Bókun rarely exposes a per-category cap; OTA-standard fallback is 15.
   const DETAIL_PAX_MAX = 15;
@@ -17,19 +16,6 @@
     const out = [];
     for (let i = start; i <= end; i += 1) out.push(i);
     return out;
-  }
-
-  function mapsSearchUrl(meetingPoint) {
-    if (!meetingPoint) return null;
-    const { geoPoint, address, title, name } = meetingPoint;
-    const lat = geoPoint?.latitude;
-    const lng = geoPoint?.longitude;
-    if (lat != null && lng != null) {
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
-    }
-    const q = address || title || name;
-    if (q) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-    return null;
   }
 
   /** Prefer catalog price; fall back to cheapest ticket row while detail loads. */
@@ -44,63 +30,8 @@
     return null;
   }
 
-  function cancelLabel(cancelHrs, T) {
-    if (cancelHrs == null || cancelHrs <= 0) return null;
-    if (cancelHrs >= 48) {
-      const days = Math.round(cancelHrs / 24);
-      return T({
-        hant: `出發 ${days} 天前可免費取消`,
-        hans: `出发 ${days} 天前可免费取消`,
-        en: `Free cancellation up to ${days} days before departure`,
-      });
-    }
-    return T({
-      hant: `出發 ${cancelHrs} 小時前可免費取消`,
-      hans: `出发 ${cancelHrs} 小时前可免费取消`,
-      en: `Free cancellation up to ${cancelHrs} h before departure`,
-    });
-  }
-
   function todayIso() {
     return new Date().toISOString().slice(0, 10);
-  }
-
-  function difficultyLabel(level, T) {
-    const key = String(level || '').toUpperCase();
-    const map = {
-      EASY:     { hant: '輕鬆', hans: '轻松', en: 'Easy' },
-      MODERATE: { hant: '中等', hans: '中等', en: 'Moderate' },
-      HARD:     { hant: '進階', hans: '进阶', en: 'Challenging' },
-      EXTREME:  { hant: '高強度', hans: '高强度', en: 'Extreme' },
-    };
-    if (map[key]) return T(map[key]);
-    return level;
-  }
-
-  function attributeIcon(attr) {
-    switch (String(attr).toUpperCase()) {
-      case 'FAMILY_FRIENDLY': return 'baby';
-      case 'ECO_FRIENDLY':    return 'leaf';
-      case 'OUTDOOR':         return 'tree-pine';
-      case 'INDOOR':          return 'home';
-      case 'ACCESSIBLE':      return 'accessibility';
-      case 'SMALL_GROUP':     return 'users-round';
-      default:                return 'sparkles';
-    }
-  }
-
-  function attributeLabel(attr, T) {
-    const key = String(attr || '').toUpperCase();
-    const map = {
-      FAMILY_FRIENDLY: { hant: '親子友善', hans: '亲子友善', en: 'Family-friendly' },
-      ECO_FRIENDLY:    { hant: '環境友善', hans: '环境友善', en: 'Eco-friendly' },
-      OUTDOOR:         { hant: '戶外體驗', hans: '户外体验', en: 'Outdoor' },
-      INDOOR:          { hant: '室內體驗', hans: '室内体验', en: 'Indoor' },
-      ACCESSIBLE:      { hant: '無障礙',   hans: '无障碍',   en: 'Accessible' },
-      SMALL_GROUP:     { hant: '小團體',   hans: '小团体',   en: 'Small group' },
-    };
-    if (map[key]) return T(map[key]);
-    return String(attr || '').replace(/_/g, ' ').toLowerCase();
   }
 
   function nextIsoDate(offsetDays) {
@@ -142,60 +73,6 @@
     return `${title} (${min} - ${max})`;
   }
 
-  function escapeRegex(text) {
-    return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-
-  function normalizeDescriptionText(text, title) {
-    let source = String(text || '').replace(/\s+/g, ' ').trim();
-    if (!source) return '';
-
-    if (title) {
-      const titlePattern = new RegExp(`^${escapeRegex(title)}\\s*[-:!]*\\s*`, 'i');
-      source = source.replace(titlePattern, '');
-    }
-
-    source = source
-      .replace(/^Trip difficulty\s*:?\s*[^.]+\.?\s*/i, '')
-      .replace(/^Tour Highlights\s*:?-?\s*/i, '')
-      .replace(/\s*Tour Highlights\s*:?-?\s*/gi, '. ')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
-
-    return source;
-  }
-
-  function splitDescription(text, title) {
-    const source = normalizeDescriptionText(text, title);
-    if (!source) return { highlights: [], body: '' };
-
-    const sentences = source
-      .split(/(?<=[.!?])\s+/)
-      .map((s) => s.trim().replace(/^-+\s*/, ''))
-      .filter(Boolean);
-
-    const highlights = [];
-    const bodySentences = [];
-
-    sentences.forEach((sentence) => {
-      if (
-        highlights.length < 3
-        && sentence.length <= 140
-        && !/^During this/i.test(sentence)
-        && !/^Firstly/i.test(sentence)
-      ) {
-        highlights.push(sentence);
-      } else {
-        bodySentences.push(sentence);
-      }
-    });
-
-    return {
-      highlights,
-      body: bodySentences.join(' '),
-    };
-  }
-
   function buildAvailabilityPax(tour, counts) {
     const adultCategory = findPricingCategory(tour, (row) => row.defaultCategory || /adult/i.test(row.title || row.fullTitle || ''))
       || tour?.raw?.pricingCategories?.[0]
@@ -212,20 +89,18 @@
     return pax;
   }
 
-  /** Reuse list-card proxy size (often cached), then fade in a sharper hero on desktop. */
-  function DetailHeroImage({ heroUrl, placeholderKey }) {
-    const profile = useResponsiveImageProfile();
+  /** Reuse card-sized derivative first, then fade into the larger hero asset. */
+  function DetailHeroImage({ fastUrl, hiUrl, placeholderKey }) {
     const [fastLoaded, setFastLoaded] = useState(false);
     const [hiLoaded, setHiLoaded] = useState(false);
-
-    const fastSrc = heroUrl ? proxyImageUrl(heroUrl, profile.heroFast) : null;
-    const hiSrc = profile.heroHi && heroUrl ? proxyImageUrl(heroUrl, profile.heroHi) : null;
+    const fastSrc = fastUrl || hiUrl || null;
+    const hiSrc = hiUrl || fastUrl || null;
     const useHiRes = !!(hiSrc && hiSrc !== fastSrc);
 
     useEffect(() => {
       setFastLoaded(false);
       setHiLoaded(false);
-    }, [heroUrl]);
+    }, [fastSrc, hiSrc]);
 
     useEffect(() => {
       if (!useHiRes) return undefined;
@@ -236,7 +111,7 @@
       return () => { img.onload = null; img.onerror = null; };
     }, [hiSrc, useHiRes]);
 
-    if (!heroUrl) {
+    if (!fastSrc && !hiSrc) {
       return (
         <div style={{ position: 'absolute', inset: 0, background: fakePhoto(placeholderKey) }} />
       );
@@ -299,6 +174,7 @@
     fxRates = { USD: 1 },
     initialDate = null,
     initialGuestCounts = null,
+    initialBookingSelection = null,
   }) {
     const T = (opts) => pick(lang, opts);
     const imgProfile = useResponsiveImageProfile();
@@ -306,7 +182,6 @@
     const [activePhoto, setActivePhoto] = useState(0);
     const [compactHeader, setCompactHeader] = useState(false);
     const [descExpanded, setDescExpanded] = useState(false);
-    const [stopsExpanded, setStopsExpanded] = useState(false);
     const [priceSheetOpen, setPriceSheetOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState(() => {
       const min = todayIso();
@@ -318,8 +193,15 @@
       adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
       children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
     }));
-    const [selectedPickupId, setSelectedPickupId] = useState('');
-    const [selectedExtras, setSelectedExtras] = useState({});
+    const [selectedPickupId, setSelectedPickupId] = useState(() => String(initialBookingSelection?.pickupPlaceId || ''));
+    const [selectedExtras, setSelectedExtras] = useState(() => (
+      Array.isArray(initialBookingSelection?.extras)
+        ? initialBookingSelection.extras.reduce((acc, extra) => {
+            if (extra && extra.id != null) acc[extra.id] = true;
+            return acc;
+          }, {})
+        : {}
+    ));
     const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
     const [availabilityOpen, setAvailabilityOpen] = useState(false);
     const [stickyBarVisible, setStickyBarVisible] = useState(false);
@@ -336,9 +218,23 @@
     const touchStart = useRef({ x: 0, y: 0 });
 
     const galleryPhotos = tour
-      ? ((tour.photoUrls && tour.photoUrls.length)
-        ? tour.photoUrls
-        : (tour.coverImageUrl ? [tour.coverImageUrl] : []))
+      ? ((tour.imageAssets && tour.imageAssets.length)
+        ? tour.imageAssets
+        : ((tour.photoUrls && tour.photoUrls.length)
+          ? tour.photoUrls.map((url, index) => ({
+              sourceUrl: url,
+              heroUrl: Array.isArray(tour.photoUrlsOwned) ? (tour.photoUrlsOwned[index] || null) : null,
+              galleryUrl: null,
+              cardUrl: index === 0 ? (tour.coverImageCardUrl || null) : null,
+              isCover: index === 0,
+            }))
+          : (tour.coverImageUrl ? [{
+              sourceUrl: tour.coverImageUrl,
+              heroUrl: tour.coverImageHeroUrl || tour.coverImageOwnedUrl || null,
+              galleryUrl: tour.coverImageGalleryUrl || null,
+              cardUrl: tour.coverImageCardUrl || null,
+              isCover: true,
+            }] : [])))
       : [];
 
     useEffect(() => {
@@ -346,32 +242,42 @@
       const fromTrip = initialDate && initialDate >= min ? initialDate : null;
       setActivePhoto(0);
       setDescExpanded(false);
-      setStopsExpanded(false);
       setPriceSheetOpen(false);
       setCompactHeader(false);
       setSelectedDate(fromTrip || nextIsoDate(14));
-      setSelectedStartTime('');
+      setSelectedStartTime(initialBookingSelection?.startTimeId ? String(initialBookingSelection.startTimeId) : '');
       setGuestCounts({
         adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
         children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
       });
-      setSelectedPickupId('');
-      setSelectedExtras({});
+      setSelectedPickupId(String(initialBookingSelection?.pickupPlaceId || ''));
+      setSelectedExtras(
+        Array.isArray(initialBookingSelection?.extras)
+          ? initialBookingSelection.extras.reduce((acc, extra) => {
+              if (extra && extra.id != null) acc[extra.id] = true;
+              return acc;
+            }, {})
+          : {}
+      );
       setAvailabilityState({ loading: false, error: '', data: null });
       setAvailabilityOpen(false);
       setStickyBarVisible(false);
       setInquiryOpen(false);
       setInquirySubmitting(false);
       setInquiryStatus({ ok: false, message: '' });
-    }, [tour && tour.id, galleryPhotos.length, initialDate, initialGuestCounts?.adults, initialGuestCounts?.children]);
+    }, [tour && tour.id, galleryPhotos.length, initialDate, initialGuestCounts?.adults, initialGuestCounts?.children, initialBookingSelection]);
 
     useEffect(() => {
+      if (initialBookingSelection?.startTimeId) {
+        setSelectedStartTime(String(initialBookingSelection.startTimeId));
+        return;
+      }
       const firstStartTime = tour && tour.startTimes && tour.startTimes[0];
       const nextValue = firstStartTime
         ? String(firstStartTime.id ?? firstStartTime.startTimeId ?? firstStartTime.label ?? '')
         : '';
       setSelectedStartTime(nextValue);
-    }, [tour && tour.id]);
+    }, [tour && tour.id, initialBookingSelection]);
 
     useEffect(() => {
       const onScroll = () => setCompactHeader(window.scrollY > COMPACT_HEADER_SCROLL);
@@ -436,20 +342,20 @@
     if (!tour) return null;
 
     const safeIndex = Math.min(activePhoto, Math.max(0, galleryPhotos.length - 1));
-    const heroUrl = galleryPhotos[safeIndex] || tour.coverImageUrl;
-    // Prefer the new normalized `cancellationFreeHours` (derived from
-    // cancellationPolicy.penaltyRules); fall back to the legacy minutes field
-    // for any older cached payloads that still ship `cancellationCutoffMinutes`.
-    const cancelHrs = Number.isFinite(Number(tour.cancellationFreeHours)) && Number(tour.cancellationFreeHours) > 0
-      ? Number(tour.cancellationFreeHours)
-      : (tour.cancellationCutoffMinutes != null ? Math.round(tour.cancellationCutoffMinutes / 60) : null);
-    const cancelText = cancelLabel(cancelHrs, T);
+    const activePhotoAsset = galleryPhotos[safeIndex] || null;
+    const heroFastUrl = activePhotoAsset
+      ? (activePhotoAsset.cardUrl
+        || activePhotoAsset.galleryUrl
+        || (activePhotoAsset.sourceUrl ? proxyImageUrl(activePhotoAsset.sourceUrl, imgProfile.heroFast) : null))
+      : null;
+    const heroHiUrl = activePhotoAsset
+      ? (activePhotoAsset.heroUrl
+        || (activePhotoAsset.sourceUrl && imgProfile.heroHi
+          ? proxyImageUrl(activePhotoAsset.sourceUrl, imgProfile.heroHi)
+          : null))
+      : null;
     const hasMultiPrice = tour.priceTable && tour.priceTable.length > 1;
     const stopsNamed = (tour.stops || []).filter((s) => s.name);
-    const stopsHidden = isMobile && !stopsExpanded && stopsNamed.length > MOBILE_STOPS_PREVIEW;
-    const stopsVisible = stopsHidden
-      ? stopsNamed.slice(0, MOBILE_STOPS_PREVIEW)
-      : stopsNamed;
     // Bókun ships descriptions as inline-styled HTML (rich paragraphs with
     // <p>, <br>, vendor styles). Detect that and route through the sanitiser
     // so paragraphs actually render, instead of collapsing into a wall of text.
@@ -462,24 +368,23 @@
     const descPreview = descNeedsCollapse && !descExpanded && !descriptionIsHtml
       ? `${tour.description.slice(0, DESC_PREVIEW_CHARS).trim()}…`
       : tour.description;
-    const descriptionParts = descriptionIsHtml ? { highlights: [], body: '' } : splitDescription(tour.description, tour.title);
-    const mapsUrl = mapsSearchUrl(tour.meetingPoint);
 
     const includedHtml = sanitizeVendorHtml(tour.includedHtml);
     const excludedHtml = sanitizeVendorHtml(tour.excludedHtml);
     const requirementsHtml = sanitizeVendorHtml(tour.requirementsHtml);
     const attentionHtml = sanitizeVendorHtml(tour.attentionHtml);
+    const cancellationPolicyHtml = sanitizeVendorHtml(tour.cancellationPolicyHtml);
     const hasIncluded = vendorHtmlIsMeaningful(includedHtml);
     const hasExcluded = vendorHtmlIsMeaningful(excludedHtml);
     const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
+    const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml);
     const extras = Array.isArray(tour.bookableExtras) ? tour.bookableExtras : [];
     const hasExtras = extras.length > 0;
     const optionalExtras = extras.filter((ex) => !ex.included && (!ex.selectionType || ex.selectionType === 'OPTIONAL'));
     const pickupInfo = tour.pickupInfo || null;
     const showPickupInfo = pickupInfo && pickupInfo.enabled;
     const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
-    const pickupIncluded = pickupInfo?.rate?.pricingType === 'INCLUDED_IN_PRICE';
     // Per-booking pax ceiling — Bókun back office uses this as the dropdown cap.
     const paxCap = Number.isFinite(Number(tour.passCapacity)) && Number(tour.passCapacity) > 0
       ? Number(tour.passCapacity)
@@ -495,14 +400,16 @@
     }, 0);
 
     const anchorItems = [
-      tour.description && { id: 'detail-about', label: T({ hant: '介紹', hans: '介绍', en: 'About' }) },
-      hasIncluded && { id: 'detail-included', label: T({ hant: '包含', hans: '包含', en: 'Included' }) },
-      stopsNamed.length > 0 && { id: 'detail-stops', label: T({ hant: '站點', hans: '站点', en: 'Stops' }) },
-      hasRequirements && { id: 'detail-requirements', label: T({ hant: '需自備', hans: '需自备', en: 'Bring' }) },
-      hasAttention && { id: 'detail-attention', label: T({ hant: '注意', hans: '注意', en: 'Notes' }) },
-      tour.meetingPoint && { id: 'detail-meeting', label: T({ hant: '集合', hans: '集合', en: 'Meet' }) },
-      showPickupInfo && { id: 'detail-pickup', label: T({ hant: '接送', hans: '接送', en: 'Pickup' }) },
-      tour.startTimes && tour.startTimes.length > 0 && { id: 'detail-times', label: T({ hant: '時段', hans: '时段', en: 'Times' }) },
+      tour.description && { id: 'detail-about', label: 'Description' },
+      hasIncluded && { id: 'detail-included', label: 'Included' },
+      hasExcluded && { id: 'detail-excluded', label: 'Excluded' },
+      stopsNamed.length > 0 && { id: 'detail-stops', label: 'Itinerary' },
+      hasRequirements && { id: 'detail-requirements', label: 'Requirements' },
+      hasAttention && { id: 'detail-attention', label: 'Attention' },
+      hasCancellationPolicy && { id: 'detail-cancellation', label: 'Cancellation policy' },
+      tour.meetingPoint && { id: 'detail-meeting', label: 'Meeting point' },
+      showPickupInfo && { id: 'detail-pickup', label: 'Pick-up' },
+      tour.startTimes && tour.startTimes.length > 0 && { id: 'detail-times', label: 'Start times' },
     ].filter(Boolean);
     // `hasExtras` flag retained for future use; extras now live in BookPanel.
     void hasExtras;
@@ -510,6 +417,55 @@
     function scrollToSection(id) {
       const el = document.getElementById(id);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function estimateSelectionBaseTotalUsd() {
+      const rows = Array.isArray(tour.priceTable) ? tour.priceTable : [];
+      const adultAmount = Number(rows.find((row) => row.categoryId === adultCategory?.id)?.amount);
+      const childAmount = Number(rows.find((row) => row.categoryId === childCategory?.id)?.amount);
+      const fallbackUnit = Number(resolvePriceUsd(tour)) || 0;
+      const adultUnit = Number.isFinite(adultAmount) && adultAmount > 0 ? adultAmount : fallbackUnit;
+      const childUnit = Number.isFinite(childAmount) && childAmount >= 0 ? childAmount : adultUnit;
+      return (adultUnit * guestCounts.adults) + (childUnit * guestCounts.children);
+    }
+
+    function buildBookingSelection() {
+      const startTimeRow = (tour.startTimes || []).find((st, i) => {
+        const value = String(st.id ?? st.startTimeId ?? st.label ?? i);
+        return value === String(selectedStartTime || '');
+      }) || null;
+      const pickupRow = pickupPlaces.find((p) => String(p.id) === String(selectedPickupId || '')) || null;
+      const selectedExtrasRows = optionalExtras
+        .filter((ex) => !!selectedExtras[ex.id])
+        .map((ex) => ({
+          id: ex.id,
+          title: ex.title,
+          quantity: 1,
+          pricedPerPerson: !!ex.pricedPerPerson,
+          unitPriceUsd: Number(ex.price) || 0,
+        }));
+      const liveBaseTotal = Number(availabilityState.data && availabilityState.data.total);
+      const baseTotalUsd = Number.isFinite(liveBaseTotal) && liveBaseTotal > 0
+        ? liveBaseTotal
+        : estimateSelectionBaseTotalUsd();
+      const totalUsd = baseTotalUsd + (Number(extrasSubtotal) || 0);
+
+      return {
+        date: selectedDate || null,
+        startTimeId: selectedStartTime || null,
+        startTimeLabel: startTimeRow ? (startTimeRow.label || startTimeRow.startTime || null) : null,
+        guests: { adults: guestCounts.adults, children: guestCounts.children },
+        pickupPlaceId: selectedPickupId ? Number(selectedPickupId) : null,
+        pickupTitle: pickupRow ? pickupRow.title : null,
+        extras: selectedExtrasRows,
+        quotedAt: new Date().toISOString(),
+        pricing: {
+          source: Number.isFinite(liveBaseTotal) && liveBaseTotal > 0 ? 'live' : 'estimate',
+          baseTotalUsd,
+          extrasTotalUsd: Number(extrasSubtotal) || 0,
+          totalUsd,
+        },
+      };
     }
 
     async function checkAvailability() {
@@ -625,98 +581,99 @@
           <h1 className="detail-mini-header__title">{tour.title}</h1>
         </header>
 
+        {/* ── Immersive hero: title + meta overlaid at bottom ── */}
         <div
           className="detail-hero"
           onTouchStart={onHeroTouchStart}
           onTouchEnd={onHeroTouchEnd}
         >
-          <DetailHeroImage heroUrl={heroUrl} placeholderKey={tour.photo} />
+          <DetailHeroImage fastUrl={heroFastUrl} hiUrl={heroHiUrl} placeholderKey={tour.photo} />
           <div className="detail-hero-scrim" aria-hidden="true" />
-          <div className="auralis-container detail-hero-top">
+
+          {/* Top bar: back + counter */}
+          <div className="detail-hero-topbar">
             <BackButton onBack={onBack} lang={lang} light className="detail-hero-back" />
-          </div>
-          {galleryPhotos.length > 1 && (
-            <>
+            {galleryPhotos.length > 1 && (
               <div className="detail-hero-counter" aria-live="polite">
                 {safeIndex + 1} / {galleryPhotos.length}
               </div>
-              <div
-                className="detail-photo-strip"
-                role="tablist"
-                aria-label={T({ hant: '行程照片', hans: '行程照片', en: 'Tour photos' })}
-              >
-                {galleryPhotos.slice(0, isMobile ? 5 : 8).map((url, i) => {
-                  const selected = safeIndex === i;
-                  const nearActive = Math.abs(i - safeIndex) <= 1;
-                  return (
-                    <button
-                      key={url + i}
-                      type="button"
-                      role="tab"
-                      aria-selected={selected}
-                      aria-label={T({
-                        hant: `照片 ${i + 1}`,
-                        hans: `照片 ${i + 1}`,
-                        en: `Photo ${i + 1}`,
-                      })}
-                      className={`detail-photo-thumb-btn${selected ? ' is-selected' : ''}`}
-                      onClick={() => setActivePhoto(i)}
-                    >
-                      <img
-                        src={proxyImageUrl(url, imgProfile.gallery)}
-                        alt=""
-                        loading={nearActive ? 'eager' : 'lazy'}
-                        fetchPriority={selected ? 'high' : 'low'}
-                        decoding="async"
-                        draggable={false}
-                        className="detail-photo-thumb"
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
+            )}
+          </div>
+
+          {/* Caption: title + meta overlaid at bottom */}
+          <div className="detail-hero-caption auralis-container">
+            {tour.badge && (
+              <span className="detail-hero-badge">{tour.badge}</span>
+            )}
+            <h1 className="detail-hero-title">{tour.title}</h1>
+            <div className="detail-hero-facts">
+              {tour.rating > 0 && (
+                <span className="detail-hero-fact">
+                  <Icon name="star" size={13} color="#FFB347" />
+                  <b>{tour.rating}</b>
+                  <span>· {tour.reviews.toLocaleString()} {T({ hant: '則評價', hans: '条评价', en: 'reviews' })}</span>
+                </span>
+              )}
+              {tour.duration && (
+                <span className="detail-hero-fact">
+                  <Icon name="clock" size={13} color="rgba(255,255,255,0.72)" />
+                  {tour.duration}
+                </span>
+              )}
+              {tour.supplier && (
+                <span className="detail-hero-fact">
+                  <Icon name="building-2" size={13} color="rgba(255,255,255,0.72)" />
+                  {tour.supplier}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* ── Photo row: horizontal scrollable strip below hero ── */}
+        {galleryPhotos.length > 1 && (
+          <div
+            className="detail-photo-row"
+            role="tablist"
+            aria-label={T({ hant: '行程照片', hans: '行程照片', en: 'Tour photos' })}
+          >
+            {galleryPhotos.map((asset, i) => {
+              const selected = safeIndex === i;
+              const thumbSrc = asset.galleryUrl
+                || asset.cardUrl
+                || (asset.sourceUrl ? proxyImageUrl(asset.sourceUrl, imgProfile.gallery) : null);
+              return (
+                <button
+                  key={(asset.sourceUrl || asset.heroUrl || 'photo') + i}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-label={T({ hant: `照片 ${i + 1}`, hans: `照片 ${i + 1}`, en: `Photo ${i + 1}` })}
+                  className={`detail-photo-row__btn${selected ? ' is-active' : ''}`}
+                  onClick={() => setActivePhoto(i)}
+                >
+                  <img
+                    src={thumbSrc}
+                    alt=""
+                    loading={Math.abs(i - safeIndex) <= 2 ? 'eager' : 'lazy'}
+                    fetchPriority={selected ? 'high' : 'low'}
+                    decoding="async"
+                    draggable={false}
+                    className="detail-photo-row__img"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className="auralis-container detail-layout">
           <div className="detail-main">
-            <header className="detail-header">
-              {tour.badge && (
-                <span className={`detail-badge${tour.badgeKey === 'premium' ? ' detail-badge--premium' : ''}`}>
-                  {tour.badge}
-                </span>
-              )}
-              <h1 className="detail-page-title">{tour.title}</h1>
-              <div className="detail-meta">
-                {tour.rating > 0 && (
-                  <span className="detail-meta__item detail-meta__item--rating">
-                    <Icon name="star" size={16} color="#FFB347" />
-                    <b>{tour.rating}</b>
-                    <span className="detail-meta__reviews">
-                      {tour.reviews.toLocaleString()} {T({ hant: '則評價', hans: '条评价', en: 'reviews' })}
-                    </span>
-                  </span>
-                )}
-                {tour.duration && (
-                  <span className="detail-meta__item">
-                    <Icon name="clock" size={16} />
-                    {tour.duration}
-                  </span>
-                )}
-                {tour.supplier && (
-                  <span className="detail-meta__item detail-meta__item--supplier">
-                    <Icon name="building-2" size={16} />
-                    <span className="detail-meta__ellipsis">{tour.supplier}</span>
-                  </span>
-                )}
-              </div>
-              {loading && (
-                <p className="detail-loading-hint">
-                  {T({ hant: '正在載入完整內容…', hans: '正在加载完整内容…', en: 'Loading full details…' })}
-                </p>
-              )}
-            </header>
+            {loading && (
+              <p className="detail-loading-hint" style={{ marginBottom: 0 }}>
+                {T({ hant: '正在載入完整內容…', hans: '正在加载完整内容…', en: 'Loading full details…' })}
+              </p>
+            )}
 
             {isMobile && anchorItems.length > 1 && (
               <nav className="detail-anchor-nav" aria-label={T({ hant: '頁面章節', hans: '页面章节', en: 'Page sections' })}>
@@ -733,31 +690,13 @@
               </nav>
             )}
 
-            {tour.tags && tour.tags.length > 0 && (
-              <div className="detail-tags">
-                {tour.tags.map((tag) => (
-                  <span key={tag.key} className="detail-tag">{tag.label}</span>
-                ))}
-              </div>
-            )}
-
             {(tour.description || loading) && (
               <Section
                 id="detail-about"
-                title={T({ hant: '體驗介紹', hans: '体验介绍', en: 'About this experience' })}
+                title="Description"
               >
                 {tour.description ? (
                   <>
-                    {descriptionParts.highlights.length > 0 && (
-                      <div className="detail-highlight-list">
-                        {descriptionParts.highlights.map((line, index) => (
-                          <div key={index} className="detail-highlight-item">
-                            <Icon name="sparkles" size={15} color="var(--aurora-deep)" />
-                            <span>{line}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     {descriptionIsHtml ? (
                       <div
                         className={`detail-description detail-description--rich detail-vendor-html${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}
@@ -765,7 +704,7 @@
                       />
                     ) : (
                       <p className={`detail-description${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}>
-                        {descExpanded ? tour.description : (descriptionParts.body || descPreview)}
+                        {descExpanded ? tour.description : descPreview}
                       </p>
                     )}
                     {descNeedsCollapse && (
@@ -791,43 +730,33 @@
               </Section>
             )}
 
-            {(hasIncluded || hasExcluded) && (
+            {hasIncluded && (
               <Section
                 id="detail-included"
-                title={T({ hant: '行程包含 / 不含', hans: '行程包含 / 不含', en: 'What\u2019s included' })}
+                title="Included"
               >
-                <div className="detail-included-grid">
-                  {hasIncluded && (
-                    <div className="detail-included-block detail-included-block--yes">
-                      <div className="detail-included-block__head">
-                        <Icon name="check" size={16} color="#0A7B4F" />
-                        <span>{T({ hant: '含', hans: '含', en: 'Included' })}</span>
-                      </div>
-                      <div className="detail-vendor-html"
-                           dangerouslySetInnerHTML={{ __html: includedHtml }} />
-                    </div>
-                  )}
-                  {hasExcluded && (
-                    <div className="detail-included-block detail-included-block--no">
-                      <div className="detail-included-block__head">
-                        <Icon name="x" size={16} color="#C03A3A" />
-                        <span>{T({ hant: '不含', hans: '不含', en: 'Not included' })}</span>
-                      </div>
-                      <div className="detail-vendor-html"
-                           dangerouslySetInnerHTML={{ __html: excludedHtml }} />
-                    </div>
-                  )}
-                </div>
+                <div className="detail-vendor-html"
+                     dangerouslySetInnerHTML={{ __html: includedHtml }} />
+              </Section>
+            )}
+
+            {hasExcluded && (
+              <Section
+                id="detail-excluded"
+                title="Excluded"
+              >
+                <div className="detail-vendor-html"
+                     dangerouslySetInnerHTML={{ __html: excludedHtml }} />
               </Section>
             )}
 
             {stopsNamed.length > 0 && (
               <Section
                 id="detail-stops"
-                title={T({ hant: '行程站點', hans: '行程站点', en: 'Itinerary stops' })}
+                title="Itinerary"
               >
                 <ol className="detail-stops-list">
-                  {stopsVisible.map((stop, i) => (
+                  {stopsNamed.map((stop, i) => (
                     <li key={stop.id} className="detail-stop">
                       <span className="detail-stop__num">{i + 1}</span>
                       <div>
@@ -839,46 +768,24 @@
                     </li>
                   ))}
                 </ol>
-                {stopsHidden && (
-                  <button
-                    type="button"
-                    className="detail-stops-more"
-                    onClick={() => setStopsExpanded(true)}
-                  >
-                    {T({
-                      hant: `還有 ${stopsNamed.length - MOBILE_STOPS_PREVIEW} 個站點`,
-                      hans: `还有 ${stopsNamed.length - MOBILE_STOPS_PREVIEW} 个站点`,
-                      en: `${stopsNamed.length - MOBILE_STOPS_PREVIEW} more stops`,
-                    })}
-                  </button>
-                )}
               </Section>
             )}
 
             {tour.meetingPoint && (
               <Section
                 id="detail-meeting"
-                title={T({ hant: '集合地點', hans: '集合地点', en: 'Meeting point' })}
+                title="Meeting point"
               >
                 <div className="detail-meeting">
                   <Icon name="map-pin" size={20} color="var(--coral)" />
                   <div className="detail-meeting__body">
-                    <div className="detail-meeting__title">
-                      {tour.meetingPoint.title || tour.meetingPoint.name || T({ hant: '集合點', hans: '集合点', en: 'Meeting point' })}
-                    </div>
+                    {(tour.meetingPoint.title || tour.meetingPoint.name) && (
+                      <div className="detail-meeting__title">
+                        {tour.meetingPoint.title || tour.meetingPoint.name}
+                      </div>
+                    )}
                     {tour.meetingPoint.address && (
                       <div className="detail-meeting__address">{tour.meetingPoint.address}</div>
-                    )}
-                    {mapsUrl && (
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="detail-meeting__maps"
-                      >
-                        <Icon name="external-link" size={14} />
-                        {T({ hant: '在地圖中開啟', hans: '在地图中打开', en: 'Open in Maps' })}
-                      </a>
                     )}
                   </div>
                 </div>
@@ -888,7 +795,7 @@
             {tour.startTimes && tour.startTimes.length > 0 && (
               <Section
                 id="detail-times"
-                title={T({ hant: '出發時段', hans: '出发时段', en: 'Start times' })}
+                title="Start times"
               >
                 <div className="detail-chips">
                   {tour.startTimes.map((st, i) => {
@@ -903,7 +810,7 @@
             )}
 
             {tour.languages && tour.languages.length > 0 && (
-              <Section title={T({ hant: '導覽語言', hans: '导览语言', en: 'Guide languages' })}>
+              <Section title="Guide languages">
                 <div className="detail-chips">
                   {tour.languages.map((l) => (
                     <span key={l} className="detail-chip detail-chip--lang">{l}</span>
@@ -915,7 +822,7 @@
             {hasRequirements && (
               <Section
                 id="detail-requirements"
-                title={T({ hant: '請自備 / 穿著', hans: '请自备 / 穿着', en: 'What to bring' })}
+                title="Requirements"
               >
                 <div className="detail-vendor-html"
                      dangerouslySetInnerHTML={{ __html: requirementsHtml }} />
@@ -925,52 +832,23 @@
             {showPickupInfo && (
               <Section
                 id="detail-pickup"
-                title={T({ hant: '接送服務', hans: '接送服务', en: 'Pickup' })}
+                title="Pick-up"
               >
                 <div className="detail-pickup-card">
                   <Icon name="bus" size={18} color="var(--aurora-deep, #00837A)" />
                   <div className="detail-pickup-card__body">
-                    <div className="detail-pickup-card__title">
-                      {T({
-                        hant: '提供接送服務',
-                        hans: '提供接送服务',
-                        en: 'Pickup service available',
-                      })}
-                    </div>
-                    <ul className="detail-pickup-card__list">
-                      {pickupInfo.minutesBefore != null && pickupInfo.minutesBefore > 0 && (
-                        <li>
-                          {T({
-                            hant: `預計於出發前 ${pickupInfo.minutesBefore} 分鐘接送`,
-                            hans: `预计于出发前 ${pickupInfo.minutesBefore} 分钟接送`,
-                            en: `Pickup approximately ${pickupInfo.minutesBefore} minutes before departure`,
-                          })}
-                        </li>
-                      )}
-                      {pickupInfo.timeWindowMinutes != null && pickupInfo.timeWindowMinutes > 0 && (
-                        <li>
-                          {T({
-                            hant: `請於接送時段前 ${pickupInfo.timeWindowMinutes} 分鐘準備好`,
-                            hans: `请于接送时段前 ${pickupInfo.timeWindowMinutes} 分钟准备好`,
-                            en: `Be ready ${pickupInfo.timeWindowMinutes} minutes before your pickup window`,
-                          })}
-                        </li>
-                      )}
-                      <li>
-                        {pickupInfo.customAllowed
-                          ? T({
-                              hant: '可指定住宿地點接送',
-                              hans: '可指定住宿地点接送',
-                              en: 'Custom hotel pickup accepted',
-                            })
-                          : T({
-                              hant: '請於預訂時選擇指定接送點',
-                              hans: '请于预订时选择指定接送点',
-                              en: 'Pickup at one of the designated stops (selected when booking)',
-                            })}
-                      </li>
-                      {pickupInfo.noPickupMessage && <li>{pickupInfo.noPickupMessage}</li>}
-                    </ul>
+                    {pickupPlaces.length > 0 && (
+                      <ul className="detail-pickup-card__list">
+                        {pickupPlaces.map((place) => (
+                          <li key={place.id}>{place.title}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {pickupInfo.noPickupMessage && (
+                      <div className="detail-vendor-html">
+                        {pickupInfo.noPickupMessage}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Section>
@@ -979,7 +857,7 @@
             {hasAttention && (
               <Section
                 id="detail-attention"
-                title={T({ hant: '重要注意事項', hans: '重要注意事项', en: 'Good to know' })}
+                title="Attention"
               >
                 <div className="detail-attention-card">
                   <Icon name="info" size={18} color="var(--warning, #FFB347)" />
@@ -989,72 +867,28 @@
               </Section>
             )}
 
-
-            {(tour.difficultyLevel || tour.minAge != null || tour.cancellationFreeHours || (tour.activityAttributes && tour.activityAttributes.length > 0)) && (
-              <Section title={T({ hant: '重點資訊', hans: '重点信息', en: 'Quick facts' })}>
-                <div className="detail-facts-grid">
-                  {tour.difficultyLevel && (
-                    <div className="detail-fact">
-                      <Icon name="activity" size={16} />
-                      <div>
-                        <div className="detail-fact__label">{T({ hant: '難度', hans: '难度', en: 'Difficulty' })}</div>
-                        <div className="detail-fact__value">{difficultyLabel(tour.difficultyLevel, T)}</div>
+            {hasCancellationPolicy && (
+              <Section
+                id="detail-cancellation"
+                title="Cancellation policy"
+              >
+                <div className="detail-attention-card">
+                  <Icon name="shield-check" size={18} color="var(--aurora-deep, #00837A)" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', minWidth: 0 }}>
+                    {tour.cancellationPolicyTitle && (
+                      <div style={{ font: '600 13px/1.45 var(--font-text)', color: 'var(--fg-1)' }}>
+                        {tour.cancellationPolicyTitle}
                       </div>
-                    </div>
-                  )}
-                  {tour.minAge != null && tour.minAge > 0 && (
-                    <div className="detail-fact">
-                      <Icon name="users" size={16} />
-                      <div>
-                        <div className="detail-fact__label">{T({ hant: '年齡限制', hans: '年龄限制', en: 'Min age' })}</div>
-                        <div className="detail-fact__value">
-                          {T({
-                            hant: `${tour.minAge} 歲以上`,
-                            hans: `${tour.minAge} 岁以上`,
-                            en: `${tour.minAge}+ years`,
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {tour.cancellationFreeHours > 0 && (
-                    <div className="detail-fact">
-                      <Icon name="shield-check" size={16} color="var(--aurora-deep, #00837A)" />
-                      <div>
-                        <div className="detail-fact__label">{T({ hant: '取消政策', hans: '取消政策', en: 'Cancellation' })}</div>
-                        <div className="detail-fact__value">
-                          {tour.cancellationFreeHours >= 48
-                            ? T({
-                                hant: `${Math.round(tour.cancellationFreeHours / 24)} 天前可免費取消`,
-                                hans: `${Math.round(tour.cancellationFreeHours / 24)} 天前可免费取消`,
-                                en: `Free up to ${Math.round(tour.cancellationFreeHours / 24)} days before`,
-                              })
-                            : T({
-                                hant: `${tour.cancellationFreeHours} 小時前可免費取消`,
-                                hans: `${tour.cancellationFreeHours} 小时前可免费取消`,
-                                en: `Free up to ${tour.cancellationFreeHours}h before`,
-                              })}
-                        </div>
-                        {tour.cancellationPolicyTitle && (
-                          <div style={{ font: '500 11px/1.4 var(--font-text)', color: 'var(--fg-3)', marginTop: 2 }}>
-                            {tour.cancellationPolicyTitle}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {(tour.activityAttributes || []).slice(0, 4).map((attr) => (
-                    <div key={attr} className="detail-fact">
-                      <Icon name={attributeIcon(attr)} size={16} />
-                      <div>
-                        <div className="detail-fact__label">{T({ hant: '特色', hans: '特色', en: 'Feature' })}</div>
-                        <div className="detail-fact__value">{attributeLabel(attr, T)}</div>
-                      </div>
-                    </div>
-                  ))}
+                    )}
+                    <div
+                      className="detail-vendor-html"
+                      dangerouslySetInnerHTML={{ __html: cancellationPolicyHtml }}
+                    />
+                  </div>
                 </div>
               </Section>
             )}
+
           </div>
 
           <BookPanel
@@ -1064,10 +898,9 @@
             fxRates={fxRates}
             priceUsd={resolvePriceUsd(tour)}
             loading={loading}
-            cancelText={cancelText}
             hasMultiPrice={hasMultiPrice}
             inTrip={inTrip}
-            onAdd={onAdd}
+            onAddSelection={() => onAdd && onAdd(tour, { booking: buildBookingSelection() })}
             trip={trip}
             isMobile={isMobile}
             onOpenPrices={() => setPriceSheetOpen(true)}
@@ -1082,7 +915,6 @@
             paxCap={paxCap}
             pickupInfo={pickupInfo}
             pickupPlaces={pickupPlaces}
-            pickupIncluded={pickupIncluded}
             selectedPickupId={selectedPickupId}
             onSelectedPickupId={setSelectedPickupId}
             optionalExtras={optionalExtras}
@@ -1118,10 +950,10 @@
   }
 
   function BookPanel({
-    tour, T, displayCurrency, fxRates, priceUsd, loading, cancelText, hasMultiPrice, inTrip, onAdd, trip,
+    tour, T, displayCurrency, fxRates, priceUsd, loading, hasMultiPrice, inTrip, onAddSelection, trip,
     isMobile, onOpenPrices, selectedDate, onSelectedDate, selectedStartTime, onSelectedStartTime, guestCounts,
     onGuestCounts, adultCategory, childCategory, paxCap,
-    pickupInfo, pickupPlaces, pickupIncluded, selectedPickupId, onSelectedPickupId,
+    pickupInfo, pickupPlaces, selectedPickupId, onSelectedPickupId,
     optionalExtras, selectedExtras, onSelectedExtras, extrasSubtotal,
     stickyBarVisible, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
     inquirySubmitting, inquiryStatus, onSubmitInquiry,
@@ -1132,24 +964,6 @@
         ? '…'
         : T({ hant: '價格載入中', hans: '价格加载中', en: 'Price loading' }));
     const guestTotal = guestCounts.adults + guestCounts.children;
-    const trustRows = [
-      cancelText && {
-        icon: 'shield-check',
-        label: cancelText,
-      },
-      tour.availability?.bookableNow && {
-        icon: 'zap',
-        label: T({ hant: '即時確認庫存', hans: '即时确认库存', en: 'Instant inventory confirmation' }),
-      },
-      tour.startTimes?.length > 1 && {
-        icon: 'clock-3',
-        label: T({ hant: '多個出發時段', hans: '多个出发时段', en: 'Multiple departure times' }),
-      },
-      tour.languages?.length > 0 && {
-        icon: 'languages',
-        label: T({ hant: `${tour.languages.length} 種導覽語言`, hans: `${tour.languages.length} 种导览语言`, en: `${tour.languages.length} guide languages` }),
-      },
-    ].filter(Boolean);
     const showAvailabilityPanel = !isMobile || availabilityOpen;
     const showInquiryPanel = !isMobile || inquiryOpen;
     const mobileAvailabilitySummary = availabilityState.data
@@ -1180,12 +994,6 @@
                   {T({ hant: '先顯示基礎票價，查詢後更新即時可售與總價', hans: '先显示基础票价，查询后更新即时可售与总价', en: 'Base fare shown now. Live availability updates below.' })}
                 </p>
               )}
-              {isMobile && cancelText && (
-                <p className="detail-book-trust">
-                  <Icon name="shield-check" size={14} color="var(--aurora-deep)" />
-                  {cancelText}
-                </p>
-              )}
               {isMobile && hasMultiPrice && (
                 <button type="button" className="detail-book-prices-link" onClick={onOpenPrices}>
                   {T({ hant: '查看票價', hans: '查看票价', en: 'View ticket prices' })}
@@ -1202,25 +1010,13 @@
             </div>
           )}
 
-          {trustRows.length > 0 && (
-            <div className="detail-book-extra detail-book-extra--desktop detail-book-trust-grid">
-              {trustRows.map((row) => (
-                <div key={row.label} className="detail-book-trust-item">
-                  <Icon name={row.icon} size={16} color="var(--aurora-deep)" />
-                  <span>{row.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
           <button
             type="button"
             className="detail-book-cta"
-            onClick={() => onAdd && onAdd(tour)}
-            disabled={inTrip}
+            onClick={onAddSelection}
           >
             {inTrip
-              ? <><Icon name="check" size={18} /> {T({ hant: '已在行程中', hans: '已在行程中', en: 'In your trip' })}</>
+              ? <><Icon name="check" size={18} /> {T({ hant: '更新行程設定', hans: '更新行程设置', en: 'Update trip settings' })}</>
               : <>{T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })} <Icon name="plus" size={18} /></>}
           </button>
 
@@ -1327,11 +1123,11 @@
                         <option key={p.id} value={String(p.id)}>{p.title}</option>
                       ))}
                     </select>
-                    <span className="detail-book-helper" style={{ font: '500 12px/1.4 var(--font-text)', color: 'var(--fg-2)' }}>
-                      {pickupIncluded
-                        ? T({ hant: '（已含於票價）', hans: '（已含于票价）', en: '(included in price)' })
-                        : T({ hant: '可能加收接送費，下方總價會自動更新', hans: '可能加收接送费，下方总价会自动更新', en: 'May add a pickup fee — total updates below' })}
-                    </span>
+                    {pickupInfo.noPickupMessage && (
+                      <span className="detail-book-helper" style={{ font: '500 12px/1.4 var(--font-text)', color: 'var(--fg-2)' }}>
+                        {pickupInfo.noPickupMessage}
+                      </span>
+                    )}
                   </label>
                 )}
 
@@ -1561,11 +1357,10 @@
             <button
               type="button"
               className="detail-mobile-sticky-bar__cta"
-              onClick={() => onAdd && onAdd(tour)}
-              disabled={inTrip}
+              onClick={onAddSelection}
             >
               {inTrip
-                ? T({ hant: '已在行程中', hans: '已在行程中', en: 'In your trip' })
+                ? T({ hant: '更新行程', hans: '更新行程', en: 'Update trip' })
                 : T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })}
             </button>
           </div>

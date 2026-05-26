@@ -47,26 +47,6 @@
 
   // Tiny helper — strip HTML tags out of a Bókun description (they ship
   // rich-text). Production should use DOMPurify; this is fine for a prototype.
-  function decodeHtmlEntities(text) {
-    const input = text == null ? '' : String(text);
-    if (!input) return '';
-    if (typeof document === 'undefined') {
-      return input
-        .replace(/&#39;/g, "'")
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>');
-    }
-    const el = document.createElement('textarea');
-    el.innerHTML = input;
-    return el.value;
-  }
-
-  function stripHtml(html) {
-    return decodeHtmlEntities(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  }
-
   const DETAIL_CACHE_TTL_MS = 5 * 60 * 1000;
   const activityDetailCache = new Map();
   const activityDetailInflight = new Map();
@@ -106,16 +86,12 @@
 
   function guideLanguageLabel(phrase, lang) {
     if (!phrase) return '';
-    if (lang === 'en') return String(phrase);
-    const T = A.BOKUN_TRANSLATIONS || {};
-    const key = String(phrase).trim().toLowerCase().replace(/[\s-]+/g, '_');
-    return pickFromOverlay(T.GUIDE_LANGUAGE && T.GUIDE_LANGUAGE[key], lang, '');
+    return String(phrase);
   }
 
   function localizeMeetingPoint(mp, lang) {
     if (!mp) return null;
-    if (lang === 'en') return mp;
-    return null;
+    return mp;
   }
 
   /** Merge static bokunTranslations.js with Supabase overlays from API. */
@@ -319,18 +295,11 @@
       const overlay = getActivityOverlay(activity.id);
 
       // ---- core text ----
-      const enTitle = activity.title || '';
-      const title = pickFromOverlay(overlay.title, lang, lang === 'en' ? enTitle : '');
-      const summary = pickFromOverlay(
-        overlay.summary,
-        lang,
-        lang === 'en' ? stripHtml(activity.summary || activity.description) : '',
-      );
-      const description = pickFromOverlay(
-        overlay.description,
-        lang,
-        lang === 'en' ? stripHtml(activity.description || activity.summary || '') : '',
-      );
+      // Supplier-authored content should match Bókun verbatim. Do not
+      // translate or rewrite title / summary / description in the UI layer.
+      const title = String(activity.title || '');
+      const summary = String(activity.summary || '');
+      const description = String(activity.description || activity.summary || '');
       const catKey = activity.categories && activity.categories[0];
       const mode = pickFromOverlay(overlay.mode, lang, '')
         || (catKey ? pickFromOverlay(T.CATEGORY[catKey], lang, lang === 'en' ? catKey : '') : '');
@@ -341,14 +310,8 @@
         : '';
       const supplierRole = '';
 
-      // ---- duration ----
-      // Bókun ships `durationText` as a long English phrase ("5 hours and
-      // 30 minutes"); we re-render a compact form ("5h 30m" / "5 小時 30 分")
-      // either from numeric minutes or by parsing the original text.
-      const minsForDuration = Number(activity.durationMinutes) > 0
-        ? Number(activity.durationMinutes)
-        : parseDurationTextToMinutes(activity.durationText);
-      const duration = formatDuration(minsForDuration, lang) || '';
+      // Supplier-authored duration text should stay verbatim.
+      const duration = String(activity.durationText || activity.duration || '');
 
       // ---- pricing ----
       const defaultCategoryId = (activity.pricingCategories || []).find(c => c.defaultCategory)?.id
@@ -374,17 +337,10 @@
 
       const priceTable = (activity.pricing || [])
         .map((row) => {
-          const cat = T.PRICING_CATEGORY[row.pricingCategoryId];
           const catRaw = (activity.pricingCategories || []).find((c) => c.id === row.pricingCategoryId);
           return {
             categoryId: row.pricingCategoryId,
-            label: pickFromOverlay(
-              cat,
-              lang,
-              lang === 'en'
-                ? (catRaw?.fullTitle || catRaw?.title || 'Traveler')
-                : '',
-            ),
+            label: catRaw?.fullTitle || catRaw?.title || (lang === 'en' ? 'Traveler' : ''),
             amount: row.amount,
             currency: row.currency,
           };
@@ -394,22 +350,10 @@
       // ---- stops (for the trip-with-map screen) ----
       const stops = (activity.stops || []).map(stop => ({
         id: stop.id,
-        name: pickFromOverlay(overlay.stops && overlay.stops[String(stop.id)], lang, lang === 'en' ? stop.title : ''),
+        name: stop.title || '',
         geo: stop.geoPoint,
         durationMinutes: stop.durationMinutes,
       }));
-
-      // ---- tags ----
-      const tags = (activity.tags || [])
-        .map((key) => ({
-          key,
-          label: pickFromOverlay(T.TAG[key], lang, lang === 'en' ? key : ''),
-        }))
-        .filter((t) => t.label);
-
-      // ---- badge (a single hero label) ----
-      const badgeKey = pickPrimaryBadge(activity.tags);
-      const badge = badgeKey ? pickFromOverlay(T.TAG[badgeKey], lang, '') : null;
 
       // ---- availability ----
       const avWarning = activity.availability && activity.availability.warning;
@@ -439,13 +383,19 @@
         price: resolvedPriceAmount,
         priceCurrency: resolvedPriceCurrency,
         priceTable,
-        badge,
-        badgeKey,
+        badge: null,
+        badgeKey: null,
         photo: activity.coverImagePlaceholder || 'aurora',
         coverImageUrl: activity.coverImageUrl,
+        coverImageOwnedUrl: activity.coverImageOwnedUrl || null,
+        coverImageCardUrl: activity.coverImageCardUrl || null,
+        coverImageHeroUrl: activity.coverImageHeroUrl || null,
+        coverImageGalleryUrl: activity.coverImageGalleryUrl || null,
         photoUrls: (activity.photoUrls && activity.photoUrls.length)
           ? activity.photoUrls
           : (activity.coverImageUrl ? [activity.coverImageUrl] : []),
+        photoUrlsOwned: Array.isArray(activity.photoUrlsOwned) ? activity.photoUrlsOwned : [],
+        imageAssets: Array.isArray(activity.imageAssets) ? activity.imageAssets : [],
         meetingPoint: localizeMeetingPoint(activity.meetingPoint, lang),
         meetingType: activity.meetingType || null,
         startTimes: activity.startTimes || [],
@@ -455,7 +405,7 @@
         routeIds: activity.routeIds || [],
         facetIds: activity.facetIds || [],
         stops,
-        tags,
+        tags: [],
         availability,
         vendor: activity.vendor,
         languages: (activity.languages || [])
@@ -478,6 +428,7 @@
         activityAttributes: activity.activityAttributes || [],
         cancellationFreeHours: activity.cancellationFreeHours ?? null,
         cancellationPolicyTitle: activity.cancellationPolicyTitle || null,
+        cancellationPolicyHtml: activity.cancellationPolicyHtml || '',
         raw: activity,
       };
     },
@@ -531,51 +482,6 @@
 
   // -------- helpers --------
 
-  function formatDuration(mins, lang) {
-    const total = Number(mins);
-    if (!Number.isFinite(total) || total <= 0) return null;
-    const dayMin = 24 * 60;
-    const d = Math.floor(total / dayMin);
-    const remAfterDays = total - d * dayMin;
-    const h = Math.floor(remAfterDays / 60);
-    const m = Math.round(remAfterDays % 60);
-
-    if (lang === 'en') {
-      if (d > 0) return h === 0 ? `${d}d` : `${d}d ${h}h`;
-      if (h === 0) return `${m}m`;
-      if (m === 0) return `${h}h`;
-      return `${h}h ${m}m`;
-    }
-    const baseDay = lang === 'hans' ? '天' : '天';
-    const baseHr = lang === 'hans' ? '小时' : '小時';
-    const baseMin = lang === 'hans' ? '分' : '分';
-    if (d > 0) return h === 0 ? `${d} ${baseDay}` : `${d} ${baseDay} ${h} ${baseHr}`;
-    if (h === 0) return `${m} ${baseMin}`;
-    if (m === 0) return `${h} ${baseHr}`;
-    return `${h} ${baseHr} ${m} ${baseMin}`;
-  }
-
-  /** Parse Bókun's English duration text ("5 hours and 30 minutes") into minutes. */
-  function parseDurationTextToMinutes(text) {
-    if (!text || typeof text !== 'string') return 0;
-    let total = 0;
-    const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*hour/i);
-    const minMatch = text.match(/(\d+(?:\.\d+)?)\s*min/i);
-    const dayMatch = text.match(/(\d+(?:\.\d+)?)\s*day/i);
-    if (dayMatch) total += Math.round(parseFloat(dayMatch[1]) * 24 * 60);
-    if (hourMatch) total += Math.round(parseFloat(hourMatch[1]) * 60);
-    if (minMatch) total += Math.round(parseFloat(minMatch[1]));
-    return total;
-  }
-
-  // Pick the badge key with the highest visual priority for a card.
-  // Bókun lets vendors set multiple tags; we surface only one as a hero badge.
-  function pickPrimaryBadge(tags = []) {
-    const priority = ['top_pick', 'selling_fast', 'premium'];
-    for (const p of priority) if (tags.includes(p)) return p;
-    return null;
-  }
-
   function hasPositiveAmount(value) {
     const n = Number(value);
     return Number.isFinite(n) && n > 0;
@@ -589,15 +495,28 @@
 
   function mergePreviewPriceFallback(tour, previewVm) {
     if (!tour || !previewVm) return tour || previewVm || null;
-    if (tourHasResolvablePrice(tour) || !tourHasResolvablePrice(previewVm)) return tour;
+    const merged = { ...tour };
+
+    if (!merged.coverImageOwnedUrl && previewVm.coverImageOwnedUrl) merged.coverImageOwnedUrl = previewVm.coverImageOwnedUrl;
+    if (!merged.coverImageCardUrl && previewVm.coverImageCardUrl) merged.coverImageCardUrl = previewVm.coverImageCardUrl;
+    if (!merged.coverImageHeroUrl && previewVm.coverImageHeroUrl) merged.coverImageHeroUrl = previewVm.coverImageHeroUrl;
+    if (!merged.coverImageGalleryUrl && previewVm.coverImageGalleryUrl) merged.coverImageGalleryUrl = previewVm.coverImageGalleryUrl;
+    if ((!Array.isArray(merged.photoUrlsOwned) || !merged.photoUrlsOwned.length) && Array.isArray(previewVm.photoUrlsOwned)) {
+      merged.photoUrlsOwned = previewVm.photoUrlsOwned;
+    }
+    if ((!Array.isArray(merged.imageAssets) || !merged.imageAssets.length) && Array.isArray(previewVm.imageAssets)) {
+      merged.imageAssets = previewVm.imageAssets;
+    }
+
+    if (tourHasResolvablePrice(merged) || !tourHasResolvablePrice(previewVm)) return merged;
 
     return {
-      ...tour,
-      priceUsd: previewVm.priceUsd ?? previewVm.price ?? tour.priceUsd ?? tour.price ?? null,
-      price: previewVm.price ?? previewVm.priceUsd ?? tour.price ?? tour.priceUsd ?? null,
-      priceCurrency: tour.priceCurrency || previewVm.priceCurrency || 'USD',
-      priceTable: Array.isArray(tour.priceTable) && tour.priceTable.some((row) => hasPositiveAmount(row && row.amount))
-        ? tour.priceTable
+      ...merged,
+      priceUsd: previewVm.priceUsd ?? previewVm.price ?? merged.priceUsd ?? merged.price ?? null,
+      price: previewVm.price ?? previewVm.priceUsd ?? merged.price ?? merged.priceUsd ?? null,
+      priceCurrency: merged.priceCurrency || previewVm.priceCurrency || 'USD',
+      priceTable: Array.isArray(merged.priceTable) && merged.priceTable.some((row) => hasPositiveAmount(row && row.amount))
+        ? merged.priceTable
         : (previewVm.priceTable || []),
       priceFallbackSource: 'catalog-preview',
     };

@@ -123,6 +123,12 @@
           en: `${trip.length} experience${trip.length === 1 ? '' : 's'}`,
         });
 
+    function tripItemPriceUsd(item) {
+      const selected = Number(item.tripPricing && item.tripPricing.totalUsd);
+      if (Number.isFinite(selected) && selected > 0) return selected;
+      return Number(item.priceUsd ?? item.price) || 0;
+    }
+
     return (
       <div className="glass trip-panel">
         <div>
@@ -136,7 +142,9 @@
             <div style={{ display: 'flex', gap: 12, marginTop: 8, color: 'var(--fg-3)', font: '500 12px/1 var(--font-text)' }}>
               <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
                 <Icon name="calendar" size={12} />
-                {T({ hant: '日期待選', hans: '日期待选', en: 'Dates not set' })}
+                {trip.some((item) => item.tripDate)
+                  ? T({ hant: '已儲存預訂偏好', hans: '已保存预订偏好', en: 'Booking preferences saved' })
+                  : T({ hant: '日期待選', hans: '日期待选', en: 'Dates not set' })}
               </span>
             </div>
           )}
@@ -170,11 +178,41 @@
                     <div className="trip-item__meta">
                       {t.supplier} · {t.duration}
                     </div>
+                    {(t.tripDate || t.tripGuests || t.tripExtras?.length > 0) && (
+                      <div style={{ marginTop: 6, font: '500 12px/1.45 var(--font-text)', color: 'var(--fg-3)' }}>
+                        {[
+                          t.tripDate || null,
+                          t.tripStartTimeLabel || null,
+                          t.tripGuests
+                            ? T({
+                                hant: `${t.tripGuests.adults + t.tripGuests.children} 位`,
+                                hans: `${t.tripGuests.adults + t.tripGuests.children} 位`,
+                                en: `${t.tripGuests.adults + t.tripGuests.children} travelers`,
+                              })
+                            : null,
+                          t.tripPickupTitle
+                            ? T({ hant: `接送：${t.tripPickupTitle}`, hans: `接送：${t.tripPickupTitle}`, en: `Pickup: ${t.tripPickupTitle}` })
+                            : null,
+                          t.tripExtras?.length
+                            ? T({
+                                hant: `加購 ${t.tripExtras.length} 項`,
+                                hans: `加购 ${t.tripExtras.length} 项`,
+                                en: `${t.tripExtras.length} extras`,
+                              })
+                            : null,
+                        ].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                   </div>
                   <div className="trip-item__aside">
                     <span className="trip-item__price">
-                      {formatDisplayPrice(t.priceUsd ?? t.price, displayCurrency, fxRates)}
+                      {formatDisplayPrice(tripItemPriceUsd(t), displayCurrency, fxRates)}
                     </span>
+                    {t.tripPricing?.source === 'estimate' && (
+                      <span style={{ marginTop: 4, font: '500 11px/1.3 var(--font-text)', color: 'var(--fg-3)' }}>
+                        {T({ hant: '預估價', hans: '预估价', en: 'Estimate' })}
+                      </span>
+                    )}
                     <button type="button" className="trip-item__remove" onClick={() => onRemove(t.id)}>
                       <Icon name="x" size={11} />{T({ hant: '移除', hans: '移除', en: 'remove' })}
                     </button>
@@ -200,10 +238,6 @@
             <Icon name="arrow-right" size={18} />
           </button>
           <div className="trip-panel-trust">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Icon name="shield-check" size={12} color="var(--success)" />
-              {T({ hant: '24 小時免費取消', hans: '24 小时免费取消', en: 'Free cancel 24 h' })}
-            </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name="wallet" size={12} />
               {T({ hant: '一筆交易', hans: '一笔交易', en: 'One transaction' })}

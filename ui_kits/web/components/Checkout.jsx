@@ -78,6 +78,12 @@
     );
   }
 
+  function checkoutItemPriceUsd(item) {
+    const selected = Number(item.tripPricing && item.tripPricing.totalUsd);
+    if (Number.isFinite(selected) && selected > 0) return selected;
+    return Number(item.priceUsd ?? item.price) || 0;
+  }
+
   // --- Step 1: review ----------------------------------------------------------
   function ReviewStep({ trip, subtotalUsd, feeUsd, totalUsd, onNext, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
@@ -103,15 +109,47 @@
                   }}>
                     <Icon name="ticket" size={20} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ font: '600 15px/1.2 var(--font-display)', color: 'var(--fg-1)' }}>{t.title}</div>
-                    <div style={{ font: '400 13px/1.4 var(--font-text)', color: 'var(--fg-3)', marginTop: 2 }}>
-                      {t.supplier} · {t.duration} · {T({ hant: '第', hans: '第', en: 'Day' })} {i + 1}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ font: '600 15px/1.2 var(--font-display)', color: 'var(--fg-1)' }}>{t.title}</div>
+                      <div style={{ font: '400 13px/1.4 var(--font-text)', color: 'var(--fg-3)', marginTop: 2 }}>
+                        {t.supplier} · {t.duration} · {T({ hant: '第', hans: '第', en: 'Day' })} {i + 1}
+                      </div>
+                      {(t.tripDate || t.tripGuests || t.tripExtras?.length > 0) && (
+                        <div style={{ font: '500 12px/1.45 var(--font-text)', color: 'var(--fg-3)', marginTop: 5 }}>
+                          {[
+                            t.tripDate || null,
+                            t.tripStartTimeLabel || null,
+                            t.tripGuests
+                              ? T({
+                                  hant: `${t.tripGuests.adults + t.tripGuests.children} 位旅客`,
+                                  hans: `${t.tripGuests.adults + t.tripGuests.children} 位旅客`,
+                                  en: `${t.tripGuests.adults + t.tripGuests.children} travelers`,
+                                })
+                              : null,
+                            t.tripPickupTitle
+                              ? T({ hant: `接送：${t.tripPickupTitle}`, hans: `接送：${t.tripPickupTitle}`, en: `Pickup: ${t.tripPickupTitle}` })
+                              : null,
+                            t.tripExtras?.length
+                              ? T({
+                                  hant: `加購 ${t.tripExtras.length} 項`,
+                                  hans: `加购 ${t.tripExtras.length} 项`,
+                                  en: `${t.tripExtras.length} extras`,
+                                })
+                              : null,
+                          ].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
                     </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span style={{ font: '700 15px/1 var(--font-display)', color: 'var(--fg-1)' }}>
+                      {formatDisplayPrice(checkoutItemPriceUsd(t), displayCurrency, fxRates)}
+                    </span>
+                    {t.tripPricing?.source === 'estimate' && (
+                      <span style={{ font: '500 11px/1.3 var(--font-text)', color: 'var(--fg-3)' }}>
+                        {T({ hant: '預估價', hans: '预估价', en: 'Estimate' })}
+                      </span>
+                    )}
                   </div>
-                  <span style={{ font: '700 15px/1 var(--font-display)', color: 'var(--fg-1)' }}>
-                    {formatDisplayPrice(t.priceUsd ?? t.price, displayCurrency, fxRates)}
-                  </span>
                 </div>
               );
             })}
@@ -130,9 +168,9 @@
                 </div>
                 <div style={{ font: '400 12px/1.4 var(--font-text)', color: 'var(--fg-2)', marginTop: 2 }}>
                   {T({
-                    hant: '所有供應商透過 Bókun 即時鎖票。72 小時前可全額退款。',
-                    hans: '所有供应商通过 Bókun 实时锁票。72 小时前可全额退款。',
-                    en:   'All suppliers reserved live via Bókun. Full refund up to 72 hr before.',
+                    hant: '所有供應商透過 Bókun 即時鎖票。取消與退款請以各商品頁面的 Bókun 原文政策為準。',
+                    hans: '所有供应商通过 Bókun 实时锁票。取消与退款请以各商品页面的 Bókun 原文政策为准。',
+                    en:   'All suppliers are reserved live via Bókun. For cancellations and refunds, refer to the original Bókun policy shown on each product page.',
                   })}
                 </div>
               </div>
@@ -355,9 +393,9 @@
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', color: 'var(--fg-3)', font: '500 11px/1.4 var(--font-text)' }}>
           <Icon name="shield-check" size={12} color="var(--success)" />
           {T({
-            hant: '出發 72 小時前可全額退款。',
-            hans: '出发 72 小时前可全额退款。',
-            en:   'Free cancellation up to 72 h before departure.',
+            hant: '取消與退款請以各商品頁面的 Bókun 原文政策為準。',
+            hans: '取消与退款请以各商品页面的 Bókun 原文政策为准。',
+            en:   'Cancellations and refunds are subject to the original Bókun policy shown on each product page.',
           })}
         </div>
       </div>
