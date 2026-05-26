@@ -2615,6 +2615,28 @@ textarea.detail-book-field {
   box-shadow: none;
 }
 
+/* Primary "Book now" stays the gradient-aurora hero CTA (see base styles
+ * above). "Add to trip" demotes to a quieter outline-style button so the
+ * page has a single dominant action — matches Bókun / GetYourGuide. */
+.detail-book-cta--secondary {
+  margin-top: 10px;
+  height: 46px;
+  background: transparent;
+  color: var(--fg-1);
+  box-shadow: inset 0 0 0 1.5px var(--border-strong, var(--base-300));
+  font-weight: 600;
+}
+.detail-book-cta--secondary:hover {
+  background: var(--base-100);
+  box-shadow: inset 0 0 0 1.5px var(--fg-2);
+}
+.detail-book-cta--secondary:disabled {
+  background: var(--success-soft);
+  color: #0a7b4f;
+  box-shadow: inset 0 0 0 1.5px transparent;
+}
+.detail-book-cta--primary { margin-top: 22px; } /* explicit re-anchor */
+
 .detail-book-disclosure {
   display: none;
   width: 100%;
@@ -3244,32 +3266,500 @@ textarea.detail-book-field {
   }
 }
 
-/* ---- Checkout ------------------------------------------------------------ */
-.checkout-stepper {
+/* ─── Checkout (Bókun-style 3-step pre-checkout) ────────────────────────────
+ * Layout philosophy: top-mounted collapsible order summary + a centered
+ * single-column form per step. No sidebar — gives the form the full
+ * reading width on phones and lets the thumb stay on the primary CTA.
+ * ──────────────────────────────────────────────────────────────────────── */
+.checkout-page {
+  background: var(--bg-page);
+  min-height: 70vh;
+  padding: 28px 0 56px;
+}
+.checkout-container {
+  max-width: 760px;
   display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.checkout-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 6px 10px 6px 6px;
+  margin-left: -6px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--fg-2);
+  font: 600 13px/1 var(--font-text);
+  border-radius: 999px;
+}
+.checkout-back-link:hover { background: var(--base-100); color: var(--fg-1); }
+
+/* Top-mounted order summary — collapsed by default so it's lightweight
+ * on mobile. Expanded body lists every trip item + a one-liner about
+ * Bókun fee disclosure. */
+.checkout-order-summary {
+  background: var(--surface-card);
+  border-radius: 16px;
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.checkout-order-summary__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.checkout-order-summary__heading {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 28px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
+  flex: 1;
+  min-width: 0;
+  color: var(--fg-1);
+  font: 600 14px/1 var(--font-text);
 }
-
-.checkout-stepper > * {
-  flex: 1 1 140px;
-  min-width: 120px;
+.checkout-order-summary__chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--base-100);
+  color: var(--fg-2);
+  font: 500 12px/1 var(--font-text);
+  white-space: nowrap;
 }
-
-.checkout-grid {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 24px;
+.checkout-order-summary__total {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-1);
+  font: 700 16px/1 var(--font-display);
+}
+.checkout-order-summary__body {
+  padding: 4px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--base-200);
+}
+.checkout-order-summary__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-top: 10px;
+}
+.checkout-order-summary__row-meta { flex: 1; min-width: 0; }
+.checkout-order-summary__row-title {
+  font: 600 14px/1.3 var(--font-display);
+  color: var(--fg-1);
+}
+.checkout-order-summary__row-sub {
+  margin-top: 4px;
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--fg-3);
+}
+.checkout-order-summary__row-price {
+  font: 700 14px/1 var(--font-display);
+  color: var(--fg-1);
+  white-space: nowrap;
+}
+.checkout-order-summary__note {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--base-50);
+  color: var(--fg-3);
+  font: 500 12px/1.5 var(--font-text);
+  display: flex;
+  gap: 6px;
   align-items: flex-start;
 }
 
-@media (max-width: 900px) {
-  .checkout-grid {
-    grid-template-columns: 1fr;
-  }
+/* Stepper — 3 horizontal pills with dot + label. The current step gets
+ * the brand gradient; done steps use success colors; upcoming ones are
+ * muted. */
+.checkout-stepper {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.checkout-stepper__step {
+  flex: 1 1 0;
+  min-width: 120px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--base-100);
+  color: var(--fg-3);
+  font: 600 13px/1 var(--font-text);
+}
+.checkout-stepper__step.is-active {
+  background: var(--surface-card);
+  color: var(--fg-1);
+  box-shadow: var(--shadow-1), inset 0 0 0 2px var(--aurora-cyan);
+}
+.checkout-stepper__step.is-done {
+  background: var(--success-soft);
+  color: #0a7b4f;
+}
+.checkout-stepper__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--base-200);
+  color: var(--fg-3);
+  font: 700 12px/1 var(--font-text);
+  flex-shrink: 0;
+}
+.checkout-stepper__step.is-active .checkout-stepper__dot {
+  background: var(--gradient-aurora);
+  color: var(--brand-on-gradient);
+}
+.checkout-stepper__step.is-done .checkout-stepper__dot {
+  background: var(--success, #1FAA70);
+  color: #fff;
+}
+.checkout-stepper__label { white-space: nowrap; }
+
+/* The card that holds the active step's form. Generous padding so the
+ * page reads as a focused task, not a dense form. */
+.checkout-step { display: contents; }
+.checkout-card {
+  background: var(--surface-card);
+  border-radius: 20px;
+  padding: clamp(20px, 3vw, 32px);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.checkout-card__title {
+  margin: 0;
+  font: 700 22px/1.2 var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: -0.015em;
+}
+.checkout-card__lede {
+  margin: -8px 0 4px;
+  font: 500 14px/1.55 var(--font-text);
+  color: var(--fg-2);
+}
+.checkout-card__inferred {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--base-50);
+  color: var(--fg-3);
+  font: 500 12px/1.5 var(--font-text);
+}
+.checkout-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.checkout-card__hint {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--fg-3);
+  flex: 1;
+  min-width: 220px;
+}
+
+/* CTAs — primary uses the brand gradient + chevron, secondary is a quiet
+ * outlined button suitable for "Back". */
+.checkout-cta-primary,
+.checkout-cta-secondary {
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font: 600 14px/1 var(--font-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.checkout-cta-primary {
+  background: var(--gradient-aurora);
+  color: var(--brand-on-gradient);
+  font-weight: 700;
+  box-shadow: var(--shadow-glow-aurora);
+}
+.checkout-cta-primary:disabled {
+  background: var(--base-200);
+  color: var(--fg-3);
+  box-shadow: none;
+  cursor: default;
+}
+.checkout-cta-secondary {
+  background: transparent;
+  color: var(--fg-1);
+  box-shadow: inset 0 0 0 1.5px var(--base-300);
+}
+.checkout-cta-secondary:hover { background: var(--base-100); }
+.checkout-cta-secondary:disabled { opacity: 0.5; cursor: default; }
+
+/* Form primitives — generous touch targets, error styling, paired
+ * country-code+phone input that doesn't break on small screens. */
+.checkout-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 540px) {
+  .checkout-grid-2 { grid-template-columns: 1fr; }
+}
+
+.checkout-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.checkout-field__label {
+  font: 600 12px/1.2 var(--font-text);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.checkout-field__input,
+.checkout-field__textarea,
+.checkout-field__select {
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--surface-card);
+  box-shadow: inset 0 0 0 1px var(--base-200);
+  font: 500 15px/1.4 var(--font-text);
+  color: var(--fg-1);
+  outline: 0;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.checkout-field__textarea {
+  height: auto;
+  min-height: 96px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+.checkout-field__select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+.checkout-field__input:focus,
+.checkout-field__textarea:focus,
+.checkout-field__select:focus {
+  box-shadow: inset 0 0 0 2px var(--aurora-cyan);
+}
+.checkout-field__input.is-error,
+.checkout-field__phone.is-error {
+  box-shadow: inset 0 0 0 1.5px var(--coral, #E16A6A);
+}
+.checkout-field__help {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--fg-3);
+}
+.checkout-field__error {
+  font: 600 12px/1.4 var(--font-text);
+  color: var(--coral, #E16A6A);
+}
+
+/* Phone field — country selector glued to the number input with a thin
+ * divider so it reads as a single control. */
+.checkout-field__phone {
+  display: flex;
+  align-items: stretch;
+  border-radius: 12px;
+  background: var(--surface-card);
+  box-shadow: inset 0 0 0 1px var(--base-200);
+  overflow: hidden;
+}
+.checkout-field__phone:focus-within {
+  box-shadow: inset 0 0 0 2px var(--aurora-cyan);
+}
+.checkout-field__country {
+  height: 48px;
+  padding: 0 8px 0 12px;
+  border: 0;
+  border-right: 1px solid var(--base-200);
+  background: transparent;
+  font: 500 14px/1 var(--font-text);
+  color: var(--fg-1);
+  outline: 0;
+  flex: 0 0 auto;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.checkout-field__phone-input {
+  flex: 1;
+  height: 48px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  font: 500 15px/1.4 var(--font-text);
+  color: var(--fg-1);
+  outline: 0;
+  min-width: 0;
+}
+
+/* Toggle (used for marketing opt-in + boolean questions) */
+.checkout-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font: 500 14px/1.4 var(--font-text);
+  color: var(--fg-2);
+}
+.checkout-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--aurora-cyan);
+}
+
+/* Question groups (Step 2) */
+.checkout-question-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--base-50);
+  box-shadow: inset 0 0 0 1px var(--base-200);
+}
+.checkout-question-group__title {
+  margin: 0 0 4px;
+  font: 700 14px/1 var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: 0.01em;
+}
+
+/* Loading / error / success inline states */
+.checkout-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--base-50);
+  color: var(--fg-2);
+  font: 500 13px/1.4 var(--font-text);
+}
+.checkout-state--ok { background: var(--success-soft, rgba(31,170,112,0.08)); color: #0a7b4f; }
+.checkout-state--error { background: rgba(225,106,106,0.08); color: var(--coral, #E16A6A); }
+.checkout-state__dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--aurora-deep, #00837A);
+  animation: detailBookStatusPulse 1.2s ease-out infinite;
+}
+
+/* Review step's summary tables */
+.checkout-review-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--base-50);
+  box-shadow: inset 0 0 0 1px var(--base-200);
+}
+.checkout-review-box__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.checkout-review-box__row--total {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--base-200);
+  align-items: baseline;
+}
+.checkout-review-box__label {
+  flex: 0 0 96px;
+  font: 600 12px/1.4 var(--font-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+}
+.checkout-review-box__value {
+  flex: 1;
+  font: 500 14px/1.5 var(--font-text);
+  color: var(--fg-1);
+}
+.checkout-review-box__sub {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--fg-3);
+}
+.checkout-review-box__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 2px 0;
+}
+.checkout-review-box__total {
+  font: 700 22px/1 var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: -0.02em;
+}
+
+.checkout-security {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--success-soft, rgba(31,170,112,0.08));
+}
+.checkout-security strong {
+  display: block;
+  font: 700 13px/1.3 var(--font-text);
+  color: var(--fg-1);
+  margin-bottom: 2px;
+}
+.checkout-security span {
+  font: 500 12px/1.5 var(--font-text);
+  color: var(--fg-2);
+}
+
+@media (max-width: 540px) {
+  .checkout-page { padding: 16px 0 44px; }
+  .checkout-card { padding: 18px; }
+  .checkout-card__title { font-size: 19px; }
+  .checkout-stepper__step { padding: 8px 10px; min-width: 100px; }
+  .checkout-stepper__label { font-size: 12px; }
+  .checkout-card__actions { gap: 10px; }
+  .checkout-cta-primary,
+  .checkout-cta-secondary { width: 100%; }
+  .checkout-card__hint { display: none; }
+  .checkout-review-box__row { flex-direction: column; gap: 4px; }
+  .checkout-review-box__label { flex: none; }
 }
 
 /* ---- Footer -------------------------------------------------------------- */
@@ -4221,110 +4711,9 @@ html[data-site-theme="sun"] .detail-attention-card {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Checkout — mobile single-column layout + safe area                  */
-/* ------------------------------------------------------------------ */
-.checkout-section {
-  min-height: 480px;
-  background: var(--brand-surface);
-  padding-top: clamp(24px, 5vw, 40px);
-  padding-bottom: calc(clamp(24px, 5vw, 40px) + env(safe-area-inset-bottom, 0px));
-}
-
-@media (max-width: 640px) {
-  /* Main section */
-  .checkout-section {
-    padding-top: 20px !important;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
-    min-height: auto !important;
-  }
-
-  /* Stepper */
-  .checkout-stepper {
-    gap: 6px;
-    margin-bottom: 18px;
-  }
-
-  .checkout-stepper > * {
-    min-width: 90px !important;
-    flex: 1 1 90px;
-    padding: 0 10px !important;
-    height: 40px !important;
-    font-size: 12px !important;
-    gap: 6px !important;
-  }
-
-  /* Step label text — hide on smallest */
-  .checkout-step-label {
-    display: none;
-  }
-
-  /* Main content panel */
-  .checkout-panel {
-    border-radius: 20px !important;
-    padding: 20px !important;
-  }
-
-  .checkout-panel h2 {
-    font-size: 22px !important;
-    margin-bottom: 14px !important;
-  }
-
-  /* Payment method grid → 3 cols tighter */
-  .checkout-method-grid {
-    gap: 8px !important;
-  }
-
-  .checkout-method-btn {
-    height: 64px !important;
-    border-radius: 12px !important;
-  }
-
-  /* Summary card */
-  .checkout-summary {
-    position: static !important;
-    top: auto !important;
-    padding: 18px !important;
-    border-radius: 20px !important;
-  }
-
-  /* Done step */
-  .checkout-done {
-    padding: 28px 20px !important;
-    border-radius: 20px !important;
-  }
-
-  .checkout-done h2 {
-    font-size: 28px !important;
-  }
-
-  /* Done CTA row */
-  .checkout-done-ctas {
-    flex-direction: column !important;
-    width: 100% !important;
-    align-items: stretch !important;
-  }
-
-  .checkout-done-ctas button {
-    width: 100% !important;
-    justify-content: center !important;
-  }
-
-  /* Stat cards in done step */
-  .checkout-stat {
-    padding: 10px 14px !important;
-    min-width: 80px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .checkout-stepper > * {
-    min-width: 76px !important;
-    height: 36px !important;
-    font-size: 11px !important;
-    padding: 0 8px !important;
-  }
-}
+/* Legacy 3-step Checkout overrides removed — the new Bókun-style flow
+ * (.checkout-page / .checkout-card / .checkout-stepper__step) has its
+ * own mobile rules defined alongside the base styles above. */
 
 /* ------------------------------------------------------------------ */
 /* Trip map — compact on mobile (map above panel)                      */
@@ -4431,75 +4820,18 @@ html[data-site-theme="sun"] .detail-attention-card {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Checkout section wrapper — override inline style via class hook      */
-/* ------------------------------------------------------------------ */
-/* Checkout.jsx renders <section className="auralis-section"> with
-   inline paddingTop/paddingBottom. We target .auralis-section that
-   contains .checkout-grid or .checkout-stepper to override safely. */
-@media (max-width: 640px) {
-  .auralis-section:has(.checkout-stepper) {
-    padding-top: 20px !important;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
-    min-height: auto !important;
-  }
-
-  /* Stepper items — override inline styles */
-  .checkout-stepper > div {
-    height: 40px !important;
-    padding: 0 10px !important;
-    border-radius: 10px !important;
-    gap: 6px !important;
-    flex: 1 1 80px !important;
-    min-width: 0 !important;
-  }
-
-  .checkout-stepper > div span:last-child {
-    font-size: 11px !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Review / Pay left panel */
-  .checkout-grid > div:first-child {
-    border-radius: 20px !important;
-    padding: 18px !important;
-  }
-
-  /* Checkout h2 */
-  .checkout-grid > div:first-child h2 {
-    font-size: 22px !important;
-    margin-bottom: 14px !important;
-  }
-
-  /* Payment method grid */
-  .checkout-grid > div:first-child > div[style*="grid-template-columns"] {
-    gap: 8px !important;
-  }
-
-  .checkout-grid > div:first-child > div[style*="grid-template-columns"] > button {
-    height: 64px !important;
-    border-radius: 12px !important;
-  }
-
-  /* Summary card */
-  .checkout-grid > div:last-child {
-    position: static !important;
-    padding: 18px !important;
-    border-radius: 20px !important;
-  }
-}
-
+/* (legacy .auralis-section:has(.checkout-stepper) overrides removed —
+ *  superseded by the .checkout-page class on the new Checkout shell.) */
 @media (max-width: 480px) {
-  .checkout-stepper > div {
-    height: 36px !important;
-    padding: 0 8px !important;
+  .checkout-stepper__step .checkout-stepper__label {
+    /* On the smallest phones, hide the textual step label so the dot
+     * indicator can fit four-abreast without horizontal scroll. */
+    display: none;
   }
-
-  /* Hide step label text, keep number badge */
-  .checkout-stepper > div span:last-child {
-    display: none !important;
+  .checkout-stepper__step {
+    min-width: 56px;
+    flex: 0 0 auto;
+    padding: 8px 12px;
   }
 }
 

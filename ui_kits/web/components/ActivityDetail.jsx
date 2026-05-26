@@ -167,6 +167,7 @@
     error,
     onBack,
     onAdd,
+    onBookNow,
     inTrip,
     trip = [],
     lang,
@@ -1159,6 +1160,7 @@
             hasMultiPrice={hasMultiPrice}
             inTrip={inTrip}
             onAddSelection={() => onAdd && onAdd(tour, { booking: buildBookingSelection() })}
+            onBookNow={onBookNow ? () => onBookNow(tour, buildBookingSelection()) : null}
             trip={trip}
             isMobile={isMobile}
             onOpenPrices={() => setPriceSheetOpen(true)}
@@ -1221,7 +1223,7 @@
   }
 
   function BookPanel({
-    tour, T, lang, displayCurrency, fxRates, priceUsd, loading, hasMultiPrice, inTrip, onAddSelection, trip,
+    tour, T, lang, displayCurrency, fxRates, priceUsd, loading, hasMultiPrice, inTrip, onAddSelection, onBookNow, trip,
     isMobile, onOpenPrices, selectedDate, onSelectedDate, dayAvailableTimes,
     selectedStartTime, onSelectedStartTime, guestCounts,
     onGuestCounts, adultCategory, childCategory, paxCap,
@@ -1591,17 +1593,31 @@
             </div>
           )}
 
-          {/* Primary CTA — placed AFTER the booking config + live result so
-              users commit only once they've seen availability & total price.
-              Industry convention (Bókun, GetYourGuide, Klook, Viator). */}
+          {/* Primary CTA stack — placed AFTER the booking config + live
+              result so users commit only once they've seen availability
+              and total price. Industry convention (Bókun, GetYourGuide,
+              Klook, Viator).
+              "Book now" is the dominant action → drives single-product
+              checkout straight to the Bókun 3-step flow.
+              "Add to trip" is the lighter alternative for multi-stop
+              planners who want to combine multiple activities. */}
           <button
             type="button"
-            className="detail-book-cta"
+            className="detail-book-cta detail-book-cta--primary"
+            onClick={onBookNow}
+            disabled={!onBookNow}
+          >
+            {T({ hant: '立即預訂', hans: '立即预订', en: 'Book now' })}
+            <Icon name="arrow-right" size={18} />
+          </button>
+          <button
+            type="button"
+            className="detail-book-cta detail-book-cta--secondary"
             onClick={onAddSelection}
           >
             {inTrip
-              ? <><Icon name="check" size={18} /> {T({ hant: '更新行程設定', hans: '更新行程设置', en: 'Update trip settings' })}</>
-              : <>{T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })} <Icon name="plus" size={18} /></>}
+              ? <><Icon name="check" size={16} /> {T({ hant: '更新行程設定', hans: '更新行程设置', en: 'Update trip settings' })}</>
+              : <>{T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })} <Icon name="plus" size={16} /></>}
           </button>
 
           {isMobile && (
@@ -1714,11 +1730,13 @@
             <button
               type="button"
               className="detail-mobile-sticky-bar__cta"
-              onClick={onAddSelection}
+              onClick={onBookNow || onAddSelection}
             >
-              {inTrip
-                ? T({ hant: '更新行程', hans: '更新行程', en: 'Update trip' })
-                : T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' })}
+              {onBookNow
+                ? T({ hant: '立即預訂', hans: '立即预订', en: 'Book now' })
+                : (inTrip
+                  ? T({ hant: '更新行程', hans: '更新行程', en: 'Update trip' })
+                  : T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' }))}
             </button>
           </div>
         )}

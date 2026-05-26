@@ -117,6 +117,12 @@
     const [tripCache, setTripCache] = useState({});
     const [tripSelections, setTripSelections] = useState({});
 
+    // Single-product checkout state. When set, the Checkout screen consumes
+    // this one-item array INSTEAD of the regular trip basket — lets a visitor
+    // "Book now" from a detail page without polluting their planning trip.
+    // Cleared when checkout finishes or the user navigates away.
+    const [directCheckout, setDirectCheckout] = useState(null);
+
     const trip = useMemo(
       () => tripIds
         .map((id) => {
@@ -395,6 +401,12 @@
             error={detailError}
             onBack={closeActivityDetail}
             onAdd={addToTrip}
+            onBookNow={(vm, selection) => {
+              const enriched = enrichTripItem(vm, selection);
+              if (!enriched) return;
+              setDirectCheckout([enriched]);
+              setScreen('checkout');
+            }}
             inTrip={detailActivityId != null && tripIdSet.has(detailActivityId)}
             trip={trip}
             lang={lang}
@@ -419,11 +431,24 @@
 
         {screen === 'checkout' && (
           <Checkout
-            trip={trip}
-            onBack={() => setScreen('trip')}
+            // Direct (single-product "Book now") path takes precedence over the
+            // multi-item cart so a visitor's planning trip isn't pulled into a
+            // hasty single-product purchase by accident.
+            trip={directCheckout || trip}
+            onBack={() => {
+              if (directCheckout) {
+                setDirectCheckout(null);
+                setScreen('detail');
+              } else {
+                setScreen('trip');
+              }
+            }}
             onPaid={() => {
-              setTripIds([]);
-              setTripSelections({});
+              if (!directCheckout) {
+                setTripIds([]);
+                setTripSelections({});
+              }
+              setDirectCheckout(null);
               setScreen('home');
             }}
             lang={lang}
