@@ -1626,6 +1626,37 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   gap: 28px;
   position: relative;
   z-index: 1;
+  /* Grid items default to min-content; without min-width:0 a long unbroken
+     line (Bókun pickup names, attention HTML, etc.) blows the column wider
+     than the viewport. body { overflow-x: hidden } then silently clips the
+     right edge on mobile. */
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Defensive wrap rules for vendor-authored copy. Bókun ships HTML with
+   arbitrary inline formatting; we cannot trust line breaks, so let any long
+   token wrap rather than push the column out. */
+.detail-description,
+.detail-description--rich,
+.detail-vendor-html,
+.detail-attention-card,
+.detail-pickup-card,
+.detail-pickup-card__list,
+.detail-pickup-card__list li,
+.detail-fact,
+.detail-fact-value {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detail-vendor-html img,
+.detail-description--rich img,
+.detail-vendor-html iframe,
+.detail-vendor-html video,
+.detail-vendor-html table {
+  max-width: 100%;
+  height: auto;
 }
 
 .detail-page-title {
@@ -2416,13 +2447,17 @@ textarea.detail-book-field {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
-    padding: 10px 10px 10px 12px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.88);
-    box-shadow: 0 10px 28px rgba(8, 18, 30, 0.12);
-    backdrop-filter: blur(14px) saturate(1.08);
-    -webkit-backdrop-filter: blur(14px) saturate(1.08);
+    gap: 12px;
+    padding: 12px 12px 12px 14px;
+    border-radius: 18px;
+    /* Solid surface so price + label contrast stays correct on every theme.
+       Avoids the backdrop-filter haze that on `sun` (dark) theme washed out
+       to a mid-grey panel where var(--fg-1) text was almost invisible. Also
+       cheaper to composite on iOS Chrome. */
+    background: var(--surface-card);
+    box-shadow:
+      0 14px 32px rgba(8, 18, 30, 0.22),
+      0 0 0 1px var(--border-subtle, rgba(17, 21, 31, 0.06));
     transform: translateY(120%);
     opacity: 0;
     pointer-events: none;
@@ -2439,32 +2474,33 @@ textarea.detail-book-field {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
   }
 
   .detail-mobile-sticky-bar__label {
-    font: 600 9px/1 var(--font-text);
-    letter-spacing: 0.08em;
+    font: 600 10px/1 var(--font-text);
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--fg-3);
+    color: var(--fg-2);
   }
 
   .detail-mobile-sticky-bar__price strong {
-    font: 700 18px/1 var(--font-display);
+    font: 800 20px/1 var(--font-display);
     letter-spacing: -0.02em;
     color: var(--fg-1);
   }
 
   .detail-mobile-sticky-bar__cta {
-    min-width: 118px;
-    height: 42px;
+    min-width: 124px;
+    height: 46px;
     border: 0;
-    border-radius: 12px;
-    padding: 0 14px;
+    border-radius: 14px;
+    padding: 0 18px;
     background: var(--gradient-aurora);
     color: var(--brand-on-gradient);
-    font: 700 13px/1 var(--font-text);
-    box-shadow: 0 8px 18px rgba(0, 213, 255, 0.16);
+    font: 700 14px/1 var(--font-text);
+    letter-spacing: 0.01em;
+    box-shadow: 0 10px 22px rgba(0, 213, 255, 0.24);
   }
 
   .detail-mobile-sticky-bar__cta:disabled {
