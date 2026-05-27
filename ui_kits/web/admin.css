@@ -1,4 +1,4 @@
-/* Admin console — Phase 3 (read + ops + content).
+/* Admin console — Phase 4 (marketing + inquiry follow-up).
  * Intentionally separate from public site styles so we can iterate without
  * affecting marketing visuals. Uses the same CSS variables for theme parity.
  */
@@ -772,6 +772,46 @@
   gap: 10px;
   padding: 14px 18px;
   border-top: 1px solid var(--border-subtle, rgba(0,0,0,0.08));
+}
+
+.admin-modal--wide {
+  width: min(880px, 100%);
+}
+
+.admin-row--abandoned td {
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.admin-inquiry-detail {
+  background: rgba(0, 0, 0, 0.02);
+  padding: 16px 18px !important;
+}
+
+.admin-inquiry-detail__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.admin-inquiry-detail h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--fg-1);
+}
+
+.admin-inquiry-detail p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--fg-2);
+}
+
+.admin-inquiry-detail__notes {
+  font-style: italic;
+  color: var(--fg-3, rgba(0,0,0,0.6));
+}
+
+@media (max-width: 900px) {
+  .admin-inquiry-detail__grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {

@@ -147,6 +147,43 @@
     const homeFeatured = featuredActivities.length > 0 ? featuredActivities : activities;
     const homeFeaturedLoading = featuredActivities.length > 0 ? featuredLoading : loading;
 
+    const [homeCollections, setHomeCollections] = useState([]);
+    const [collectionsLoading, setCollectionsLoading] = useState(true);
+
+    useEffect(() => {
+      let cancelled = false;
+      setCollectionsLoading(true);
+      const adapter = window.AuralisData && window.AuralisData.BokunAdapter;
+      if (!adapter || !adapter.fetchCollections) {
+        setHomeCollections([]);
+        setCollectionsLoading(false);
+        return undefined;
+      }
+      adapter.fetchCollections({ lang })
+        .then(({ collections, translations }) => {
+          if (cancelled) return;
+          if (translations && window.AuralisData) {
+            window.AuralisData._runtimeTranslations = {
+              ...(window.AuralisData._runtimeTranslations || {}),
+              ...translations,
+            };
+          }
+          setHomeCollections(collections || []);
+        })
+        .catch(() => { if (!cancelled) setHomeCollections([]); })
+        .finally(() => { if (!cancelled) setCollectionsLoading(false); });
+      return () => { cancelled = true; };
+    }, [lang]);
+
+    const collectionRails = React.useMemo(() => {
+      const adapter = window.AuralisData && window.AuralisData.BokunAdapter;
+      if (!homeCollections.length || !adapter) return [];
+      return homeCollections.map((col) => ({
+        ...col,
+        activities: adapter.toViewModels(col.activities || [], lang),
+      })).filter((col) => col.activities.length > 0);
+    }, [homeCollections, lang]);
+
     // Trip = ARRAY OF BÓKUN IDS (numbers). View-models are looked up from the
     // current `activities` list, so a language flip rehydrates every cart row
     // without us touching trip state.
@@ -396,6 +433,25 @@
                              onView={() => goToToursWithFilters(tripSearch)} onAdd={addToTrip} onRemove={removeFromTrip} onOpenDetail={openActivityDetail}
                              tripIdSet={tripIdSet} lang={lang}
                              displayCurrency={displayCurrency} fxRates={fxRates} />
+            {collectionRails.map((col) => (
+              <CollectionSection
+                key={col.slug}
+                collection={col}
+                loading={collectionsLoading}
+                catalogTotal={catalogTotal}
+                onView={() => goToToursWithFilters(tripSearch, {
+                  chipId: col.ctaChipId || null,
+                  routeId: col.ctaRouteId || null,
+                })}
+                onAdd={addToTrip}
+                onRemove={removeFromTrip}
+                onOpenDetail={openActivityDetail}
+                tripIdSet={tripIdSet}
+                lang={lang}
+                displayCurrency={displayCurrency}
+                fxRates={fxRates}
+              />
+            ))}
             <Footer lang={lang} />
           </>
         )}
@@ -523,6 +579,55 @@
               </span>
             </button>
           ))}
+        </div>
+      </section>
+    );
+  }
+
+  function CollectionSection({
+    collection, loading, catalogTotal, onView, onAdd, onRemove, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates,
+  }) {
+    const T = (opts) => pick(lang, opts);
+    const countLabel = formatCatalogCount(catalogTotal, lang);
+    const title = collection.title || T({ hant: '精選行程', hans: '精选行程', en: 'Curated trips' });
+    const overline = collection.overline || '';
+    const cta = collection.ctaLabel || T({
+      hant: `看全部 ${countLabel} 個`,
+      hans: `查看全部 ${countLabel} 个`,
+      en: `View all ${countLabel}`,
+    });
+    const activities = collection.activities || [];
+
+    return (
+      <section className="auralis-section" style={{ paddingTop: 'clamp(32px, 8vw, 56px)', paddingBottom: 'clamp(32px, 8vw, 56px)' }}>
+        <div className="auralis-container">
+          <div className="featured-header">
+            <div>
+              {overline ? (
+                <span className="overline" style={{ color: 'var(--coral)' }}>{overline}</span>
+              ) : null}
+              <h2 className="featured-title" style={{ margin: overline ? '8px 0 0' : 0, font: '700 40px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
+                {title}
+              </h2>
+            </div>
+            <button type="button" onClick={onView} style={{
+              height: 44, padding: '0 18px', borderRadius: 999, border: 0, cursor: 'pointer',
+              background: 'transparent', boxShadow: 'inset 0 0 0 1px var(--base-300)',
+              color: 'var(--fg-1)', font: '600 13px/1 var(--font-text)',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              {cta} <Icon name="arrow-right" size={14} />
+            </button>
+          </div>
+          <div className="grid-cards-3">
+            {loading
+              ? Array.from({ length: 3 }, (_, i) => <TourCardSkeleton key={i} />)
+              : activities.slice(0, collection.maxItems || 6).map((t, i) => (
+                <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
+                          inTrip={tripIdSet.has(t.id)} lang={lang}
+                          displayCurrency={displayCurrency} fxRates={fxRates} />
+              ))}
+          </div>
         </div>
       </section>
     );

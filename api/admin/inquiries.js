@@ -5,7 +5,7 @@
  *   - Concierge form leads (status='new')
  *   - Hosted-checkout redirects (status='redirected_to_bokun', has hosted_checkout_url)
  *
- * Read-only for Phase 1; Phase 2 will add status updates and notes.
+ * Phase 4: abandoned filter + follow-up fields; PATCH via /api/admin/inquiry.
  */
 
 const { applyAdminCors, requireAdmin } = require('../../lib/adminAuth');
@@ -45,6 +45,8 @@ module.exports = async function handler(req, res) {
   const page = parseInteger(req.query.page, 1);
   const pageSize = Math.min(parseInteger(req.query.pageSize, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
   const status = req.query.status && String(req.query.status).trim();
+  const abandonedOnly = req.query.abandoned === 'true' || req.query.abandoned === '1';
+  const followUp = req.query.followUp && String(req.query.followUp).trim();
 
   const offset = (page - 1) * pageSize;
 
@@ -66,6 +68,8 @@ module.exports = async function handler(req, res) {
       'selected_trip',
       'source_page',
       'hosted_checkout_url',
+      'admin_notes',
+      'follow_up_status',
       'created_at',
       'updated_at',
     ].join(',')
@@ -75,6 +79,14 @@ module.exports = async function handler(req, res) {
   params.set('offset', String(offset));
 
   if (status) params.append('status', `eq.${status}`);
+  if (followUp) params.append('follow_up_status', `eq.${followUp}`);
+
+  if (abandonedOnly) {
+    params.append('status', 'eq.redirected_to_bokun');
+    params.append('follow_up_status', 'in.(open,contacted)');
+    const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    params.append('created_at', `lt.${cutoff}`);
+  }
 
   try {
     const countParams = new URLSearchParams(params);
@@ -113,8 +125,14 @@ module.exports = async function handler(req, res) {
       selectedTrip: row.selected_trip || [],
       sourcePage: row.source_page || null,
       hostedCheckoutUrl: row.hosted_checkout_url || null,
+      adminNotes: row.admin_notes || null,
+      followUpStatus: row.follow_up_status || 'open',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      isAbandoned: row.status === 'redirected_to_bokun'
+        && ['open', 'contacted'].includes(row.follow_up_status || 'open')
+        && row.created_at
+        && new Date(row.created_at).getTime() < Date.now() - 60 * 60 * 1000,
     }));
 
     return res.status(200).json({

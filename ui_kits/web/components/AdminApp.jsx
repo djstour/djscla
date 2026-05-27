@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 /* global React, ReactDOM */
 
-  // DJS Tour · Admin Console — Phase 3 (catalog ops + owned content).
+  // DJS Tour · Admin Console — Phase 4 (marketing + inquiry follow-up).
 //
 // Self-contained app: does NOT import the public AuralisUI/AuralisData stacks
 // so we can iterate independently and keep the admin bundle lean. Auth is a
@@ -180,6 +180,7 @@
       { id: 'vendors', label: 'Vendors', badge: counts.vendors },
       { id: 'activities', label: 'Activities', badge: counts.activities },
       { id: 'content', label: 'Content' },
+      { id: 'marketing', label: 'Marketing', badge: counts.collections },
       { id: 'inquiries', label: 'Inquiries', badge: counts.inquiries },
       { id: 'env', label: 'Environment' },
     ];
@@ -201,7 +202,7 @@
         ))}
         <div className="admin-nav-spacer" />
         <div className="admin-sidebar__footer">
-          Phase 3 · content<br />
+          Phase 4 · marketing<br />
           <button onClick={onLogout}>Sign out</button>
         </div>
       </aside>
@@ -477,6 +478,11 @@
             <div className="admin-card__label">Inquiries</div>
             <div className="admin-card__value">{formatNumber(inquiries.last7d)}</div>
             <div className="admin-card__hint">{formatNumber(inquiries.total)} all-time · last 7d</div>
+          </div>
+          <div className="admin-card">
+            <div className="admin-card__label">Abandoned checkouts</div>
+            <div className="admin-card__value">{formatNumber(inquiries.abandoned)}</div>
+            <div className="admin-card__hint">Hosted Bókun · open follow-up · &gt;1h</div>
           </div>
         </div>
 
@@ -1114,34 +1120,285 @@
     );
   }
 
+  const COLLECTION_CHIP_IDS = ['aurora', 'glacier', 'hotspring', 'day', 'self-drive', 'water', 'snow', 'outdoor'];
+  const COLLECTION_ROUTE_IDS = ['golden-circle', 'south-coast'];
+  const FOLLOW_UP_OPTIONS = ['open', 'contacted', 'converted', 'lost', 'spam'];
+
+  const EMPTY_COLLECTION = {
+    slug: '',
+    isActive: true,
+    sortOrder: 0,
+    maxItems: 6,
+    filterType: 'chip',
+    filterValue: 'aurora',
+    activityIds: [],
+    titles: { hant: '', hans: '', en: '' },
+    overlines: { hant: '', hans: '', en: '' },
+    ctaLabels: { hant: '', hans: '', en: '' },
+    ctaChipId: 'aurora',
+    ctaRouteId: null,
+  };
+
+  // ---------------- Marketing page ----------------
+  function MarketingPage({ token, reloadKey }) {
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [msg, setMsg] = useState('');
+    const [editing, setEditing] = useState(null);
+    const [saving, setSaving] = useState(false);
+
+    const load = useCallback(() => {
+      setLoading(true);
+      setError('');
+      adminFetch('/api/admin/collections', token)
+        .then((res) => setRows(res.rows || []))
+        .catch((err) => setError(err.message || 'Failed to load collections'))
+        .finally(() => setLoading(false));
+    }, [token]);
+
+    useEffect(() => { load(); }, [load, reloadKey]);
+
+    const save = async () => {
+      if (!editing) return;
+      setSaving(true);
+      setMsg('');
+      setError('');
+      try {
+        const body = {
+          slug: editing.slug,
+          isActive: editing.isActive,
+          sortOrder: editing.sortOrder,
+          maxItems: editing.maxItems,
+          filterType: editing.filterType,
+          filterValue: editing.filterType === 'manual' ? null : editing.filterValue,
+          activityIds: editing.filterType === 'manual'
+            ? String(editing.activityIdsText || '').split(/[\s,]+/).map((s) => s.trim()).filter(Boolean)
+            : [],
+          titles: editing.titles,
+          overlines: editing.overlines,
+          ctaLabels: editing.ctaLabels,
+          ctaChipId: editing.ctaChipId || null,
+          ctaRouteId: editing.ctaRouteId || null,
+        };
+        if (editing.id) {
+          await adminFetch(`/api/admin/collections?id=${editing.id}`, token, { method: 'PATCH', body });
+        } else {
+          await adminFetch('/api/admin/collections', token, { method: 'POST', body });
+        }
+        setMsg('Collection saved.');
+        setEditing(null);
+        load();
+      } catch (err) {
+        setError(err.message || 'Save failed');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    const remove = async (row) => {
+      if (!window.confirm(`Delete collection "${row.slug}"?`)) return;
+      try {
+        await adminFetch(`/api/admin/collections?id=${row.id}`, token, { method: 'DELETE' });
+        load();
+      } catch (err) {
+        setError(err.message || 'Delete failed');
+      }
+    };
+
+    return (
+      <div>
+        <h1 className="admin-page-title">Marketing</h1>
+        <p className="admin-page-sub">Homepage collection rails below the featured section. Filter by chip, route, or manual activity IDs.</p>
+
+        <div className="admin-sync-actions" style={{ marginBottom: 16 }}>
+          <button
+            type="button"
+            className="admin-btn"
+            onClick={() => setEditing({
+              ...EMPTY_COLLECTION,
+              slug: `collection-${Date.now()}`,
+              titles: { hant: '精選行程', hans: '精选行程', en: 'Curated trips' },
+              overlines: { hant: '季節精選', hans: '季节精选', en: 'Season picks' },
+            })}
+          >
+            New collection
+          </button>
+          {loading ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>Loading…</span> : null}
+          {msg ? <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{msg}</span> : null}
+        </div>
+
+        {error ? <div className="admin-result admin-result--error">{error}</div> : null}
+
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr><th>Order</th><th>Slug</th><th>Title (EN)</th><th>Filter</th><th>Active</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan="6" className="admin-empty">No collections yet — add one to show homepage rails.</td></tr>
+              ) : rows.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.sortOrder}</td>
+                  <td><code>{row.slug}</code></td>
+                  <td>{row.titles.en || row.titles.hant || '—'}</td>
+                  <td>{row.filterType}{row.filterValue ? ` · ${row.filterValue}` : ''}</td>
+                  <td>{row.isActive ? <span className="admin-badge admin-badge--ok">on</span> : <span className="admin-badge admin-badge--off">off</span>}</td>
+                  <td>
+                    <div className="admin-actions">
+                      <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setEditing({
+                        ...row,
+                        activityIdsText: (row.activityIds || []).join(', '),
+                      })}>Edit</button>
+                      <button type="button" className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => remove(row)}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {editing ? (
+          <div className="admin-modal-backdrop" onClick={() => setEditing(null)} role="presentation">
+            <div className="admin-modal admin-modal--wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+              <div className="admin-modal__header">
+                <h2>{editing.id ? `Edit · ${editing.slug}` : 'New collection'}</h2>
+                <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setEditing(null)}>Close</button>
+              </div>
+              <div className="admin-modal__body">
+                <div className="admin-form-grid">
+                  <label className="admin-field">
+                    <span>Slug</span>
+                    <input type="text" value={editing.slug} onChange={(e) => setEditing((f) => ({ ...f, slug: e.target.value }))} disabled={!!editing.id} />
+                  </label>
+                  <label className="admin-field">
+                    <span>Sort order</span>
+                    <input type="number" value={editing.sortOrder} onChange={(e) => setEditing((f) => ({ ...f, sortOrder: Number(e.target.value) || 0 }))} />
+                  </label>
+                  <label className="admin-field">
+                    <span>Max cards</span>
+                    <input type="number" min={1} max={24} value={editing.maxItems} onChange={(e) => setEditing((f) => ({ ...f, maxItems: Number(e.target.value) || 6 }))} />
+                  </label>
+                  <label className="admin-field">
+                    <span>Active</span>
+                    <input type="checkbox" checked={editing.isActive} onChange={(e) => setEditing((f) => ({ ...f, isActive: e.target.checked }))} />
+                  </label>
+                  <label className="admin-field">
+                    <span>Filter type</span>
+                    <select value={editing.filterType} onChange={(e) => setEditing((f) => ({ ...f, filterType: e.target.value }))}>
+                      <option value="chip">chip</option>
+                      <option value="route">route</option>
+                      <option value="manual">manual IDs</option>
+                    </select>
+                  </label>
+                  {editing.filterType === 'chip' ? (
+                    <label className="admin-field">
+                      <span>Chip</span>
+                      <select value={editing.filterValue || ''} onChange={(e) => setEditing((f) => ({ ...f, filterValue: e.target.value }))}>
+                        {COLLECTION_CHIP_IDS.map((id) => <option key={id} value={id}>{id}</option>)}
+                      </select>
+                    </label>
+                  ) : null}
+                  {editing.filterType === 'route' ? (
+                    <label className="admin-field">
+                      <span>Route</span>
+                      <select value={editing.filterValue || ''} onChange={(e) => setEditing((f) => ({ ...f, filterValue: e.target.value }))}>
+                        {COLLECTION_ROUTE_IDS.map((id) => <option key={id} value={id}>{id}</option>)}
+                      </select>
+                    </label>
+                  ) : null}
+                  {editing.filterType === 'manual' ? (
+                    <label className="admin-field admin-field--wide">
+                      <span>Bókun activity IDs (comma-separated)</span>
+                      <textarea rows={2} value={editing.activityIdsText || ''} onChange={(e) => setEditing((f) => ({ ...f, activityIdsText: e.target.value }))} />
+                    </label>
+                  ) : null}
+                  {['hant', 'hans', 'en'].map((lng) => (
+                    <label key={`title-${lng}`} className="admin-field admin-field--wide">
+                      <span>Title · {lng}</span>
+                      <input type="text" value={(editing.titles && editing.titles[lng]) || ''} onChange={(e) => setEditing((f) => ({
+                        ...f,
+                        titles: { ...f.titles, [lng]: e.target.value },
+                      }))} />
+                    </label>
+                  ))}
+                  {['hant', 'hans', 'en'].map((lng) => (
+                    <label key={`over-${lng}`} className="admin-field admin-field--wide">
+                      <span>Overline · {lng}</span>
+                      <input type="text" value={(editing.overlines && editing.overlines[lng]) || ''} onChange={(e) => setEditing((f) => ({
+                        ...f,
+                        overlines: { ...f.overlines, [lng]: e.target.value },
+                      }))} />
+                    </label>
+                  ))}
+                  <label className="admin-field">
+                    <span>CTA chip (View all)</span>
+                    <select value={editing.ctaChipId || ''} onChange={(e) => setEditing((f) => ({ ...f, ctaChipId: e.target.value || null }))}>
+                      <option value="">—</option>
+                      {COLLECTION_CHIP_IDS.map((id) => <option key={id} value={id}>{id}</option>)}
+                    </select>
+                  </label>
+                  <label className="admin-field">
+                    <span>CTA route</span>
+                    <select value={editing.ctaRouteId || ''} onChange={(e) => setEditing((f) => ({ ...f, ctaRouteId: e.target.value || null }))}>
+                      <option value="">—</option>
+                      {COLLECTION_ROUTE_IDS.map((id) => <option key={id} value={id}>{id}</option>)}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div className="admin-modal__footer">
+                <button type="button" className="admin-btn admin-btn--ghost" onClick={() => setEditing(null)} disabled={saving}>Cancel</button>
+                <button type="button" className="admin-btn" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   // ---------------- Inquiries page ----------------
   function InquiriesPage({ token }) {
     const [page, setPage] = useState(1);
     const [pageSize] = useState(50);
     const [statusFilter, setStatusFilter] = useState('');
+    const [abandonedOnly, setAbandonedOnly] = useState(false);
     const [data, setData] = useState({ rows: [], total: 0, statusCounts: null });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [openId, setOpenId] = useState(null);
+    const [detail, setDetail] = useState(null);
+    const [notesDraft, setNotesDraft] = useState('');
+    const [followDraft, setFollowDraft] = useState('open');
+    const [saving, setSaving] = useState(false);
+    const [saveMsg, setSaveMsg] = useState('');
 
-    useEffect(() => { setPage(1); }, [statusFilter]);
-
-    useEffect(() => {
-      let alive = true;
-      setLoading(true);
-      setError('');
+    const loadList = useCallback(() => {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(pageSize),
       });
       if (statusFilter) params.set('status', statusFilter);
-      adminFetch(`/api/admin/inquiries?${params}`, token)
+      if (abandonedOnly) params.set('abandoned', 'true');
+      return adminFetch(`/api/admin/inquiries?${params}`, token);
+    }, [token, page, pageSize, statusFilter, abandonedOnly]);
+
+    useEffect(() => { setPage(1); }, [statusFilter, abandonedOnly]);
+
+    useEffect(() => {
+      let alive = true;
+      setLoading(true);
+      setError('');
+      loadList()
         .then((res) => {
           if (!alive) return;
           setData({
             rows: res.rows || [],
             total: res.total || 0,
-            statusCounts: res.statusCounts || data.statusCounts || null,
+            statusCounts: res.statusCounts || null,
           });
         })
         .catch((err) => {
@@ -1150,8 +1407,50 @@
         })
         .finally(() => { if (alive) setLoading(false); });
       return () => { alive = false; };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token, page, pageSize, statusFilter]);
+    }, [loadList]);
+
+    useEffect(() => {
+      if (!openId) {
+        setDetail(null);
+        return undefined;
+      }
+      let alive = true;
+      adminFetch(`/api/admin/inquiry?id=${openId}`, token)
+        .then((res) => {
+          if (!alive) return;
+          const inq = res.inquiry;
+          setDetail(inq);
+          setNotesDraft(inq.adminNotes || '');
+          setFollowDraft(inq.followUpStatus || 'open');
+          setSaveMsg('');
+        })
+        .catch(() => { if (alive) setDetail(null); });
+      return () => { alive = false; };
+    }, [token, openId]);
+
+    const saveFollowUp = async () => {
+      if (!openId) return;
+      setSaving(true);
+      setSaveMsg('');
+      try {
+        const res = await adminFetch(`/api/admin/inquiry?id=${openId}`, token, {
+          method: 'PATCH',
+          body: { followUpStatus: followDraft, adminNotes: notesDraft },
+        });
+        setDetail(res.inquiry);
+        setSaveMsg('Saved.');
+        const listRes = await loadList();
+        setData({
+          rows: listRes.rows || [],
+          total: listRes.total || 0,
+          statusCounts: listRes.statusCounts || data.statusCounts,
+        });
+      } catch (err) {
+        setSaveMsg(err.message || 'Save failed');
+      } finally {
+        setSaving(false);
+      }
+    };
 
     const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
 
@@ -1163,6 +1462,13 @@
       return 'admin-badge admin-badge--off';
     }
 
+    function followBadge(s) {
+      if (s === 'converted') return 'admin-badge admin-badge--ok';
+      if (s === 'contacted') return 'admin-badge admin-badge--info';
+      if (s === 'lost' || s === 'spam') return 'admin-badge admin-badge--off';
+      return 'admin-badge admin-badge--warn';
+    }
+
     return (
       <div>
         <h1 className="admin-page-title">Inquiries</h1>
@@ -1172,13 +1478,15 @@
 
         <div className="admin-table-wrap">
           <div className="admin-table-toolbar">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} disabled={abandonedOnly}>
               <option value="">All statuses</option>
               <option value="new">new (concierge lead)</option>
               <option value="redirected_to_bokun">redirected_to_bokun</option>
-              <option value="completed">completed</option>
-              <option value="cancelled">cancelled</option>
             </select>
+            <label style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={abandonedOnly} onChange={(e) => setAbandonedOnly(e.target.checked)} />
+              Abandoned carts only
+            </label>
             {data.statusCounts ? (
               <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>
                 {Object.entries(data.statusCounts).map(([k, v]) => `${k}:${v}`).join(' · ')}
@@ -1195,6 +1503,7 @@
                 <tr>
                   <th>Created</th>
                   <th>Status</th>
+                  <th>Follow-up</th>
                   <th>Contact</th>
                   <th>Items</th>
                   <th>Hosted URL</th>
@@ -1202,15 +1511,20 @@
               </thead>
               <tbody>
                 {data.rows.length === 0 ? (
-                  <tr><td colSpan="5" className="admin-empty">No inquiries yet.</td></tr>
+                  <tr><td colSpan="6" className="admin-empty">No inquiries yet.</td></tr>
                 ) : data.rows.map((row) => (
                   <React.Fragment key={row.id}>
-                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenId(openId === row.id ? null : row.id)}>
+                    <tr
+                      className={row.isAbandoned ? 'admin-row--abandoned' : ''}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setOpenId(openId === row.id ? null : row.id)}
+                    >
                       <td>
                         {formatDateTime(row.createdAt)}
                         <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{timeAgo(row.createdAt)}</div>
                       </td>
                       <td><span className={statusBadge(row.status)}>{row.status}</span></td>
+                      <td><span className={followBadge(row.followUpStatus)}>{row.followUpStatus}</span></td>
                       <td>
                         <strong>{row.name}</strong>
                         <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{row.email}{row.phone ? ` · ${row.phone}` : ''}</div>
@@ -1222,10 +1536,43 @@
                           : '—'}
                       </td>
                     </tr>
-                    {openId === row.id ? (
+                    {openId === row.id && detail ? (
                       <tr>
-                        <td colSpan="5" style={{ background: 'rgba(0,0,0,0.02)' }}>
-                          <pre className="admin-pre">{JSON.stringify(row, null, 2)}</pre>
+                        <td colSpan="6" className="admin-inquiry-detail">
+                          <div className="admin-inquiry-detail__grid">
+                            <div>
+                              <h3>Contact</h3>
+                              <p><strong>{detail.name}</strong><br />{detail.email}{detail.phone ? <><br />{detail.phone}</> : null}</p>
+                              <p>Lang: {detail.lang || '—'} · Pax: {detail.pax ?? '—'}</p>
+                              {detail.travelStartDate ? <p>Travel: {detail.travelStartDate}{detail.travelEndDate ? ` → ${detail.travelEndDate}` : ''}</p> : null}
+                              {detail.notes ? <p className="admin-inquiry-detail__notes">{detail.notes}</p> : null}
+                            </div>
+                            <div>
+                              <h3>Follow-up</h3>
+                              <label className="admin-field">
+                                <span>Status</span>
+                                <select value={followDraft} onChange={(e) => setFollowDraft(e.target.value)}>
+                                  {FOLLOW_UP_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                              </label>
+                              <label className="admin-field admin-field--wide">
+                                <span>Internal notes</span>
+                                <textarea rows={4} value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} placeholder="Call back, sent quote, etc." />
+                              </label>
+                              <div className="admin-sync-actions">
+                                <button type="button" className="admin-btn admin-btn--sm" onClick={saveFollowUp} disabled={saving}>
+                                  {saving ? 'Saving…' : 'Save follow-up'}
+                                </button>
+                                {saveMsg ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{saveMsg}</span> : null}
+                              </div>
+                            </div>
+                          </div>
+                          {Array.isArray(detail.selectedTrip) && detail.selectedTrip.length ? (
+                            <details style={{ marginTop: 12 }}>
+                              <summary style={{ cursor: 'pointer', fontSize: 13 }}>Trip payload ({detail.selectedTrip.length})</summary>
+                              <pre className="admin-pre">{JSON.stringify(detail.selectedTrip, null, 2)}</pre>
+                            </details>
+                          ) : null}
                         </td>
                       </tr>
                     ) : null}
@@ -1316,6 +1663,7 @@
       vendors: overview?.vendors?.length,
       activities: overview?.activities?.active,
       inquiries: overview?.inquiries?.total,
+      collections: overview?.marketing?.collectionsActive,
     };
 
     return (
@@ -1346,6 +1694,9 @@
               reloadKey={reloadKey}
               onRefresh={refreshAll}
             />
+          )}
+          {tab === 'marketing' && (
+            <MarketingPage token={token} reloadKey={reloadKey} />
           )}
           {tab === 'inquiries' && <InquiriesPage token={token} />}
           {tab === 'env' && <EnvironmentPage overview={overview} />}

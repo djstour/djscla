@@ -224,6 +224,43 @@
     },
 
     /**
+     * GET /api/catalog/collections — homepage marketing rails (Supabase).
+     */
+    fetchCollections(opts = {}) {
+      const { lang = 'hant' } = opts;
+
+      if (typeof fetch === 'undefined') {
+        const err = new Error('fetch is not available — use a browser or vercel dev');
+        err.code = 'NO_FETCH';
+        return Promise.reject(err);
+      }
+
+      const qs = new URLSearchParams({ lang });
+
+      return fetch(`/api/catalog/collections?${qs}`)
+        .then((res) => res.json().then((data) => ({ res, data })))
+        .then(({ res, data }) => {
+          if (!res.ok) {
+            const err = new Error(data.error || `Collections HTTP ${res.status}`);
+            err.status = res.status;
+            throw err;
+          }
+          const list = data.collections;
+          if (!Array.isArray(list)) {
+            throw new Error('Invalid response from /api/catalog/collections');
+          }
+          if (data.translations && typeof data.translations === 'object') {
+            A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
+          }
+          return {
+            collections: list,
+            meta: data.meta || { count: list.length },
+            translations: data.translations || {},
+          };
+        });
+    },
+
+    /**
      * Lightweight catalog typeahead — hits Supabase via /api/catalog/activities
      * with the FTS `q` param. Returns view-models so callers can render rows
      * with the same shape as the rest of the catalog.
