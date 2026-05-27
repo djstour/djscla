@@ -1289,15 +1289,6 @@
               )}
             </div>
 
-          {hasMultiPrice && (
-            <div className="detail-book-extra detail-book-extra--desktop">
-              <div className="detail-book-extra__title">
-                {T({ hant: '票種', hans: '票种', en: 'Ticket types' })}
-              </div>
-              <PriceRows tour={tour} displayCurrency={displayCurrency} fxRates={fxRates} />
-            </div>
-          )}
-
           {isMobile && (
             <button
               type="button"
