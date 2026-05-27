@@ -16,6 +16,14 @@
       "destination": "/api/catalog/activities"
     },
     {
+      "source": "/admin",
+      "destination": "/ui_kits/web/admin.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/ui_kits/web/admin.html"
+    },
+    {
       "source": "/",
       "destination": "/ui_kits/web/index.html"
     },

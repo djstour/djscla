@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<base href="/ui_kits/web/">
+<title>Auralis · Admin Console</title>
+<link rel="icon" href="../../assets/logo-mark.svg">
+<link rel="stylesheet" href="../../colors_and_type.css?v=site1">
+<link rel="stylesheet" href="responsive.css">
+<link rel="stylesheet" href="admin.css">
+<meta name="robots" content="noindex,nofollow">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg-page); font-family: var(--font-text); color: var(--fg-2); min-height: 100vh; }
+  *, *::before, *::after { box-sizing: border-box; }
+  button { font-family: var(--font-text); }
+  input, select, textarea { font-family: var(--font-text); }
+</style>
+</head>
+<body data-screen-label="Auralis Admin">
+<div id="admin-root"></div>
+
+<script type="text/babel" data-presets="react" src="components/AdminApp.jsx"></script>
+<script type="text/babel" data-presets="react">
+  ReactDOM.createRoot(document.getElementById('admin-root')).render(<window.AuralisAdmin />);
+</script>
+
+</body>
+</html>
