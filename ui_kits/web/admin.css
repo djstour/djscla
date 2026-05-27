@@ -1,4 +1,4 @@
-/* Admin console — Phase 4 (marketing + inquiry follow-up).
+/* Admin console — Phase 5 (translations + health).
  * Intentionally separate from public site styles so we can iterate without
  * affecting marketing visuals. Uses the same CSS variables for theme parity.
  */
@@ -812,6 +812,88 @@
 
 @media (max-width: 900px) {
   .admin-inquiry-detail__grid { grid-template-columns: 1fr; }
+}
+
+.admin-health-banner {
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.admin-health-banner--healthy {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: #15803d;
+}
+
+.admin-health-banner--degraded {
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #92400e;
+}
+
+.admin-health-banner--unhealthy {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #b91c1c;
+}
+
+.admin-health-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.admin-health-check {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.08));
+  background: var(--surface-card, #fff);
+}
+
+.admin-health-check p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--fg-2);
+}
+
+.admin-health-check__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-health-check__status {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.admin-health-check--ok .admin-health-check__status {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.admin-health-check--warn .admin-health-check__status {
+  background: rgba(251, 191, 36, 0.2);
+  color: #92400e;
+}
+
+.admin-health-check--fail .admin-health-check__status {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.admin-health-check__latency {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 900px) {

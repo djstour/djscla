@@ -7,6 +7,7 @@
 
 const { applyAdminCors, requireAdmin } = require('../../lib/adminAuth');
 const { supabaseRestFetch } = require('../../lib/supabase');
+const { envHealth } = require('../../lib/adminHealth');
 
 async function countActivities() {
   // PostgREST: HEAD with Prefer: count=exact returns the row count in
@@ -108,36 +109,6 @@ async function inquiryStats() {
     created_at: `lt.${cutoff}`,
   });
   return { total, last7d, abandoned };
-}
-
-function envHealth() {
-  function flag(key) {
-    const v = process.env[key];
-    return { set: !!(v && String(v).trim()), key };
-  }
-  return {
-    bokun: {
-      accessKey: flag('BOKUN_ACCESS_KEY').set,
-      secretKey: flag('BOKUN_SECRET_KEY').set,
-      apiHost: process.env.BOKUN_API_HOST || null,
-      shopUrl: process.env.BOKUN_SHOP_URL || null,
-    },
-    supabase: {
-      url: !!(process.env.SUPABASE_URL || '').trim(),
-      anonKey: !!(process.env.SUPABASE_ANON_KEY || '').trim(),
-      serviceKey: !!(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim(),
-    },
-    cron: {
-      cronSecret: !!(process.env.CRON_SECRET || '').trim(),
-      catalogSyncSecret: !!(process.env.CATALOG_SYNC_SECRET || '').trim(),
-    },
-    catalog: {
-      source: process.env.CATALOG_SOURCE || 'bokun',
-    },
-    admin: {
-      password: !!(process.env.ADMIN_PASSWORD || '').trim(),
-    },
-  };
 }
 
 module.exports = async function handler(req, res) {

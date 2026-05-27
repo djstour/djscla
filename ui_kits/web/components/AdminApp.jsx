@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 /* global React, ReactDOM */
 
-  // DJS Tour · Admin Console — Phase 4 (marketing + inquiry follow-up).
+  // DJS Tour · Admin Console — Phase 5 (translations + health).
 //
 // Self-contained app: does NOT import the public AuralisUI/AuralisData stacks
 // so we can iterate independently and keep the admin bundle lean. Auth is a
@@ -182,7 +182,8 @@
       { id: 'content', label: 'Content' },
       { id: 'marketing', label: 'Marketing', badge: counts.collections },
       { id: 'inquiries', label: 'Inquiries', badge: counts.inquiries },
-      { id: 'env', label: 'Environment' },
+      { id: 'translations', label: 'Translations', badge: counts.translationPending },
+      { id: 'health', label: 'Health' },
     ];
     return (
       <aside className="admin-sidebar">
@@ -202,7 +203,7 @@
         ))}
         <div className="admin-nav-spacer" />
         <div className="admin-sidebar__footer">
-          Phase 4 · marketing<br />
+          Phase 5 · ops<br />
           <button onClick={onLogout}>Sign out</button>
         </div>
       </aside>
@@ -1594,20 +1595,270 @@
     );
   }
 
-  // ---------------- Environment ----------------
-  function EnvironmentPage({ overview }) {
-    if (!overview) return <div className="admin-empty">Loading…</div>;
-    const env = overview.env || {};
+  // ---------------- Translations page ----------------
+  function TranslationsPage({ token, reloadKey }) {
+    const [queue, setQueue] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [running, setRunning] = useState(false);
+    const [runResult, setRunResult] = useState(null);
+    const [rowBusy, setRowBusy] = useState(null);
+    const [batchSize, setBatchSize] = useState(12);
+
+    const loadQueue = useCallback(() => {
+      setLoading(true);
+      setError('');
+      adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50', token)
+        .then((res) => setQueue(res))
+        .catch((err) => setError(err.message || 'Failed to load queue'))
+        .finally(() => setLoading(false));
+    }, [token]);
+
+    useEffect(() => { loadQueue(); }, [loadQueue, reloadKey]);
+
+    const runBatch = async () => {
+      setRunning(true);
+      setRunResult(null);
+      setError('');
+      try {
+        const res = await adminFetch('/api/admin/translations', token, {
+          method: 'POST',
+          body: { action: 'run-batch', maxActivities: batchSize },
+        });
+        setRunResult(res);
+        loadQueue();
+      } catch (err) {
+        setError(err.message || 'Batch failed');
+      } finally {
+        setRunning(false);
+      }
+    };
+
+    const syncOne = async (bokunActivityId) => {
+      setRowBusy(bokunActivityId);
+      setError('');
+      try {
+        await adminFetch('/api/admin/translations', token, {
+          method: 'POST',
+          body: { action: 'sync-activities', activityIds: [Number(bokunActivityId)] },
+        });
+        loadQueue();
+      } catch (err) {
+        setError(err.message || 'Sync failed');
+      } finally {
+        setRowBusy(null);
+      }
+    };
+
+    const cov = queue && queue.coverage;
+    const stats = queue && queue.stats;
+
+    return (
+      <div>
+        <h1 className="admin-page-title">Translations</h1>
+        <p className="admin-page-sub">
+          OpenAI background sync for hant/hans overlays. Scanned {formatNumber(queue?.activeActivities)} active activities
+          {queue?.scannedAt ? ` · ${formatDateTime(queue.scannedAt)}` : ''}.
+        </p>
+
+        <div className="admin-grid" style={{ marginBottom: 20 }}>
+          <div className="admin-card">
+            <div className="admin-card__label">Field coverage</div>
+            <div className="admin-card__value">{cov ? `${cov.percentComplete}%` : '—'}</div>
+            <div className="admin-card__hint">
+              {cov ? `${formatNumber(cov.translatedFields)} / ${formatNumber(cov.requiredFields)} fields` : '—'}
+            </div>
+          </div>
+          <div className="admin-card">
+            <div className="admin-card__label">Queue depth</div>
+            <div className="admin-card__value">{formatNumber(stats?.queueDepth)}</div>
+            <div className="admin-card__hint">activities need translation work</div>
+          </div>
+          <div className="admin-card">
+            <div className="admin-card__label">Fully translated</div>
+            <div className="admin-card__value">{formatNumber(stats?.complete)}</div>
+            <div className="admin-card__hint">{formatNumber(stats?.partial)} partial · {formatNumber(stats?.pending)} empty</div>
+          </div>
+          <div className="admin-card">
+            <div className="admin-card__label">Cron estimate</div>
+            <div className="admin-card__value">{queue?.cron?.estimatedRunsToClear ?? '—'}</div>
+            <div className="admin-card__hint">runs @ {queue?.cron?.maxActivitiesPerRun || 12}/batch · {queue?.cron?.schedule || 'every 6h'}</div>
+          </div>
+        </div>
+
+        <section className="admin-sync-panel">
+          <h2>Run translation batch</h2>
+          <p>Same worker as Vercel cron — translates up to N activities per run (title, summary, description, stops).</p>
+          <div className="admin-sync-actions">
+            <label style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              Batch size
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={batchSize}
+                onChange={(e) => setBatchSize(Math.min(30, Math.max(1, Number(e.target.value) || 12)))}
+                disabled={running}
+                style={{ width: 56 }}
+              />
+            </label>
+            <button type="button" className={`admin-btn${running ? ' admin-btn--loading' : ''}`} onClick={runBatch} disabled={running}>
+              {running ? (
+                <>
+                  <span className="admin-sync-spinner" aria-hidden="true" />
+                  Translating…
+                </>
+              ) : (
+                'Run batch now'
+              )}
+            </button>
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={loadQueue} disabled={running || loading}>
+              Refresh queue
+            </button>
+          </div>
+          {runResult && runResult.summary ? (
+            <div className="admin-sync-result" style={{ marginTop: 14 }}>
+              <div className="admin-sync-result__header">
+                <span className="admin-sync-result__icon" aria-hidden="true">✓</span>
+                <div>
+                  <strong>Batch complete</strong>
+                  <span className="admin-sync-result__meta">
+                    {formatNumber(runResult.summary.translated)} translated ·{' '}
+                    {formatNumber(runResult.summary.skipped)} skipped ·{' '}
+                    {formatNumber(runResult.summary.pendingActivities)} activities in batch
+                  </span>
+                </div>
+              </div>
+              {runResult.summary.errors && runResult.summary.errors.length ? (
+                <pre className="admin-pre" style={{ marginTop: 10 }}>{JSON.stringify(runResult.summary.errors, null, 2)}</pre>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+
+        {error ? <div className="admin-result admin-result--error">{error}</div> : null}
+
+        <h2 style={{ fontSize: 16, margin: '8px 0 12px' }}>Pending queue</h2>
+        <div className="admin-table-wrap">
+          {loading ? <div className="admin-empty">Scanning catalog…</div> : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Activity</th>
+                  <th>ID</th>
+                  <th>Coverage</th>
+                  <th>Missing</th>
+                  <th>Stale</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!queue?.pending?.length ? (
+                  <tr><td colSpan="6" className="admin-empty">Queue empty — all scanned activities are up to date.</td></tr>
+                ) : queue.pending.map((row) => (
+                  <tr key={row.bokunActivityId}>
+                    <td><strong>{row.title}</strong></td>
+                    <td>{row.bokunActivityId}</td>
+                    <td>{row.percent}%</td>
+                    <td>{formatNumber(row.missing)}</td>
+                    <td>{formatNumber(row.stale)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost admin-btn--sm"
+                        disabled={rowBusy === row.bokunActivityId || running}
+                        onClick={() => syncOne(row.bokunActivityId)}
+                      >
+                        {rowBusy === row.bokunActivityId ? '…' : 'Translate'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------- Health page ----------------
+  function HealthPage({ token, overview }) {
+    const [report, setReport] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    const loadHealth = useCallback(() => {
+      setLoading(true);
+      setError('');
+      adminFetch('/api/admin/health', token)
+        .then((res) => setReport(res))
+        .catch((err) => setError(err.message || 'Health check failed'))
+        .finally(() => setLoading(false));
+    }, [token]);
+
+    useEffect(() => { loadHealth(); }, [loadHealth]);
+
+    const env = (report && report.env) || overview?.env || {};
+
     function flagBadge(b) {
       return b
         ? <span className="admin-badge admin-badge--ok">set</span>
         : <span className="admin-badge admin-badge--err">missing</span>;
     }
+
+    function checkStatusClass(status) {
+      if (status === 'ok') return 'admin-health-check--ok';
+      if (status === 'warn') return 'admin-health-check--warn';
+      return 'admin-health-check--fail';
+    }
+
+    const overall = report?.overall || 'unknown';
+
     return (
       <div>
-        <h1 className="admin-page-title">Environment</h1>
-        <p className="admin-page-sub">Server-side config visible to the running deployment. Values themselves are never returned.</p>
+        <h1 className="admin-page-title">Health</h1>
+        <p className="admin-page-sub">Live probes + environment flags for this deployment.</p>
 
+        <div className="admin-sync-actions" style={{ marginBottom: 16 }}>
+          <button type="button" className="admin-btn admin-btn--ghost" onClick={loadHealth} disabled={loading}>
+            {loading ? 'Checking…' : 'Re-run checks'}
+          </button>
+          {report?.generatedAt ? (
+            <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>Last run {formatDateTime(report.generatedAt)}</span>
+          ) : null}
+        </div>
+
+        {error ? <div className="admin-result admin-result--error">{error}</div> : null}
+
+        {report ? (
+          <div className={`admin-health-banner admin-health-banner--${overall}`}>
+            <strong>Overall: {overall}</strong>
+            {report.translation ? (
+              <span style={{ marginLeft: 12, fontWeight: 400 }}>
+                Translation queue {formatNumber(report.translation.queueDepth)} · {report.translation.percentComplete}% field coverage
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        {report && report.checks ? (
+          <div className="admin-health-checks">
+            {report.checks.map((c) => (
+              <div key={c.id} className={`admin-health-check ${checkStatusClass(c.status)}`}>
+                <div className="admin-health-check__head">
+                  <span className="admin-health-check__status">{c.status}</span>
+                  <strong>{c.label}</strong>
+                  {c.latencyMs > 0 ? <span className="admin-health-check__latency">{c.latencyMs} ms</span> : null}
+                </div>
+                <p>{c.message}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <h2 style={{ fontSize: 16, margin: '24px 0 12px' }}>Environment variables</h2>
+        <p className="admin-page-sub" style={{ marginTop: 0 }}>Presence only — values are never returned.</p>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <tbody>
@@ -1622,9 +1873,14 @@
               <tr><td>SUPABASE_ANON_KEY</td><td>{flagBadge(env.supabase?.anonKey)}</td></tr>
               <tr><td>SUPABASE_SERVICE_ROLE_KEY</td><td>{flagBadge(env.supabase?.serviceKey)}</td></tr>
 
+              <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>OpenAI</th></tr>
+              <tr><td>OPENAI_API_KEY</td><td>{flagBadge(env.openai?.apiKey)}</td></tr>
+              <tr><td>OPENAI_TRANSLATION_MODEL</td><td><code>{env.openai?.model || 'gpt-4o-mini'}</code></td></tr>
+
               <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>Cron / Sync</th></tr>
               <tr><td>CRON_SECRET</td><td>{flagBadge(env.cron?.cronSecret)}</td></tr>
               <tr><td>CATALOG_SYNC_SECRET</td><td>{flagBadge(env.cron?.catalogSyncSecret)}</td></tr>
+              <tr><td>TRANSLATION_SYNC_SECRET</td><td>{flagBadge(env.cron?.translationSyncSecret)}</td></tr>
               <tr><td>CATALOG_SOURCE</td><td><code>{env.catalog?.source}</code></td></tr>
 
               <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>Admin</th></tr>
@@ -1664,6 +1920,7 @@
       activities: overview?.activities?.active,
       inquiries: overview?.inquiries?.total,
       collections: overview?.marketing?.collectionsActive,
+      translationPending: null,
     };
 
     return (
@@ -1699,7 +1956,10 @@
             <MarketingPage token={token} reloadKey={reloadKey} />
           )}
           {tab === 'inquiries' && <InquiriesPage token={token} />}
-          {tab === 'env' && <EnvironmentPage overview={overview} />}
+          {tab === 'translations' && (
+            <TranslationsPage token={token} reloadKey={reloadKey} />
+          )}
+          {tab === 'health' && <HealthPage token={token} overview={overview} />}
         </main>
       </div>
     );
