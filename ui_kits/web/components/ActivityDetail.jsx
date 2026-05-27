@@ -1427,7 +1427,7 @@
                         const unit = unitPriceByCategoryId && unitPriceByCategoryId.get(String(cat.id));
                         return (
                           <label key={cat.id} className="detail-book-people__field">
-                            <span className="detail-book-label">{paxLabel(cat)}</span>
+                            <span className="detail-book-people__cat">{paxLabel(cat)}</span>
                             <select
                               value={qty}
                               onChange={(e) => {

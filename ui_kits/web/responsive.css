@@ -2370,6 +2370,14 @@ html[data-site-theme="sun"] .detail-tabs__btn.is-active {
   min-width: 0;
 }
 
+.detail-book-people__cat {
+  font: 650 12px/1.2 var(--font-text);
+  color: var(--fg-2);
+  text-transform: none;
+  letter-spacing: 0;
+  min-height: 30px; /* keeps selects aligned when labels wrap */
+}
+
 .detail-book-people__unitprices {
   margin: 12px 0 0;
   font: 500 12px/1.5 var(--font-text);
@@ -2381,6 +2389,7 @@ html[data-site-theme="sun"] .detail-tabs__btn.is-active {
 }
 
 .detail-book-people__unit {
+  margin-top: 2px;
   font: 600 13px/1.35 var(--font-text);
   color: var(--fg-1);
   font-variant-numeric: tabular-nums;
