@@ -198,6 +198,24 @@
     'Syncing activity details (if enabled)…',
   ];
 
+  const TRANSLATION_BATCH_STEPS = [
+    'Scanning translation queue in Supabase…',
+    'Loading activity payloads from catalog…',
+    'Checking which fields are missing or stale…',
+    'Calling OpenAI — Traditional Chinese (hant)…',
+    'Calling OpenAI — Simplified Chinese (hans)…',
+    'Translating titles, summaries, and descriptions…',
+    'Translating itinerary stop names…',
+    'Writing translation overlays to Supabase…',
+    'Finishing batch — large batches can take several minutes…',
+  ];
+
+  const TRANSLATION_ROW_STEPS = [
+    'Loading activity from catalog…',
+    'Translating fields via OpenAI…',
+    'Saving to Supabase…',
+  ];
+
   function timeAgo(iso) {
     if (!iso) return '';
     const t = new Date(iso).getTime();
@@ -329,24 +347,87 @@
     );
   }
 
-  function CatalogSyncRunning({ elapsedSec, stepIndex }) {
-    const step = CATALOG_SYNC_STEPS[stepIndex % CATALOG_SYNC_STEPS.length];
+  function AdminJobRunning({
+    title,
+    step,
+    elapsedSec,
+    hint,
+    progressPct = null,
+  }) {
+    const indeterminate = progressPct == null;
     return (
-      <div className="admin-sync-running" role="status" aria-live="polite">
+      <div
+        className="admin-sync-running"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <div className="admin-sync-running__head">
           <span className="admin-sync-spinner admin-sync-spinner--lg" aria-hidden="true" />
           <div>
-            <strong>Catalog sync in progress</strong>
-            <p className="admin-sync-running__step">{step}</p>
+            <strong>{title}</strong>
+            <p className="admin-sync-running__step" key={step}>{step}</p>
           </div>
         </div>
-        <div className="admin-sync-progress" aria-hidden="true">
-          <div className="admin-sync-progress__bar" />
+        <div
+          className="admin-sync-progress"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={indeterminate ? undefined : progressPct}
+          aria-label={indeterminate ? 'Working' : `Estimated progress ${progressPct}%`}
+        >
+          {indeterminate ? (
+            <div className="admin-sync-progress__bar" />
+          ) : (
+            <div
+              className="admin-sync-progress__bar admin-sync-progress__bar--fill"
+              style={{ width: `${progressPct}%` }}
+            />
+          )}
         </div>
-        <p className="admin-sync-running__hint">
-          Elapsed {elapsedSec}s · typical run 30–90s · keep this tab open
-        </p>
+        <p className="admin-sync-running__hint">{hint}</p>
       </div>
+    );
+  }
+
+  function CatalogSyncRunning({ elapsedSec, stepIndex }) {
+    const step = CATALOG_SYNC_STEPS[stepIndex % CATALOG_SYNC_STEPS.length];
+    return (
+      <AdminJobRunning
+        title="Catalog sync in progress"
+        step={step}
+        elapsedSec={elapsedSec}
+        hint={`Elapsed ${elapsedSec}s · typical run 30–90s · keep this tab open`}
+      />
+    );
+  }
+
+  function TranslationBatchRunning({
+    elapsedSec,
+    stepIndex,
+    batchSize,
+    queueDepth,
+    progressPct,
+    estimatedSec,
+  }) {
+    const step = TRANSLATION_BATCH_STEPS[stepIndex % TRANSLATION_BATCH_STEPS.length];
+    const estMin = Math.max(1, Math.ceil(estimatedSec / 60));
+    return (
+      <AdminJobRunning
+        title="Translation batch in progress"
+        step={step}
+        elapsedSec={elapsedSec}
+        progressPct={progressPct}
+        hint={(
+          <>
+            Elapsed {elapsedSec}s · up to {formatNumber(batchSize)} activities this run
+            {queueDepth != null ? ` · ${formatNumber(queueDepth)} in queue` : ''}
+            {' · '}
+            typical {estMin}–{estMin + 2} min · keep this tab open (server limit ~5 min)
+          </>
+        )}
+      />
     );
   }
 
@@ -383,7 +464,7 @@
     }
     if (linkAdded > 0 || linkRemoved > 0) {
       summaryChips.push({
-        text: `links +${formatNumber(linkAdded)} / −${formatNumber(linkRemoved)}`,
+        text: `Vendor links: +${formatNumber(linkAdded)} added, −${formatNumber(linkRemoved)} removed`,
         tone: 'neutral',
       });
     }
@@ -465,14 +546,17 @@
         </div>
 
         <div className="admin-sync-summary" role="status">
-          {summaryChips.map((chip) => (
-            <span
-              key={chip.text}
-              className={`admin-sync-summary__chip admin-sync-summary__chip--${chip.tone}`}
-            >
-              {chip.text}
-            </span>
-          ))}
+          <div className="admin-sync-summary__label">This sync run</div>
+          <div className="admin-sync-summary__chips">
+            {summaryChips.map((chip) => (
+              <span
+                key={chip.text}
+                className={`admin-sync-summary__chip admin-sync-summary__chip--${chip.tone}`}
+              >
+                {chip.text}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="admin-sync-stat-groups">
@@ -511,6 +595,49 @@
           </div>
         ) : null}
       </div>
+    );
+  }
+
+  function CatalogCountExplainer({ activities, totals, vendors }) {
+    const activeVendors = (vendors || []).filter((v) => v.isActive);
+    const contract = totals?.contractTotal || 0;
+    const unique = totals?.uniqueTotal || 0;
+    const active = activities?.active || 0;
+    const inactive = activities?.inactive || 0;
+    const total = activities?.total || 0;
+
+    return (
+      <aside className="admin-callout admin-callout--info" aria-label="Catalog count guide">
+        <strong>How the numbers relate</strong>
+        <p>
+          <span className="admin-callout__num">{formatNumber(contract)}</span>
+          {' '}
+          <em>contract products</em>
+          {' '}
+          = Bókun search rows summed per vendor (same trip can appear under multiple suppliers).
+          {' '}
+          <span className="admin-callout__num">{formatNumber(unique)}</span>
+          {' '}
+          <em>unique</em>
+          {' '}
+          = deduped trips across the channel.
+          {' '}
+          <span className="admin-callout__num">{formatNumber(active)}</span>
+          {' '}
+          <em>active on site</em>
+          {' '}
+          = what Tours, translations, and sync scripts use (
+          {formatNumber(inactive)} deactivated of {formatNumber(total)} in DB).
+        </p>
+        <p className="admin-callout__foot">
+          Sidebar uses <strong>{formatNumber(activeVendors.length)}</strong> active vendor
+          {activeVendors.length === 1 ? '' : 's'}
+          {(vendors || []).length > activeVendors.length
+            ? ` (${formatNumber(vendors.length - activeVendors.length)} inactive hidden from totals)`
+            : ''}
+          .
+        </p>
+      </aside>
     );
   }
 
@@ -657,21 +784,34 @@
           ) : null}
         </section>
 
-        <div className="admin-grid">
-          <div className="admin-card">
-            <div className="admin-card__label">Active activities</div>
+        <CatalogCountExplainer activities={activities} totals={totals} vendors={vendors} />
+
+        <div className="admin-grid admin-grid--metrics">
+          <div className="admin-card admin-card--primary">
+            <div className="admin-card__label">Active on site</div>
             <div className="admin-card__value">{formatNumber(activities.active)}</div>
-            <div className="admin-card__hint">{formatNumber(activities.inactive)} deactivated · {formatNumber(activities.total)} total</div>
+            <div className="admin-card__hint">
+              Shown on djstour.com · translation sync uses this count
+            </div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Contract products</div>
+            <div className="admin-card__label">Bókun contract rows</div>
             <div className="admin-card__value">{formatNumber(totals.contractTotal)}</div>
-            <div className="admin-card__hint">across {formatNumber(vendors.length)} vendor{vendors.length === 1 ? '' : 's'}</div>
+            <div className="admin-card__hint">
+              Matches Create booking total · {formatNumber(vendors.filter((v) => v.isActive).length)} active vendors
+            </div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Unique products</div>
+            <div className="admin-card__label">Unique trips (channel)</div>
             <div className="admin-card__value">{formatNumber(totals.uniqueTotal)}</div>
-            <div className="admin-card__hint">After dedup across vendors</div>
+            <div className="admin-card__hint">Deduped across all vendors</div>
+          </div>
+          <div className="admin-card admin-card--warn">
+            <div className="admin-card__label">Deactivated</div>
+            <div className="admin-card__value">{formatNumber(activities.inactive)}</div>
+            <div className="admin-card__hint">
+              No longer in channel · {formatNumber(activities.total)} rows in DB
+            </div>
           </div>
           <div className="admin-card">
             <div className="admin-card__label">Inquiries</div>
@@ -685,15 +825,19 @@
           </div>
         </div>
 
-        <h2 style={{ fontSize: 16, margin: '8px 0 12px', color: 'var(--fg-1)' }}>Vendor breakdown</h2>
+        <h2 className="admin-section-title">Vendor breakdown</h2>
+        <p className="admin-section-sub">
+          Contract column = Bókun search rows per supplier. Unique = deduped trips for that supplier.
+          Footer sums should match the cards above.
+        </p>
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-table--numeric">
             <thead>
               <tr>
                 <th>Vendor</th>
                 <th>Bókun ID</th>
-                <th>Contracts</th>
-                <th>Unique</th>
+                <th title="Search rows in Bókun for this supplier">Contract rows</th>
+                <th title="Unique activity IDs for this supplier">Unique trips</th>
                 <th>Last sync</th>
                 <th>Status</th>
               </tr>
@@ -702,12 +846,12 @@
               {vendors.length === 0 ? (
                 <tr><td colSpan="6" className="admin-empty">No vendors yet — run /api/catalog/sync first.</td></tr>
               ) : vendors.map((v) => (
-                <tr key={v.id}>
+                <tr key={v.id} className={v.isActive ? '' : 'admin-table-row--muted'}>
                   <td><strong>{v.name}</strong></td>
-                  <td>#{v.bokunVendorId}</td>
+                  <td><code className="admin-code">#{v.bokunVendorId}</code></td>
                   <td>{formatNumber(v.contractProductCount)}</td>
                   <td>{formatNumber(v.uniqueProductCount)}</td>
-                  <td>{formatDateTime(v.lastSyncedAt)}</td>
+                  <td>{formatDateTime(v.lastSyncedAt, lang)}</td>
                   <td>
                     {v.isActive
                       ? <span className="admin-badge admin-badge--ok">active</span>
@@ -716,6 +860,16 @@
                 </tr>
               ))}
             </tbody>
+            {vendors.length > 0 ? (
+              <tfoot>
+                <tr>
+                  <td colSpan="2"><strong>Total (listed vendors)</strong></td>
+                  <td><strong>{formatNumber(totals.contractTotal)}</strong></td>
+                  <td><strong>{formatNumber(totals.uniqueTotal)}</strong></td>
+                  <td colSpan="2" />
+                </tr>
+              </tfoot>
+            ) : null}
           </table>
         </div>
       </div>
@@ -1802,6 +1956,44 @@
     const [runResult, setRunResult] = useState(null);
     const [rowBusy, setRowBusy] = useState(null);
     const [batchSize, setBatchSize] = useState(12);
+    const [batchElapsed, setBatchElapsed] = useState(0);
+    const [batchStep, setBatchStep] = useState(0);
+    const [rowElapsed, setRowElapsed] = useState(0);
+    const [rowStep, setRowStep] = useState(0);
+    const batchStartedRef = useRef(0);
+    const rowStartedRef = useRef(0);
+
+    const queueDepth = queue?.stats?.queueDepth;
+    const batchEstimateSec = Math.min(295, Math.max(40, batchSize * 22));
+    const batchProgressPct = running
+      ? Math.min(92, Math.round((batchElapsed / batchEstimateSec) * 100))
+      : 0;
+
+    useEffect(() => {
+      if (!running) return undefined;
+      batchStartedRef.current = Date.now();
+      setBatchElapsed(0);
+      setBatchStep(0);
+      const tick = window.setInterval(() => {
+        const sec = Math.floor((Date.now() - batchStartedRef.current) / 1000);
+        setBatchElapsed(sec);
+        setBatchStep(Math.floor(sec / 5));
+      }, 500);
+      return () => window.clearInterval(tick);
+    }, [running]);
+
+    useEffect(() => {
+      if (!rowBusy) return undefined;
+      rowStartedRef.current = Date.now();
+      setRowElapsed(0);
+      setRowStep(0);
+      const tick = window.setInterval(() => {
+        const sec = Math.floor((Date.now() - rowStartedRef.current) / 1000);
+        setRowElapsed(sec);
+        setRowStep(Math.floor(sec / 4));
+      }, 500);
+      return () => window.clearInterval(tick);
+    }, [rowBusy]);
 
     const loadQueue = useCallback(() => {
       setLoading(true);
@@ -1884,7 +2076,7 @@
           </div>
         </div>
 
-        <section className="admin-sync-panel">
+        <section className={`admin-sync-panel${running ? ' admin-sync-panel--busy' : ''}`}>
           <h2>Run translation batch</h2>
           <p>Same worker as Vercel cron — translates up to N activities per run (title, summary, description, stops).</p>
           <div className="admin-sync-actions">
@@ -1896,37 +2088,69 @@
                 max={30}
                 value={batchSize}
                 onChange={(e) => setBatchSize(Math.min(30, Math.max(1, Number(e.target.value) || 12)))}
-                disabled={running}
+                disabled={running || !!rowBusy}
                 style={{ width: 56 }}
               />
             </label>
-            <button type="button" className={`admin-btn${running ? ' admin-btn--loading' : ''}`} onClick={runBatch} disabled={running}>
+            <button
+              type="button"
+              className={`admin-btn${running ? ' admin-btn--loading' : ''}`}
+              onClick={runBatch}
+              disabled={running || !!rowBusy}
+            >
               {running ? (
                 <>
                   <span className="admin-sync-spinner" aria-hidden="true" />
-                  Translating…
+                  Translating… {batchElapsed}s
                 </>
               ) : (
                 'Run batch now'
               )}
             </button>
-            <button type="button" className="admin-btn admin-btn--ghost" onClick={loadQueue} disabled={running || loading}>
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={loadQueue} disabled={running || loading || !!rowBusy}>
               Refresh queue
             </button>
           </div>
-          {runResult && runResult.summary ? (
+          {running ? (
+            <TranslationBatchRunning
+              elapsedSec={batchElapsed}
+              stepIndex={batchStep}
+              batchSize={batchSize}
+              queueDepth={queueDepth}
+              progressPct={batchProgressPct}
+              estimatedSec={batchEstimateSec}
+            />
+          ) : null}
+          {rowBusy && !running ? (
+            <AdminJobRunning
+              title={`Translating activity #${rowBusy}`}
+              step={TRANSLATION_ROW_STEPS[rowStep % TRANSLATION_ROW_STEPS.length]}
+              elapsedSec={rowElapsed}
+              progressPct={Math.min(90, Math.round((rowElapsed / 75) * 100))}
+              hint={`Elapsed ${rowElapsed}s · one activity usually 30–90s · keep this tab open`}
+            />
+          ) : null}
+          {runResult && runResult.summary && !running ? (
             <div className="admin-sync-result" style={{ marginTop: 14 }}>
               <div className="admin-sync-result__header">
                 <span className="admin-sync-result__icon" aria-hidden="true">✓</span>
                 <div>
                   <strong>Batch complete</strong>
                   <span className="admin-sync-result__meta">
-                    {formatNumber(runResult.summary.translated)} translated ·{' '}
+                    {formatNumber(runResult.summary.translated)} fields translated ·{' '}
                     {formatNumber(runResult.summary.skipped)} skipped ·{' '}
-                    {formatNumber(runResult.summary.pendingActivities)} activities in batch
+                    {formatNumber(runResult.summary.pendingActivities)} activities processed
+                    {runResult.summary.coveragePercent != null
+                      ? ` · coverage now ~${runResult.summary.coveragePercent}%`
+                      : ''}
                   </span>
                 </div>
               </div>
+              {runResult.summary.activityIds && runResult.summary.activityIds.length ? (
+                <p className="admin-sync-running__hint" style={{ marginTop: 10 }}>
+                  Activity IDs: {runResult.summary.activityIds.join(', ')}
+                </p>
+              ) : null}
               {runResult.summary.errors && runResult.summary.errors.length ? (
                 <pre className="admin-pre" style={{ marginTop: 10 }}>{JSON.stringify(runResult.summary.errors, null, 2)}</pre>
               ) : null}
@@ -1967,7 +2191,7 @@
                         disabled={rowBusy === row.bokunActivityId || running}
                         onClick={() => syncOne(row.bokunActivityId)}
                       >
-                        {rowBusy === row.bokunActivityId ? '…' : 'Translate'}
+                        {rowBusy === row.bokunActivityId ? `… ${rowElapsed}s` : 'Translate'}
                       </button>
                     </td>
                   </tr>
@@ -2119,7 +2343,7 @@
     }, [loadOverview]);
 
     const counts = {
-      vendors: overview?.vendors?.length,
+      vendors: overview?.vendors?.filter((v) => v.isActive).length,
       activities: overview?.activities?.active,
       inquiries: overview?.inquiries?.total,
       collections: overview?.marketing?.collectionsActive,
