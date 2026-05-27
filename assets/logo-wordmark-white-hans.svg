@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 56" fill="none" aria-label="Ï“}≈8">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 56" fill="none" aria-label="Áã¨ËßíÂÖΩÊóÖÊ∏∏">
   <defs>
     <linearGradient id="awl-grad-wh" x1="0" y1="48" x2="48" y2="8" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2EFFB8"></stop>
@@ -8,8 +8,8 @@
   </defs>
   <g transform="translate(0,4)">
     <path d="M24 4 C 12 18, 8 28, 6 42 L 14 42 C 16 32, 20 22, 24 16 C 28 22, 32 32, 34 42 L 42 42 C 40 28, 36 18, 24 4 Z" fill="url(#awl-grad-wh)"></path>
-    <path d="M24 16 C 21 22, 18 30, 16.5 38 L 31.5 38 C 30 30, 27 22, 24 16 Z" fill="#FFFFFF" opacity="0.55"></path>
+    <path d="M24 16 C 21 22, 18 30, 16.5 38 L 31.5 38 C 30 30, 27 22, 24 16 Z" fill="#FFFFFF" opacity="0.7"></path>
     <circle cx="24" cy="11" r="2.4" fill="#FFFFFF"></circle>
   </g>
-  <text x="56" y="36" font-family="'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif" font-weight="600" font-size="20" letter-spacing="0.02em" fill="#FFFFFF">Ï“}≈8</text>
+  <text x="56" y="36" font-family="'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif" font-weight="600" font-size="20" letter-spacing="0.02em" fill="#FFFFFF">&#29420;&#35282;&#20861;&#26053;&#28216;</text>
 </svg>

@@ -295,13 +295,13 @@
   function brandLogoSrc(lang, siteThemeId) {
     const isSun = siteThemeId === 'sun';
     if (isSun) {
-      if (lang === 'hans') return '../../assets/logo-wordmark-white-hans.svg';
-      if (lang === 'en') return '../../assets/logo-wordmark-white-en.svg';
-      return '../../assets/logo-wordmark-white.svg';
+      if (lang === 'hans') return '/assets/logo-wordmark-white-hans.svg';
+      if (lang === 'en') return '/assets/logo-wordmark-white-en.svg';
+      return '/assets/logo-wordmark-white.svg';
     }
-    if (lang === 'hans') return '../../assets/logo-wordmark-hans.svg';
-    if (lang === 'en') return '../../assets/logo-wordmark-en.svg';
-    return '../../assets/logo-wordmark.svg';
+    if (lang === 'hans') return '/assets/logo-wordmark-hans.svg';
+    if (lang === 'en') return '/assets/logo-wordmark-en.svg';
+    return '/assets/logo-wordmark.svg';
   }
 
   /** Logo alt text — matches visible wordmark language (no mixed EN/ZH). */

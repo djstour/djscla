@@ -563,6 +563,10 @@ button.hero-popular-chip:hover {
   box-shadow: inset 0 -1px 0 var(--border-subtle);
 }
 
+.nav-logo {
+  color: var(--fg-1);
+}
+
 .nav-logo img {
   height: clamp(28px, 5vw, 36px);
   width: auto;
