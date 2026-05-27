@@ -71,7 +71,7 @@ Setup after deploy:
 Manual test:
 
 ```bash
-curl -s "https://djscla.vercel.app/api/translations/cron" \
+curl -s "https://djstour.com/api/translations/cron" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
@@ -86,7 +86,7 @@ Response includes `summary.catalogSize`, `summary.pendingActivities`, and `summa
 After env vars are set and redeployed:
 
 ```bash
-curl -X POST "https://djscla.vercel.app/api/translations/sync" \
+curl -X POST "https://djstour.com/api/translations/sync" \
   -H "Authorization: Bearer $TRANSLATION_SYNC_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"limit": 20, "langs": ["hant", "hans"]}'

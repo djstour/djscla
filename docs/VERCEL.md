@@ -1,6 +1,6 @@
-# Vercel — project `djscla`
+# Vercel — project `djscla` (DJS Tour)
 
-Static hosting for the Auralis design system and UI kit. No build step.
+Static hosting for the DJS Tour design system, UI kit, and admin console. No build step.
 
 **Recommended deployment (environments, workflow, checklist):** [DEPLOYMENT.md](./DEPLOYMENT.md)
 
@@ -8,7 +8,8 @@ Static hosting for the Auralis design system and UI kit. No build step.
 
 | | |
 |---|---|
-| **Production** | https://djscla.vercel.app |
+| **Production (custom domain)** | https://djstour.com |
+| **Production (Vercel alias)** | https://djscla.vercel.app |
 | **Dashboard** | https://vercel.com/djstours-projects/djscla |
 
 | Path | Content |
@@ -52,7 +53,7 @@ After upgrading, configure once in the [project dashboard](https://vercel.com/dj
 | **Cron** | Keep `0 */6 * * *`; set `TRANSLATION_CRON_MAX_ACTIVITIES=12` in env |
 | **Catch-up script** | `CHUNK=12 CURL_MAX_TIME=180 ./scripts/sync-all-translations.sh` (fewer rounds per activity) |
 | **Observability** | Enable Log Drains only if you use Datadog etc.; otherwise **Logs** tab is enough |
-| **Domains** | Keep `djscla.vercel.app`; add custom domain when ready |
+| **Domains** | Primary `djstour.com`; Vercel alias `djscla.vercel.app` (keep both for fallback) |
 
 **Do not** rely on a single 300s request to translate all 123 activities — still use chunked sync or the shell script.
 

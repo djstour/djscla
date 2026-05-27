@@ -6,7 +6,7 @@ Product photos come from **Bókun S3** (`coverImageUrl`, `photoUrls`). The brows
 
 | Environment | Use for |
 |-------------|---------|
-| **https://djscla.vercel.app** | Realistic latency + CDN cache on thumb API |
+| **https://djstour.com** | Realistic latency + CDN cache on thumb API |
 | `npm start` on LAN / localhost | Dev only — every miss hits your machine, then Bókun; **looks slower than production** |
 
 Do not conclude the pipeline is too slow from local preview alone.

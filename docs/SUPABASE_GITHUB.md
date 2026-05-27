@@ -88,5 +88,5 @@ Copy `.env.example` → `.env` and fill keys from
 
 ## Vercel
 
-Static UI deploy: see [VERCEL.md](./VERCEL.md) (`https://djscla.vercel.app`).  
+Static UI deploy: see [VERCEL.md](./VERCEL.md) (`https://djstour.com` · Vercel alias `djscla.vercel.app`).  
 Link project **`djscla`** under Supabase → Integrations → **Vercel** → **Manage** if env sync is needed later.

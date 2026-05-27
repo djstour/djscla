@@ -1,6 +1,6 @@
 # 供應商擴展策略（Vendor scale）
 
-本文件記錄 Auralis 從**少數供應商（目前 Arctic Adventures + Adventure Vikings，約 140+ SKU）**擴展到**多供應商（目標最多約 1000 家）**時的產品與技術策略。實作應依階段推進，避免在 SKU 暴增後才改架構。
+本文件記錄 DJS Tour 從**少數供應商（目前 Arctic Adventures + Adventure Vikings + BusTravel Iceland）**擴展到**多供應商（目標最多約 1000 家）**時的產品與技術策略。實作應依階段推進，避免在 SKU 暴增後才改架構。
 
 ## 現況（Phase A — 已採用）
 

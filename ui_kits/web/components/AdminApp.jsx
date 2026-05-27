@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 /* global React, ReactDOM */
 
-// Auralis Admin Console — Phase 1 (read-only).
+  // DJS Tour · Admin Console — Phase 1 (read-only).
 //
 // Self-contained app: does NOT import the public AuralisUI/AuralisData stacks
 // so we can iterate independently and keep the admin bundle lean. Auth is a
@@ -128,7 +128,7 @@
     return (
       <div className="admin-login">
         <form className="admin-login__card" onSubmit={onSubmit}>
-          <h1 className="admin-login__title">Auralis Admin</h1>
+          <h1 className="admin-login__title">DJS Tour · Admin</h1>
           <p className="admin-login__sub">Read-only control room (Phase 1).</p>
 
           {error ? <div className="admin-login__error">{error}</div> : null}
@@ -167,7 +167,7 @@
       <aside className="admin-sidebar">
         <div className="admin-brand">
           <span className="admin-brand__dot" />
-          <span>Auralis · Admin</span>
+          <span>DJS Tour · Admin</span>
         </div>
         {items.map((it) => (
           <button

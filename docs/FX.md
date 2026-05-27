@@ -44,7 +44,7 @@ npm start
 
 Test endpoint: http://localhost:3000/api/fx/rates
 
-Production: https://djscla.vercel.app/api/fx/rates
+Production: https://djstour.com/api/fx/rates
 
 ## Failure modes
 

@@ -9,7 +9,7 @@ const path = require('path');
 const { normalizeActivity } = require('../lib/normalizeActivity');
 const { deriveChipIds, mergeChipIdSets } = require('../lib/chipIds');
 
-const BASE = (process.argv[2] || 'https://djscla.vercel.app').replace(/\/$/, '');
+const BASE = (process.argv[2] || 'https://djstour.com').replace(/\/$/, '');
 const CACHE_PATH = path.join(__dirname, '..', 'data', 'chipIdsCache.json');
 const CONCURRENCY = 5;
 const DELAY_MS = 120;

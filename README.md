@@ -1,4 +1,4 @@
-# Auralis · 極光旅 — Design System
+# DJS Tour · 極光旅 — Design System
 
 > A premium Online Travel Agency (OTA) for the Mandarin-speaking world, specialising in **Iceland** adventure and independent road-trip itineraries. Built atop the Bókun multi-supplier inventory API.
 
@@ -10,7 +10,8 @@ This is a **branding + UI design system**, not a production codebase. It defines
 
 | | |
 |---|---|
-| **Name** | Auralis · 極光旅 (jíguāng lǚ — "Aurora Journey") |
+| **Name** | DJS Tour · 極光旅 (jíguāng lǚ — "Aurora Journey") |
+| **Domain** | https://djstour.com |
 | **Category** | Premium OTA · Iceland adventure · independent road-trip |
 | **Audience** | Digital-savvy travellers, 20–40, Taiwan + Mandarin-speaking regions |
 | **Suppliers** | Aggregated through Bókun API |
@@ -111,8 +112,8 @@ Confident, curious, and a little bit poetic — like a well-travelled friend who
 - Traditional Chinese uses **「你」** in marketing and **「您」** only in formal post-purchase comms (confirmations, refunds, legal). Pick one per surface; never mix.
 
 ### Tone & casing
-- **Sentence case** everywhere in product UI — including buttons, navigation, and titles. The only Title-Case exception is the proper-noun "Auralis" wordmark and named tour packages (e.g. "Golden Circle · 黃金圈" stays cased).
-- Chinese punctuation is **full-width** (「，。：？！」). Latin punctuation in Chinese paragraphs is **half-width** with a hair-space buffer (`Auralis 是…`, not `Auralis是…`).
+- **Sentence case** everywhere in product UI — including buttons, navigation, and titles. The only Title-Case exception is the proper-noun "DJS Tour" wordmark and named tour packages (e.g. "Golden Circle · 黃金圈" stays cased).
+- Chinese punctuation is **full-width** (「，。：？！」). Latin punctuation in Chinese paragraphs is **half-width** with a hair-space buffer (`DJS Tour 是…`, not `DJS Tour是…`).
 - Numbers use half-width digits in both languages; currency symbol comes before the number (`NT$ 12,800`, never `12,800 元`).
 - Dates are `YYYY/MM/DD` in Chinese, `DD MMM YYYY` in English.
 
@@ -198,7 +199,7 @@ See `assets/icons/` (Lucide library) and `ICONOGRAPHY.md` for the full guide. Qu
 
 ## 6 · Deployment
 
-Production: https://djscla.vercel.app — Vercel project `djscla`, deploy from GitHub `main` (no build step). See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for env vars, Preview vs Production, and checklist.
+Production: https://djstour.com — Vercel project `djscla` (legacy Vercel project name; production hostname is `djstour.com`), deploys from GitHub `main` (no build step). See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for env vars, Preview vs Production, and checklist.
 
 ## 7 · Local development (UI kit + Bókun)
 
@@ -217,7 +218,7 @@ For CSS-only previews without APIs: `npm run preview:static`. Details: [`docs/BO
 
 The brand-name, gradients, voice and component grammar above are **first-draft assumptions** from your brief. Treat them as a starting point. The fastest way to dial it in:
 
-1. **Brand name** — "Auralis · 極光旅" is a stand-in. Tell me the real one and I'll rebuild the wordmark, replace it across every file, and rename the project.
+1. **Brand wordmark** — Customer-facing copy is now "DJS Tour · 極光旅" (domain: `djstour.com`). The current wordmark SVGs (`assets/logo-wordmark*.svg`) are a typographic placeholder using Sora 700; a finalized logo from the design team should drop in at the same paths to inherit all references.
 2. **Photography** — drop 4–6 real Iceland photos into `assets/photos/` and I'll wire them into the hero, itinerary cards and tour tiles. Until then, all photo slots in the UI kit are placeholder gradients.
 3. **Fonts** — Sora + Manrope are free stand-ins. If you've licensed a display face (Söhne, GT Walsheim, GT America, etc.) ship me the woff2 and I'll swap them in.
 4. **Real components** — if any existing UI code or a Figma file is available, share it and I'll re-derive tokens from source rather than from this brief.

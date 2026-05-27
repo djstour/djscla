@@ -31,7 +31,7 @@
           T({ hant: '常見問題',       hans: '常见问题',       en: 'FAQ' }),
           T({ hant: '取消政策',       hans: '取消政策',       en: 'Cancellation' }),
           T({ hant: '保險',           hans: '保险',           en: 'Insurance' }),
-          T({ hant: '中文客服 LINE @auralis', hans: '中文客服 微信 auralis-cs', en: 'Mandarin support · LINE @auralis' }),
+          T({ hant: '中文客服 LINE @djstour', hans: '中文客服 微信 djstour-cs', en: 'Mandarin support · LINE @djstour' }),
         ],
       },
       {
@@ -58,7 +58,7 @@
           }}>
             <div>
               <span className="overline" style={{ color: 'var(--coral)' }}>
-                {T({ hant: '加入旅誌', hans: '加入旅志', en: 'Auralis journal' })}
+                {T({ hant: '加入旅誌', hans: '加入旅志', en: 'DJS Tour journal' })}
               </span>
               <h3 style={{ margin: '8px 0 0', font: '700 28px/1.1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>
                 {T({
@@ -95,7 +95,7 @@
           {/* Link columns */}
           <div className="footer-cols">
             <div>
-              <img src="../../assets/logo-wordmark.svg" style={{ height: 44, width: 'auto', display: 'block' }} alt="Auralis · 極光旅" />
+              <img src="../../assets/logo-wordmark.svg" style={{ height: 44, width: 'auto', display: 'block' }} alt="DJS Tour · 極光旅" />
               <p style={{ margin: '14px 0 0', font: '400 13px/1.6 var(--font-text)', color: 'var(--fg-3)', maxWidth: 240 }}>
                 {T({
                   hant: '為華語旅人精選的冰島 OTA。一次規劃，無縫預訂。',
@@ -137,7 +137,7 @@
             display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
             font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-3)',
           }}>
-            <span>© 2026 Auralis · 極光旅 Ltd. · Reykjavík · Taipei</span>
+            <span>© 2026 DJS Tour · 極光旅 Ltd. · Reykjavík · Taipei</span>
             <span>{T({
               hant: '庫存由 Bókun 提供 · ISO 27001 · GDPR 合規',
               hans: '库存由 Bókun 提供 · ISO 27001 · GDPR 合规',

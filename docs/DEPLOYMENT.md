@@ -2,7 +2,7 @@
 
 This project is a **static UI kit + Vercel serverless APIs** (Bókun catalog, Supabase translations, image thumb). There is **no frontend build step**.
 
-**Production:** https://djscla.vercel.app  
+**Production:** https://djstour.com (Vercel project also serves on `djscla.vercel.app`)
 **Vercel project:** `djscla` (GitHub: `djstour/djscla`)
 
 See also: [VERCEL.md](./VERCEL.md) (dashboard URLs, env table), [BOKUN.md](./BOKUN.md) (local dev), [TRANSLATIONS.md](./TRANSLATIONS.md), [VENDOR_SCALE.md](./VENDOR_SCALE.md) (when SKU grows), [OTA_API.md](./OTA_API.md) (productization routes).
@@ -66,7 +66,7 @@ Product photos live on **Bókun S3** (URLs in API responses), not in this repo. 
 
 ### Production
 
-- **URL:** https://djscla.vercel.app (add custom domain when ready)
+- **Primary URL:** https://djstour.com (custom domain) · Vercel project alias: `djscla.vercel.app`
 - **Trigger:** push to `main` (if Git integration enabled) or `npm run deploy` → `npx vercel --prod`
 - **Vercel settings:** Framework **Other**, **empty** Build Command and Output Directory
 
@@ -119,8 +119,8 @@ Optional: `BOKUN_LANG`, `BOKUN_CURRENCY`, `OPENAI_TRANSLATION_MODEL` — see `.e
 2. Push branch → open PR → check **Vercel Preview**
 3. Merge to `main` → **Production** auto-deploy
 4. Smoke test:
-   - https://djscla.vercel.app/
-   - https://djscla.vercel.app/api/catalog/activities?lang=hant&all=true → `"source":"bokun"`, `activities` array
+   - https://djstour.com/
+   - https://djstour.com/api/catalog/activities?lang=hant&all=true → `"source":"db"` (or `bokun` before first sync), `activities` array
 
 ### CLI (optional)
 
@@ -149,7 +149,7 @@ Do **not** rely on one 300s function to translate the entire catalog in a single
 | Cron | Keep `0 */6 * * *` on `/api/translations/cron` |
 | Functions | Translation routes use `maxDuration: 300` in code |
 | Observability | Vercel **Logs** for `/api/*` failures |
-| Domains | `djscla.vercel.app` now; custom domain when brand is ready |
+| Domains | `djstour.com` (primary) + `djscla.vercel.app` (Vercel default alias) |
 
 ---
 

@@ -66,7 +66,7 @@ npm start
 
 Quick check: http://localhost:3000/api/catalog/activities?lang=hant&all=true should return `"source":"bokun"` and an `activities` array.
 
-Production: https://djscla.vercel.app/
+Production: https://djstour.com/
 
 ## Troubleshooting `401 Invalid API key`
 
@@ -80,7 +80,7 @@ There is **no mock catalog fallback**. If `/api/bokun/activities` fails, the UI 
 | Booking channel | API key must belong to a booking channel with products to sell |
 | Permissions | Key needs access to activity search / booking API |
 
-Verify: open `https://djscla.vercel.app/api/catalog/activities?lang=hant&all=true` — should return `"source":"bokun"`, `meta.total` (e.g. 123), and an `activities` array.
+Verify: open `https://djstour.com/api/catalog/activities?lang=hant&all=true` — should return `"source":"db"` (cache) or `"bokun"` (first run), `meta.total` (e.g. 132+), and an `activities` array.
 
 **Multi-vendor scale:** see [VENDOR_SCALE.md](./VENDOR_SCALE.md).
 

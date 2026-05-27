@@ -1,10 +1,10 @@
-# Handoff — 接手 Auralis 設計系統開發
+# Handoff — 接手 DJS Tour 設計系統開發
 
 > 這份文件給 Cursor / Claude Code / 任何 AI 助理看的，讓他們能直接接上下文繼續開發。
 
 ## 一句話總結
 
-Auralis · 極光旅 是為華語旅人打造的冰島 OTA 設計系統。透過 Bókun API 串接 800+ 在地嚮導庫存，採用 vibrant glassmorphism 視覺語言。目前已完成設計系統定義、3 種語系（繁/簡/EN）的 UI Kit Prototype，以及 Bókun adapter 的資料層架構。
+DJS Tour · 極光旅（djstour.com）是為華語旅人打造的冰島 OTA。透過 Bókun API 串接在地嚮導庫存，採用 vibrant glassmorphism 視覺語言。目前已完成設計系統定義、3 種語系（繁/簡/EN）的 UI Kit Prototype、Bókun adapter 資料層、Phase B Supabase 快取，以及 Phase 1 Admin 控制台。
 
 ## 專案結構
 
@@ -90,7 +90,7 @@ open http://localhost:8765/ui_kits/web/index.html
 2. **不用 emoji 在產品 UI 裡**：marketing 文案最多一個地理 emoji（🌋 🏔 🌌 ❄️）；UI 內絕不使用，圖示走 Lucide。
 3. **語系策略**：繁中是主，簡中是 first-class（不只是繁→簡的 OpenCC 轉換）。範例：TC 用「健行」、SC 用「徒步」；TC「雷克雅維克」、SC「雷克雅未克」。這些差異要在翻譯時尊重。
 4. **玻璃卡片永遠要白色內邊（inset hairline ring）**：這是品牌的視覺簽名。
-5. **句首大寫（sentence case）**：所有 UI 字串都用句首大寫，不要 Title Case（除了品牌名 "Auralis" 和已命名的行程 e.g. "Golden Circle"）。
+5. **句首大寫（sentence case）**：所有 UI 字串都用句首大寫，不要 Title Case（除了品牌名 "DJS Tour" 和已命名的行程 e.g. "Golden Circle"）。
 
 ## 給 AI 助理的提示
 

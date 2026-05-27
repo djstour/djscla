@@ -10,7 +10,7 @@
 
 set -uo pipefail
 
-BASE_URL="${BASE_URL:-https://djscla.vercel.app}"
+BASE_URL="${BASE_URL:-https://djstour.com}"
 MAX_ITEMS="${MAX_ITEMS:-2000}"
 SLEEP_SEC="${SLEEP_SEC:-2}"
 CHUNK="${CHUNK:-6}"

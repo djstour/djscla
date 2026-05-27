@@ -1,10 +1,10 @@
 ---
-name: auralis-design
-description: Use this skill to generate well-branded interfaces and assets for Auralis · 極光旅 — a premium Iceland OTA for the Mandarin-speaking (primarily Taiwanese) market. Works for production code, throwaway prototypes, mock screens, slides, marketing assets, anything visual. Contains the colour system, type tokens, fonts, gradients, glass primitives, brand voice (繁中 + EN), icon policy, and a working web UI kit.
+name: djstour-design
+description: Use this skill to generate well-branded interfaces and assets for DJS Tour · 極光旅 (djstour.com) — a premium Iceland OTA for the Mandarin-speaking (primarily Taiwanese) market. Works for production code, throwaway prototypes, mock screens, slides, marketing assets, anything visual. Contains the colour system, type tokens, fonts, gradients, glass primitives, brand voice (繁中 + EN), icon policy, and a working web UI kit.
 user-invocable: true
 ---
 
-# Auralis Design Skill
+# DJS Tour Design Skill
 
 Read `README.md` first — it contains the brand-at-a-glance, visual foundations, content fundamentals, iconography, and an index of every file. Then explore the other resources here.
 
@@ -51,8 +51,8 @@ Then act as an expert designer. Output HTML artifacts (with `colors_and_type.css
 - **No emoji** in product UI; ≤ 1 geographic emoji per marketing piece.
 - **No flag glyphs** — use text strings `繁中` / `EN` for language switches.
 - **Foreground is never pure black** — use `#11151F` as the heaviest text colour.
-- **Glass cards always carry the white inner-ring hairline** — without it, the depth reads as "flat translucent rectangle", not as the Auralis glass primitive.
-- **Sentence case** for all UI strings (buttons, nav, titles). Title-case only for the wordmark "Auralis" and named tour packages.
+- **Glass cards always carry the white inner-ring hairline** — without it, the depth reads as "flat translucent rectangle", not as the DJS Tour glass primitive.
+- **Sentence case** for all UI strings (buttons, nav, titles). Title-case only for the wordmark "DJS Tour" and named tour packages.
 - **Full-width Chinese punctuation** when in 繁中; half-width Latin punctuation within Chinese paragraphs with a hair-space buffer.
 - **Currency**: `NT$ 12,800` — symbol first, half-width digits, comma grouping.
 

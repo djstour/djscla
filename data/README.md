@@ -1,6 +1,6 @@
 # Data layer — Bókun ingest + i18n overlay + OpenAI translation pipeline
 
-This folder is the **source-of-truth boundary** between the live Bókun OTA inventory and our Auralis UI. Everything UI-side reads through `bokunAdapter.js`; everything API-side conforms to what Bókun actually returns. Translations are an overlay, not a fork of the data.
+This folder is the **source-of-truth boundary** between the live Bókun OTA inventory and our DJS Tour UI. Everything UI-side reads through `bokunAdapter.js`; everything API-side conforms to what Bókun actually returns. Translations are an overlay, not a fork of the data. Internal namespace `window.AuralisData.*` is kept verbatim for stability.
 
 ```
 data/
@@ -167,7 +167,7 @@ When a new Bókun activity lands (initial sync or upstream edit), we run this pi
 ### Prompt skeleton (production)
 
 ```
-SYSTEM: You are a localisation editor for Auralis, a premium Iceland OTA for
+SYSTEM: You are a localisation editor for DJS Tour, a premium Iceland OTA for
         Mandarin-speaking adventurers (primary market: Taiwan, secondary:
         Mainland China and Singapore). Style: confident, curious, slightly
         poetic — never breathless, never corporate. Use sentence case.

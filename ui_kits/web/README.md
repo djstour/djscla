@@ -1,6 +1,6 @@
-# Auralis Web · 極光旅 — UI Kit
+# DJS Tour Web · 極光旅 — UI Kit
 
-A click-thru recreation of the Auralis booking experience. **Not production code** — components prioritise visual fidelity and demonstrate the brand's vocabulary in motion.
+A click-thru recreation of the DJS Tour booking experience. **Not production code** — components prioritise visual fidelity and demonstrate the brand's vocabulary in motion.
 
 ## Run
 
@@ -8,7 +8,7 @@ A click-thru recreation of the Auralis booking experience. **Not production code
 |------|---------|-----|
 | Live Bókun catalog + checkout APIs | `npm start` (from repo root; needs `.env.local`) | http://localhost:3000/ |
 | Static layout only (no `/api/*`) | `npm run preview:static` | http://localhost:8765/ui_kits/web/index.html |
-| Production | Vercel deploy | https://djscla.vercel.app/ |
+| Production | Vercel deploy | https://djstour.com/ |
 
 Do not open `index.html` via `file://` (CORS blocks `/data/*.js`). See [`docs/BOKUN.md`](../../docs/BOKUN.md) for API keys and troubleshooting.
 
@@ -18,7 +18,7 @@ Responsive from **640px** (phone) and **900px** (tablet) breakpoints — see `re
 
 | Screen | What's there |
 |---|---|
-| **Discover** | Animated aurora hero · category strip · 6 featured tours · "why Auralis" stats · sample 7-day trip block · footer with newsletter capture |
+| **Discover** | Animated aurora hero · category strip · 6 featured tours · "why DJS Tour" stats · sample 7-day trip block · footer with newsletter capture |
 | **Tours** | Left rail: supplier pills (live Bókun vendors + counts), experience / routes / facets / price · right: sort bar + tour grid |
 | **Trip · Map** | Stylized Iceland map with 5 numbered pins · day-by-day glass itinerary panel · stat pills (drive distance, aurora forecast) |
 | **Checkout** | 3-step flow — Review → Payment (card / Apple Pay / LINE Pay) → Confirmation |
