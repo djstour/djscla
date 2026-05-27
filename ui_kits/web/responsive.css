@@ -2356,6 +2356,20 @@ html[data-site-theme="sun"] .detail-tabs__btn.is-active {
   border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
 }
 
+.detail-book-people__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.detail-book-people__cap {
+  margin: 0;
+  font: 500 11px/1.35 var(--font-text);
+  color: var(--fg-3);
+}
+
 .detail-book-people__grid {
   display: grid;
   grid-template-columns: repeat(var(--people-cols, 3), minmax(0, 1fr));

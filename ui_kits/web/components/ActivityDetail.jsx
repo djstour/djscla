@@ -424,6 +424,63 @@
       }));
     }, [selectedDayInfo, tour && tour.startTimes]);
 
+    const bookingPaxCap = tour
+      ? (Number.isFinite(Number(tour.passCapacity)) && Number(tour.passCapacity) > 0
+        ? Number(tour.passCapacity)
+        : DETAIL_PAX_MAX)
+      : DETAIL_PAX_MAX;
+
+    const livePaxMax = useMemo(() => {
+      if (!tour || !Pax.resolveLivePaxCap) return bookingPaxCap;
+      return Pax.resolveLivePaxCap({
+        bookingCap: bookingPaxCap,
+        dayInfo: selectedDayInfo,
+        startTimeId: selectedStartTime,
+        dayTimes: dayAvailableTimes,
+        availabilityCheck: availabilityState.data,
+      });
+    }, [
+      tour && tour.id,
+      tour && tour.passCapacity,
+      bookingPaxCap,
+      selectedDayInfo,
+      selectedStartTime,
+      dayAvailableTimes,
+      availabilityState.data,
+    ]);
+
+    const liveCapacityKnown = useMemo(() => {
+      if (!selectedDate) return false;
+      const fromCheck = availabilityState.data?.availability?.capacityRemaining;
+      if (Number.isFinite(Number(fromCheck))) return true;
+      if (selectedStartTime && dayAvailableTimes.length) {
+        const slot = dayAvailableTimes.find((t) => String(t.id) === String(selectedStartTime));
+        if (slot && Number.isFinite(Number(slot.capacityRemaining))) return true;
+      }
+      if (dayAvailableTimes.length === 1 && Number.isFinite(Number(dayAvailableTimes[0].capacityRemaining))) {
+        return true;
+      }
+      if (selectedDayInfo && Number.isFinite(Number(selectedDayInfo.capacityRemaining))) return true;
+      return false;
+    }, [
+      selectedDate,
+      selectedStartTime,
+      dayAvailableTimes,
+      selectedDayInfo,
+      availabilityState.data,
+    ]);
+
+    useEffect(() => {
+      if (!tour || !Pax.clampPaxCounts) return undefined;
+      const cats = getBookableCategories(tour);
+      if (!cats.length) return undefined;
+      setPaxCounts((prev) => {
+        if (!Pax.paxCountsTotal(prev) || Pax.paxCountsTotal(prev) <= livePaxMax) return prev;
+        return Pax.clampPaxCounts(prev, cats, livePaxMax);
+      });
+      return undefined;
+    }, [livePaxMax, tour && tour.id, selectedDate, selectedStartTime]);
+
     // Auto-trigger the availability check whenever the booking inputs change.
     // Debounced 400ms so quickly toggling adults / extras doesn't spam Bókun.
     // The user can still manually re-trigger via the "Check availability"
@@ -537,10 +594,7 @@
     const pickupInfo = tour.pickupInfo || null;
     const showPickupInfo = pickupInfo && pickupInfo.enabled;
     const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
-    // Per-booking pax ceiling — Bókun back office uses this as the dropdown cap.
-    const paxCap = Number.isFinite(Number(tour.passCapacity)) && Number(tour.passCapacity) > 0
-      ? Number(tour.passCapacity)
-      : DETAIL_PAX_MAX;
+    const paxCap = livePaxMax;
     // Client-side extras subtotal so the booking summary mirrors Bókun's "Total".
     const extrasSubtotal = optionalExtras.reduce((sum, ex) => {
       if (!selectedExtras[ex.id]) return sum;
@@ -1251,6 +1305,8 @@
             onPaxCounts={setPaxCounts}
             unitPriceByCategoryId={unitPriceByCategoryId}
             paxCap={paxCap}
+            liveCapacityKnown={liveCapacityKnown}
+            bookingPaxCap={bookingPaxCap}
             pickupInfo={pickupInfo}
             pickupPlaces={pickupPlaces}
             selectedPickupId={selectedPickupId}
@@ -1303,6 +1359,7 @@
     tour, T, lang, displayCurrency, fxRates, priceUsd, loading, hasMultiPrice, inTrip, onAddSelection, onBookNow, trip,
     isMobile, onOpenPrices, selectedDate, onSelectedDate, dayAvailableTimes,
     selectedStartTime, onSelectedStartTime, bookableCategories, paxCounts, onPaxCounts, unitPriceByCategoryId, paxCap,
+    liveCapacityKnown, bookingPaxCap,
     pickupInfo, pickupPlaces, selectedPickupId, onSelectedPickupId,
     optionalExtras, selectedExtras, onSelectedExtras, extrasSubtotal,
     stickyBarVisible, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
@@ -1494,17 +1551,34 @@
 
                 {bookableCategories.length > 0 ? (
                   <div className="detail-book-people">
-                    <div className="detail-book-extra__title">
-                      {T({ hant: '人數', hans: '人数', en: 'People' })}
+                    <div className="detail-book-people__head">
+                      <div className="detail-book-extra__title">
+                        {T({ hant: '人數', hans: '人数', en: 'People' })}
+                      </div>
+                      {liveCapacityKnown && paxCap < bookingPaxCap ? (
+                        <p className="detail-book-people__cap">
+                          {T({
+                            hant: `此時段最多 ${paxCap} 位`,
+                            hans: `此时段最多 ${paxCap} 位`,
+                            en: `Up to ${paxCap} ${paxCap === 1 ? 'spot' : 'spots'} for this slot`,
+                          })}
+                        </p>
+                      ) : null}
                     </div>
                     <div
                       className="detail-book-people__grid"
                       style={{ '--people-cols': bookableCategories.length }}
                     >
                       {bookableCategories.map((cat) => {
-                        const minQty = cat.defaultCategory ? 1 : 0;
-                        const qty = Number(paxCounts[String(cat.id)]) || 0;
+                        const bounds = Pax.categoryPaxBounds
+                          ? Pax.categoryPaxBounds(cat, paxCounts, bookableCategories, paxCap)
+                          : { min: cat.defaultCategory ? 1 : 0, max: paxCap };
+                        const rawQty = Number(paxCounts[String(cat.id)]) || 0;
+                        const qty = Math.min(rawQty, bounds.max);
                         const unit = unitPriceByCategoryId && unitPriceByCategoryId.get(String(cat.id));
+                        const qtyOptions = bounds.max >= bounds.min
+                          ? paxRange(bounds.min, bounds.max)
+                          : [0];
                         return (
                           <label key={cat.id} className="detail-book-people__field">
                             <span className="detail-book-people__cat">{paxLabel(cat)}</span>
@@ -1519,7 +1593,7 @@
                               }}
                               className="detail-book-field"
                             >
-                              {paxRange(minQty, paxCap).map((n) => (
+                              {qtyOptions.map((n) => (
                                 <option key={n} value={n}>{n}</option>
                               ))}
                             </select>
