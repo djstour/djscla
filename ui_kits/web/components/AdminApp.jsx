@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 /* global React, ReactDOM */
 
-  // DJS Tour · Admin Console — Phase 2 (read + catalog ops).
+  // DJS Tour · Admin Console — Phase 3 (catalog ops + owned content).
 //
 // Self-contained app: does NOT import the public AuralisUI/AuralisData stacks
 // so we can iterate independently and keep the admin bundle lean. Auth is a
@@ -65,6 +65,25 @@
       return iso;
     }
   }
+
+  function formatDurationMs(ms) {
+    if (ms == null || !Number.isFinite(Number(ms))) return '—';
+    const n = Number(ms);
+    if (n < 1000) return `${Math.round(n)} ms`;
+    if (n < 60000) return `${(n / 1000).toFixed(1)} s`;
+    const m = Math.floor(n / 60000);
+    const s = Math.round((n % 60000) / 1000);
+    return `${m}m ${s}s`;
+  }
+
+  const CATALOG_SYNC_STEPS = [
+    'Connecting to Bókun contract channel…',
+    'Fetching product list from channel…',
+    'Comparing source hashes…',
+    'Upserting activities into Supabase…',
+    'Updating vendor ↔ activity links…',
+    'Syncing activity details (if enabled)…',
+  ];
 
   function timeAgo(iso) {
     if (!iso) return '';
@@ -160,6 +179,7 @@
       { id: 'overview', label: 'Overview' },
       { id: 'vendors', label: 'Vendors', badge: counts.vendors },
       { id: 'activities', label: 'Activities', badge: counts.activities },
+      { id: 'content', label: 'Content' },
       { id: 'inquiries', label: 'Inquiries', badge: counts.inquiries },
       { id: 'env', label: 'Environment' },
     ];
@@ -181,10 +201,116 @@
         ))}
         <div className="admin-nav-spacer" />
         <div className="admin-sidebar__footer">
-          Phase 2 · catalog ops<br />
+          Phase 3 · content<br />
           <button onClick={onLogout}>Sign out</button>
         </div>
       </aside>
+    );
+  }
+
+  function CatalogSyncRunning({ elapsedSec, stepIndex }) {
+    const step = CATALOG_SYNC_STEPS[stepIndex % CATALOG_SYNC_STEPS.length];
+    return (
+      <div className="admin-sync-running" role="status" aria-live="polite">
+        <div className="admin-sync-running__head">
+          <span className="admin-sync-spinner admin-sync-spinner--lg" aria-hidden="true" />
+          <div>
+            <strong>Catalog sync in progress</strong>
+            <p className="admin-sync-running__step">{step}</p>
+          </div>
+        </div>
+        <div className="admin-sync-progress" aria-hidden="true">
+          <div className="admin-sync-progress__bar" />
+        </div>
+        <p className="admin-sync-running__hint">
+          Elapsed {elapsedSec}s · typical run 30–90s · keep this tab open
+        </p>
+      </div>
+    );
+  }
+
+  function CatalogSyncResult({ result, options }) {
+    const counts = result.counts || {};
+    const timings = result.timings || {};
+    const totalMs = timings.totalMs || 1;
+    const fetchPct = timings.fetchMs ? Math.round((timings.fetchMs / totalMs) * 100) : 0;
+    const writePct = timings.writeMs ? Math.round((timings.writeMs / totalMs) * 100) : 0;
+
+    const stats = [
+      { label: 'Unique in channel', value: counts.uniqueInChannel, tone: 'neutral' },
+      { label: 'Contract products', value: counts.contractTotal, tone: 'neutral' },
+      { label: 'Upserted', value: counts.upserted, tone: counts.upserted > 0 ? 'accent' : 'muted' },
+      { label: 'Unchanged', value: counts.unchanged, tone: 'muted' },
+      {
+        label: 'Deactivated',
+        value: counts.deactivated,
+        tone: counts.deactivated > 0 ? 'warn' : 'muted',
+      },
+      { label: 'Vendor links', value: counts.vendorActivityLinks, tone: 'neutral' },
+    ];
+
+    if (options.syncImages || (counts.imageSynced != null && counts.imageSynced > 0)) {
+      stats.push({
+        label: 'Images mirrored',
+        value: counts.imageSynced || 0,
+        tone: counts.imageSynced > 0 ? 'accent' : 'muted',
+      });
+    }
+
+    if (options.forceDetail || counts.detailSynced > 0 || counts.detailPending > 0) {
+      const detailLabel = counts.detailErrors > 0
+        ? `Detail synced (${counts.detailErrors} errors)`
+        : 'Detail synced';
+      stats.push({
+        label: detailLabel,
+        value: `${formatNumber(counts.detailSynced)} / ${formatNumber(counts.detailPending)}`,
+        tone: counts.detailErrors > 0 ? 'warn' : 'neutral',
+        raw: true,
+      });
+    }
+
+    return (
+      <div className="admin-sync-result">
+        <div className="admin-sync-result__header">
+          <span className="admin-sync-result__icon" aria-hidden="true">✓</span>
+          <div>
+            <strong>Sync complete</strong>
+            <span className="admin-sync-result__meta">
+              {formatNumber(counts.vendors)} vendor{counts.vendors === 1 ? '' : 's'}
+              {' · '}
+              finished in {formatDurationMs(timings.totalMs)}
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-sync-result__stats">
+          {stats.map((s) => (
+            <div key={s.label} className={`admin-sync-stat admin-sync-stat--${s.tone}`}>
+              <span className="admin-sync-stat__value">
+                {s.raw ? s.value : formatNumber(s.value)}
+              </span>
+              <span className="admin-sync-stat__label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {timings.fetchMs != null ? (
+          <div className="admin-sync-result__timing">
+            <div className="admin-sync-timing-row">
+              <span>Bókun fetch</span>
+              <span>{formatDurationMs(timings.fetchMs)}</span>
+            </div>
+            <div className="admin-sync-timing-bar" aria-hidden="true">
+              <span className="admin-sync-timing-bar__fetch" style={{ width: `${fetchPct}%` }} />
+              <span className="admin-sync-timing-bar__write" style={{ width: `${writePct}%` }} />
+            </div>
+            <div className="admin-sync-timing-row">
+              <span>Process &amp; persist</span>
+              <span>{formatDurationMs(timings.writeMs)}</span>
+            </div>
+          </div>
+        ) : null}
+      </div>
     );
   }
 
@@ -193,12 +319,28 @@
     const [syncing, setSyncing] = useState(false);
     const [syncError, setSyncError] = useState('');
     const [syncResult, setSyncResult] = useState(null);
+    const [syncElapsed, setSyncElapsed] = useState(0);
+    const [syncStep, setSyncStep] = useState(0);
+    const syncStartedRef = useRef(0);
     const [syncOpts, setSyncOpts] = useState({
       deactivateMissing: true,
       forceDetail: false,
       syncImages: false,
       maxDetailPerRun: 40,
     });
+
+    useEffect(() => {
+      if (!syncing) return undefined;
+      syncStartedRef.current = Date.now();
+      setSyncElapsed(0);
+      setSyncStep(0);
+      const tick = window.setInterval(() => {
+        const sec = Math.floor((Date.now() - syncStartedRef.current) / 1000);
+        setSyncElapsed(sec);
+        setSyncStep(Math.floor(sec / 7));
+      }, 500);
+      return () => window.clearInterval(tick);
+    }, [syncing]);
 
     const runCatalogSync = async () => {
       setSyncing(true);
@@ -221,7 +363,6 @@
     if (!overview) return <div className="admin-empty">Loading…</div>;
 
     const { activities, vendors, totals, lastSyncedAt, inquiries } = overview;
-    const counts = syncResult && syncResult.counts;
 
     return (
       <div>
@@ -231,7 +372,7 @@
           {lastSyncedAt ? <span> · {timeAgo(lastSyncedAt)}</span> : null}
         </p>
 
-        <section className="admin-sync-panel">
+        <section className={`admin-sync-panel${syncing ? ' admin-sync-panel--busy' : ''}`}>
           <h2>Catalog sync</h2>
           <p>
             Pull the latest Bókun contract channel into Supabase. Typical runtime 30–90s;
@@ -283,11 +424,18 @@
           <div className="admin-sync-actions">
             <button
               type="button"
-              className="admin-btn"
+              className={`admin-btn${syncing ? ' admin-btn--loading' : ''}`}
               onClick={runCatalogSync}
               disabled={syncing}
             >
-              {syncing ? 'Syncing…' : 'Run catalog sync'}
+              {syncing ? (
+                <>
+                  <span className="admin-sync-spinner" aria-hidden="true" />
+                  Syncing… {syncElapsed}s
+                </>
+              ) : (
+                'Run catalog sync'
+              )}
             </button>
             <button
               type="button"
@@ -298,26 +446,14 @@
               Refresh stats
             </button>
           </div>
+          {syncing ? (
+            <CatalogSyncRunning elapsedSec={syncElapsed} stepIndex={syncStep} />
+          ) : null}
           {syncError ? (
             <div className="admin-result admin-result--error">{syncError}</div>
           ) : null}
-          {syncResult && counts ? (
-            <div className="admin-result">
-              <strong>Sync complete</strong>
-              {' · '}
-              {formatNumber(counts.uniqueInChannel)} unique in channel
-              {' · '}
-              {formatNumber(counts.upserted)} upserted
-              {' · '}
-              {formatNumber(counts.unchanged)} unchanged
-              {' · '}
-              {formatNumber(counts.deactivated)} deactivated
-              {' · '}
-              detail {formatNumber(counts.detailSynced)}/{formatNumber(counts.detailPending)} pending
-              {syncResult.timings ? (
-                <pre>{JSON.stringify(syncResult.timings, null, 2)}</pre>
-              ) : null}
-            </div>
+          {syncResult && syncResult.counts && !syncing ? (
+            <CatalogSyncResult result={syncResult} options={syncOpts} />
           ) : null}
         </section>
 
@@ -425,6 +561,343 @@
     );
   }
 
+  // ---------------- Activity content editor (modal) ----------------
+  function ActivityContentModal({ token, bokunActivityId, onClose, onSaved }) {
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [form, setForm] = useState(null);
+
+    useEffect(() => {
+      if (!bokunActivityId) return undefined;
+      let alive = true;
+      setLoading(true);
+      setError('');
+      adminFetch(`/api/admin/activity-content?bokunActivityId=${encodeURIComponent(bokunActivityId)}`, token)
+        .then((res) => { if (alive) setForm(res); })
+        .catch((err) => { if (alive) setError(err.message || 'Load failed'); })
+        .finally(() => { if (alive) setLoading(false); });
+      return () => { alive = false; };
+    }, [token, bokunActivityId]);
+
+    const setTranslation = (field, lang, value) => {
+      setForm((f) => ({
+        ...f,
+        translations: {
+          ...f.translations,
+          [field]: { ...f.translations[field], [lang]: value },
+        },
+      }));
+    };
+
+    const save = async () => {
+      if (!form) return;
+      setSaving(true);
+      setError('');
+      try {
+        await adminFetch('/api/admin/activity-content', token, {
+          method: 'PATCH',
+          body: {
+            bokunActivityId: form.bokunActivityId,
+            isFeatured: form.featured.isFeatured,
+            featuredRank: form.featured.featuredRank,
+            coverImageOwnedUrl: form.owned.coverImageOwnedUrl,
+            translations: form.translations,
+          },
+        });
+        onSaved();
+        onClose();
+      } catch (err) {
+        setError(err.message || 'Save failed');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    if (!bokunActivityId) return null;
+
+    return (
+      <div className="admin-modal-backdrop" onClick={onClose} role="presentation">
+        <div className="admin-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+          <div className="admin-modal__header">
+            <h2>Activity content · {bokunActivityId}</h2>
+            <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={onClose}>Close</button>
+          </div>
+          {loading ? <div className="admin-empty">Loading…</div> : null}
+          {error ? <div className="admin-login__error">{error}</div> : null}
+          {form && !loading ? (
+            <div className="admin-modal__body">
+              <p className="admin-page-sub" style={{ marginTop: 0 }}>
+                English source (Bókun): <strong>{form.english.title}</strong>
+              </p>
+              <div className="admin-form-grid">
+                <label className="admin-field">
+                  <span>Featured on homepage</span>
+                  <input
+                    type="checkbox"
+                    checked={form.featured.isFeatured}
+                    onChange={(e) => setForm((f) => ({
+                      ...f,
+                      featured: { ...f.featured, isFeatured: e.target.checked },
+                    }))}
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Featured rank (lower = first)</span>
+                  <input
+                    type="number"
+                    value={form.featured.featuredRank ?? ''}
+                    onChange={(e) => setForm((f) => ({
+                      ...f,
+                      featured: {
+                        ...f.featured,
+                        featuredRank: e.target.value === '' ? null : Number(e.target.value),
+                      },
+                    }))}
+                  />
+                </label>
+                <label className="admin-field admin-field--wide">
+                  <span>Hero image URL (owned override)</span>
+                  <input
+                    type="url"
+                    value={form.owned.coverImageOwnedUrl || ''}
+                    onChange={(e) => setForm((f) => ({
+                      ...f,
+                      owned: { ...f.owned, coverImageOwnedUrl: e.target.value },
+                    }))}
+                    placeholder="https://…"
+                  />
+                </label>
+              </div>
+              {['title', 'summary', 'description'].map((field) => (
+                <fieldset key={field} className="admin-fieldset">
+                  <legend>{field}</legend>
+                  <div className="admin-form-grid">
+                    {['hant', 'hans', 'en'].map((lng) => (
+                      <label key={lng} className="admin-field admin-field--wide">
+                        <span>{lng}</span>
+                        {field === 'description' ? (
+                          <textarea
+                            rows={4}
+                            value={(form.translations[field] && form.translations[field][lng]) || ''}
+                            onChange={(e) => setTranslation(field, lng, e.target.value)}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={(form.translations[field] && form.translations[field][lng]) || ''}
+                            onChange={(e) => setTranslation(field, lng, e.target.value)}
+                          />
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          ) : null}
+          <div className="admin-modal__footer">
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={onClose} disabled={saving}>Cancel</button>
+            <button type="button" className="admin-btn" onClick={save} disabled={saving || loading || !form}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------- Content page ----------------
+  function ContentPage({ token, vendors, reloadKey, onRefresh }) {
+    const [vendorId, setVendorId] = useState('');
+    const [vendorForm, setVendorForm] = useState(null);
+    const [vendorMsg, setVendorMsg] = useState('');
+    const [vendorSaving, setVendorSaving] = useState(false);
+    const [featured, setFeatured] = useState({ rows: [], total: 0 });
+    const [featuredLoading, setFeaturedLoading] = useState(false);
+    const [addFeaturedId, setAddFeaturedId] = useState('');
+    const [contentEditId, setContentEditId] = useState(null);
+
+    const loadFeatured = useCallback(() => {
+      setFeaturedLoading(true);
+      adminFetch('/api/admin/activities?featured=true&pageSize=50', token)
+        .then((res) => setFeatured({ rows: res.rows || [], total: res.total || 0 }))
+        .catch(() => setFeatured({ rows: [], total: 0 }))
+        .finally(() => setFeaturedLoading(false));
+    }, [token]);
+
+    useEffect(() => { loadFeatured(); }, [loadFeatured, reloadKey]);
+
+    useEffect(() => {
+      if (!vendorId) { setVendorForm(null); return undefined; }
+      let alive = true;
+      adminFetch(`/api/admin/vendor?bokunVendorId=${encodeURIComponent(vendorId)}`, token)
+        .then((res) => { if (alive) setVendorForm(res.vendor); })
+        .catch(() => { if (alive) setVendorForm(null); });
+      return () => { alive = false; };
+    }, [token, vendorId]);
+
+    const saveVendor = async () => {
+      if (!vendorForm) return;
+      setVendorSaving(true);
+      setVendorMsg('');
+      try {
+        await adminFetch('/api/admin/vendor', token, {
+          method: 'PATCH',
+          body: {
+            bokunVendorId: vendorForm.bokunVendorId,
+            summary: vendorForm.summary,
+            heroImageUrl: vendorForm.heroImageUrl,
+            tags: vendorForm.tags,
+          },
+        });
+        setVendorMsg('Vendor profile saved.');
+        onRefresh();
+      } catch (err) {
+        setVendorMsg(err.message || 'Save failed');
+      } finally {
+        setVendorSaving(false);
+      }
+    };
+
+    const addFeatured = async () => {
+      const id = addFeaturedId.trim();
+      if (!id) return;
+      try {
+        await adminFetch('/api/admin/activity-content', token, {
+          method: 'PATCH',
+          body: { bokunActivityId: id, isFeatured: true, featuredRank: featured.rows.length + 1 },
+        });
+        setAddFeaturedId('');
+        loadFeatured();
+        onRefresh();
+      } catch (err) {
+        setVendorMsg(err.message || 'Could not add featured');
+      }
+    };
+
+    return (
+      <div>
+        <h1 className="admin-page-title">Content</h1>
+        <p className="admin-page-sub">Owned copy, vendor profiles, and homepage featured rail.</p>
+
+        <section className="admin-sync-panel">
+          <h2>Homepage featured</h2>
+          <p>Shown on djstour.com when at least one activity is marked featured. Falls back to first six tours otherwise.</p>
+          <div className="admin-sync-actions" style={{ marginBottom: 12 }}>
+            <input
+              type="text"
+              placeholder="Bókun activity ID to feature…"
+              value={addFeaturedId}
+              onChange={(e) => setAddFeaturedId(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={addFeatured}>Add featured</button>
+            {featuredLoading ? <span style={{ fontSize: 12 }}>Loading…</span> : null}
+          </div>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr><th>Title</th><th>ID</th><th>Rank</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {featured.rows.length === 0 ? (
+                  <tr><td colSpan="4" className="admin-empty">No featured activities yet.</td></tr>
+                ) : featured.rows.map((row) => (
+                  <tr key={row.id}>
+                    <td><strong>{row.title}</strong></td>
+                    <td>{row.bokunActivityId}</td>
+                    <td>{row.featuredRank ?? '—'}</td>
+                    <td>
+                      <div className="admin-actions">
+                        <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setContentEditId(row.bokunActivityId)}>Edit</button>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--danger admin-btn--sm"
+                          onClick={async () => {
+                            await adminFetch('/api/admin/activity-content', token, {
+                              method: 'PATCH',
+                              body: { bokunActivityId: row.bokunActivityId, isFeatured: false },
+                            });
+                            loadFeatured();
+                            onRefresh();
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="admin-sync-panel">
+          <h2>Vendor profile</h2>
+          <div className="admin-form-grid" style={{ marginBottom: 12 }}>
+            <label className="admin-field admin-field--wide">
+              <span>Vendor</span>
+              <select value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
+                <option value="">Select vendor…</option>
+                {(vendors || []).map((v) => (
+                  <option key={v.id} value={v.bokunVendorId}>{v.name} (#{v.bokunVendorId})</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {vendorForm ? (
+            <div className="admin-form-grid">
+              <label className="admin-field admin-field--wide">
+                <span>Summary</span>
+                <textarea
+                  rows={3}
+                  value={vendorForm.summary || ''}
+                  onChange={(e) => setVendorForm((f) => ({ ...f, summary: e.target.value }))}
+                />
+              </label>
+              <label className="admin-field admin-field--wide">
+                <span>Hero image URL</span>
+                <input
+                  type="url"
+                  value={vendorForm.heroImageUrl || ''}
+                  onChange={(e) => setVendorForm((f) => ({ ...f, heroImageUrl: e.target.value }))}
+                />
+              </label>
+              <label className="admin-field admin-field--wide">
+                <span>Tags (comma-separated)</span>
+                <input
+                  type="text"
+                  value={(vendorForm.tags || []).join(', ')}
+                  onChange={(e) => setVendorForm((f) => ({
+                    ...f,
+                    tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean),
+                  }))}
+                />
+              </label>
+            </div>
+          ) : null}
+          <div className="admin-sync-actions" style={{ marginTop: 12 }}>
+            <button type="button" className="admin-btn" onClick={saveVendor} disabled={!vendorForm || vendorSaving}>
+              {vendorSaving ? 'Saving…' : 'Save vendor'}
+            </button>
+            {vendorMsg ? <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{vendorMsg}</span> : null}
+          </div>
+        </section>
+
+        {contentEditId ? (
+          <ActivityContentModal
+            token={token}
+            bokunActivityId={contentEditId}
+            onClose={() => setContentEditId(null)}
+            onSaved={() => { loadFeatured(); onRefresh(); }}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
   // ---------------- Activities page ----------------
   function ActivitiesPage({ token, vendors, reloadKey }) {
     const [page, setPage] = useState(1);
@@ -438,6 +911,7 @@
     const [error, setError] = useState('');
     const [rowBusy, setRowBusy] = useState(null);
     const [actionMsg, setActionMsg] = useState('');
+    const [contentEditId, setContentEditId] = useState(null);
 
     useEffect(() => {
       const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -572,6 +1046,13 @@
                         <button
                           type="button"
                           className="admin-btn admin-btn--ghost admin-btn--sm"
+                          onClick={() => setContentEditId(row.bokunActivityId)}
+                        >
+                          Content
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
                           disabled={rowBusy === row.bokunActivityId}
                           onClick={() => runRowAction(row, 'resync-detail')}
                         >
@@ -621,6 +1102,14 @@
             </span>
           </div>
         </div>
+        {contentEditId ? (
+          <ActivityContentModal
+            token={token}
+            bokunActivityId={contentEditId}
+            onClose={() => setContentEditId(null)}
+            onSaved={() => fetchList().then((res) => setData({ rows: res.rows || [], total: res.total || 0 }))}
+          />
+        ) : null}
       </div>
     );
   }
@@ -848,6 +1337,14 @@
               token={token}
               vendors={overview?.vendors || []}
               reloadKey={reloadKey}
+            />
+          )}
+          {tab === 'content' && (
+            <ContentPage
+              token={token}
+              vendors={overview?.vendors}
+              reloadKey={reloadKey}
+              onRefresh={refreshAll}
             />
           )}
           {tab === 'inquiries' && <InquiriesPage token={token} />}

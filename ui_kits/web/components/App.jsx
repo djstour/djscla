@@ -110,6 +110,43 @@
       ? meta.total
       : (hookCatalogTotal > 0 ? hookCatalogTotal : activities.length);
 
+    const [featuredRaw, setFeaturedRaw] = useState([]);
+    const [featuredLoading, setFeaturedLoading] = useState(true);
+
+    useEffect(() => {
+      let cancelled = false;
+      setFeaturedLoading(true);
+      const adapter = window.AuralisData && window.AuralisData.BokunAdapter;
+      if (!adapter || !adapter.fetchFeatured) {
+        setFeaturedRaw([]);
+        setFeaturedLoading(false);
+        return undefined;
+      }
+      adapter.fetchFeatured({ lang, limit: 6 })
+        .then(({ activities: raw, translations }) => {
+          if (cancelled) return;
+          if (translations && window.AuralisData) {
+            window.AuralisData._runtimeTranslations = {
+              ...(window.AuralisData._runtimeTranslations || {}),
+              ...translations,
+            };
+          }
+          setFeaturedRaw(raw || []);
+        })
+        .catch(() => { if (!cancelled) setFeaturedRaw([]); })
+        .finally(() => { if (!cancelled) setFeaturedLoading(false); });
+      return () => { cancelled = true; };
+    }, [lang]);
+
+    const featuredActivities = React.useMemo(() => {
+      const adapter = window.AuralisData && window.AuralisData.BokunAdapter;
+      if (!featuredRaw.length || !adapter) return [];
+      return adapter.toViewModels(featuredRaw, lang);
+    }, [featuredRaw, lang]);
+
+    const homeFeatured = featuredActivities.length > 0 ? featuredActivities : activities;
+    const homeFeaturedLoading = featuredActivities.length > 0 ? featuredLoading : loading;
+
     // Trip = ARRAY OF BÓKUN IDS (numbers). View-models are looked up from the
     // current `activities` list, so a language flip rehydrates every cart row
     // without us touching trip state.
@@ -354,7 +391,8 @@
             />
             {error && <div className="auralis-container"><BokunErrorBanner error={error} lang={lang} /></div>}
             <CategoryStrip onSelectCategory={openToursWithChip} lang={lang} />
-            <FeaturedSection activities={activities} loading={loading} catalogTotal={catalogTotal}
+            <FeaturedSection activities={homeFeatured} loading={homeFeaturedLoading} catalogTotal={catalogTotal}
+                             curated={featuredActivities.length > 0}
                              onView={() => goToToursWithFilters(tripSearch)} onAdd={addToTrip} onRemove={removeFromTrip} onOpenDetail={openActivityDetail}
                              tripIdSet={tripIdSet} lang={lang}
                              displayCurrency={displayCurrency} fxRates={fxRates} />
@@ -490,7 +528,7 @@
     );
   }
 
-  function FeaturedSection({ activities, loading, catalogTotal, onView, onAdd, onRemove, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates }) {
+  function FeaturedSection({ activities, loading, catalogTotal, curated, onView, onAdd, onRemove, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
     const countLabel = formatCatalogCount(catalogTotal, lang);
     return (
@@ -499,7 +537,9 @@
         <div className="featured-header">
           <div>
             <span className="overline" style={{ color: 'var(--coral)' }}>
-              {T({ hant: '本月精選', hans: '本月精选', en: 'This month' })}
+              {curated
+                ? T({ hant: '編輯精選', hans: '编辑精选', en: 'Editor’s picks' })
+                : T({ hant: '本月精選', hans: '本月精选', en: 'This month' })}
             </span>
             <h2 className="featured-title" style={{ margin: '8px 0 0', font: '700 44px/1.05 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.025em' }}>
               {T({

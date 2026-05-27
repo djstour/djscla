@@ -45,6 +45,7 @@ module.exports = async function handler(req, res) {
   const pageSize = Math.min(parseInteger(req.query.pageSize, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
   const vendorId = req.query.vendorId && String(req.query.vendorId).trim();
   const status = String(req.query.status || 'all').trim().toLowerCase();
+  const featuredOnly = req.query.featured === 'true' || req.query.featured === '1';
   const q = req.query.q && String(req.query.q).trim();
 
   const offset = (page - 1) * pageSize;
@@ -73,14 +74,17 @@ module.exports = async function handler(req, res) {
       'price_from',
       'currency',
       'is_active',
+      'is_featured',
+      'featured_rank',
       'last_synced_at',
       'updated_at',
     ].join(',')
   );
-  params.set('order', 'updated_at.desc');
+  params.set('order', featuredOnly ? 'featured_rank.asc.nullslast,updated_at.desc' : 'updated_at.desc');
   params.set('limit', String(pageSize));
   params.set('offset', String(offset));
 
+  if (featuredOnly) params.append('is_featured', 'eq.true');
   if (status === 'active') params.append('is_active', 'eq.true');
   else if (status === 'inactive') params.append('is_active', 'eq.false');
 
@@ -125,6 +129,8 @@ module.exports = async function handler(req, res) {
         priceFrom: row.price_from != null ? Number(row.price_from) : null,
         currency: row.currency || 'USD',
         isActive: row.is_active !== false,
+        isFeatured: row.is_featured === true,
+        featuredRank: row.featured_rank != null ? Number(row.featured_rank) : null,
         lastSyncedAt: row.last_synced_at,
         updatedAt: row.updated_at,
         vendor: vendor

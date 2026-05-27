@@ -187,6 +187,43 @@
     },
 
     /**
+     * GET /api/catalog/featured — admin-curated homepage rail (Supabase).
+     */
+    fetchFeatured(opts = {}) {
+      const { lang = 'hant', limit = 6 } = opts;
+
+      if (typeof fetch === 'undefined') {
+        const err = new Error('fetch is not available — use a browser or vercel dev');
+        err.code = 'NO_FETCH';
+        return Promise.reject(err);
+      }
+
+      const qs = new URLSearchParams({ lang, limit: String(limit) });
+
+      return fetch(`/api/catalog/featured?${qs}`)
+        .then((res) => res.json().then((data) => ({ res, data })))
+        .then(({ res, data }) => {
+          if (!res.ok) {
+            const err = new Error(data.error || `Featured HTTP ${res.status}`);
+            err.status = res.status;
+            throw err;
+          }
+          const list = data.activities;
+          if (!Array.isArray(list)) {
+            throw new Error('Invalid response from /api/catalog/featured');
+          }
+          if (data.translations && typeof data.translations === 'object') {
+            A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
+          }
+          return {
+            activities: list,
+            meta: data.meta || { total: list.length },
+            translations: data.translations || {},
+          };
+        });
+    },
+
+    /**
      * Lightweight catalog typeahead — hits Supabase via /api/catalog/activities
      * with the FTS `q` param. Returns view-models so callers can render rows
      * with the same shape as the rest of the catalog.
