@@ -11,7 +11,7 @@
 | 小型目錄 | `?all=true` 在伺服器串頁拉齊（上限 `maxItems`，預設 2000）— **僅適合總 SKU 在數千以內** |
 | 前台載入 | `bokunAdapter` 預設 `all=true`，顯示正確 `meta.total`（如 123） |
 | 翻譯 | Vercel Cron 每 6h 自動補齊缺漏；首次全量用 `scripts/sync-all-translations.sh` |
-| 供應商篩選 | Tours 左側欄 **supplier pills**；數字 = Bókun 合約產品數（`vendorContractCounts`，見 `data/bokunVendors.json`） |
+| 供應商篩選 | Tours 左側欄 **supplier pills**；數字 = channel search 依供應商分組列數（`vendorContractCounts`，sync 全 channel 自動發現） |
 
 **已知限制：** Bókun search 未保證依 `vendorId` 伺服器端篩選；多供應商全庫很大時，不可長期依賴 `all=true`。
 
@@ -35,10 +35,10 @@
 |----|------|
 | 資料庫 | Supabase：`vendors`、`activities`（`bokun_activity_id`、`bokun_payload`、`source_hash`、`chip_ids`、`route_ids`、`facet_ids`、`last_synced_at`） |
 | Schema | `supabase/migrations/20260524093000_ota_core.sql` + `20260525025000_catalog_chip_ids.sql`（GIN on chip/route/facet + tsvector on `title_en`） |
-| Sync | `lib/catalogSync.js` → `fetchChannelContractCatalog()` + `source_hash` diff，僅 upsert 變更列；遺失 SKU 標 `is_active=false` |
+| Sync | `lib/catalogSync.js` → `fetchChannelCatalogForSync()`（全 channel 一輪掃描、自動發現供應商）+ `source_hash` diff；遺失 SKU 標 `is_active=false` |
 | 排程 | Vercel Cron `15 */2 * * *`（`vercel.json`）→ `GET /api/catalog/sync`；Bearer auth 走 `CRON_SECRET`／`CATALOG_SYNC_SECRET` |
 | 列表 API | `GET /api/catalog/activities?source=db&vendorId=…&chips=&routes=&facets=&q=` → 查 Supabase（GIN array overlap + tsvector FTS；fallback Bókun on miss） |
-| 供應商 API | `GET /api/catalog/vendors` → 從 `vendors` 表回 logo/簡介/contractCount，第一次同步前自動 fallback `data/bokunVendors.json` |
+| 供應商 API | `GET /api/catalog/vendors` → 從 `vendors` 表回 logo/簡介/contractCount；DB 空時 fallback `data/bokunVendors.json`（僅標籤，sync 不依賴此檔） |
 | 詳情 API | `GET /api/bokun/activity?id=…` 先讀 `activities.bokun_payload`（若 `last_synced_at` 在 `CATALOG_DETAIL_TTL_MS` 內）；過期或 miss 才打 Bókun |
 | 前台 | Tours 既有 `bokunAdapter` 客戶端不變；`meta.source` 顯示 `db` 表示走快取 |
 | 翻譯 | 佇列：新品或 `source_hash` 變更 → 既有 `/api/translations/cron` |

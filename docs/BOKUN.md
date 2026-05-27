@@ -86,9 +86,15 @@ Verify: open `https://djstour.com/api/catalog/activities?lang=hant&all=true` —
 
 ### Supplier counts (Marketplace contract)
 
-Pill counts come from **`meta.vendorContractCounts`**, aligned with Bókun Marketplace → Contract summary (e.g. Arctic Adventures **123**, Adventure Vikings **18**). The API loads each contracted vendor separately (`data/bokunVendors.json`) and counts merged search rows per vendor before display dedupe.
+Pill counts come from **`meta.vendorContractCounts`**: one full channel search, grouped by `activity.vendor.id` (search-row counts per supplier; may differ from Marketplace contract totals).
 
-Add a new marketplace vendor: edit `data/bokunVendors.json` and redeploy.
+Add a new marketplace vendor:
+
+1. Accept the contract in Bókun Marketplace (Contracts tab).
+2. Add that supplier’s products to your **booking channel** (Sales tools → channel / website — enable *auto-include new contract products* if available).
+3. Run **Admin → Overview → Run catalog sync** (or wait for cron every ~2 hours). Sync **auto-discovers** every supplier present on the channel — no `data/bokunVendors.json` edit required.
+
+**Contract accepted ≠ automatic on djstour.com.** Bókun does not notify our site; products must appear in the booking channel search API. `data/bokunVendors.json` is only a fallback label list when the DB is empty before the first sync.
 
 ## Files
 

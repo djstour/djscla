@@ -1,6 +1,7 @@
 {
   "vendors": [
     { "id": 85, "title": "Arctic Adventures" },
-    { "id": 394, "title": "Adventure Vikings" }
+    { "id": 394, "title": "Adventure Vikings" },
+    { "id": 9, "title": "BusTravel Iceland" }
   ]
 }
