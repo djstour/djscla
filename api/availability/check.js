@@ -35,6 +35,39 @@ function matchAvailability(availabilities, date, startTimeId) {
   return dated.find((row) => String(row.startTimeId) === wanted || String(row.id) === wanted) || null;
 }
 
+function extractCategoryUnitPrices(activity, availability, currency) {
+  const categories = Array.isArray(activity.pricingCategories) ? activity.pricingCategories : [];
+  const rates = Array.isArray(availability?.pricesByRate) ? availability.pricesByRate : [];
+  const defaultRateId = availability?.defaultRateId;
+  const priceRow = rates.find((row) => String(row.activityRateId) === String(defaultRateId)) || rates[0] || null;
+  const perCategory = priceRow && Array.isArray(priceRow.pricePerCategoryUnit)
+    ? priceRow.pricePerCategoryUnit
+    : [];
+  const unitById = new Map();
+  perCategory.forEach((entry) => {
+    unitById.set(String(entry.id), {
+      unitAmount: resolveAmountValue(entry.amount) || 0,
+      currency: entry.amount?.currency || currency,
+    });
+  });
+  (activity.pricing || []).forEach((row) => {
+    const key = String(row.pricingCategoryId);
+    if (!unitById.has(key) && Number(row.amount) > 0) {
+      unitById.set(key, { unitAmount: Number(row.amount), currency: row.currency || currency });
+    }
+  });
+
+  return categories.map((cat) => {
+    const hit = unitById.get(String(cat.id));
+    return {
+      pricingCategoryId: cat.id,
+      label: cat.fullTitle || cat.title || `Category ${cat.id}`,
+      unitAmount: hit ? hit.unitAmount : null,
+      currency: hit?.currency || currency,
+    };
+  }).filter((row) => row.unitAmount != null && row.unitAmount > 0);
+}
+
 function computeLineItems(activity, availability, pax) {
   const rates = Array.isArray(availability?.pricesByRate) ? availability.pricesByRate : [];
   const defaultRateId = availability?.defaultRateId;
@@ -69,13 +102,15 @@ function computeLineItems(activity, availability, pax) {
   });
 
   const bookingAmount = resolveAmountValue(priceRow.pricePerBooking);
+  const categories = Array.isArray(activity.pricingCategories) ? activity.pricingCategories : [];
   const lines = pax.map((row, index) => {
     const quantity = Number(row.quantity) || 0;
     const cat = unitMap.get(String(row.pricingCategoryId));
     const unitAmount = cat ? cat.amount : 0;
+    const catMeta = categories.find((c) => String(c.id) === String(row.pricingCategoryId));
     return {
       pricingCategoryId: row.pricingCategoryId,
-      label: `Category ${row.pricingCategoryId}`,
+      label: catMeta?.fullTitle || catMeta?.title || `Category ${row.pricingCategoryId}`,
       quantity,
       unitAmount,
       total: unitAmount * quantity,
@@ -151,6 +186,7 @@ module.exports = async function handler(req, res) {
     const minOk = requested >= minRequired;
     const pricing = computeLineItems(activity, availability, pax);
     const total = pricing.lineItems.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
+    const categoryUnitPrices = extractCategoryUnitPrices(activity, availability, pricing.currency);
 
     return res.status(200).json({
       available: !soldOut && capacityOk && minOk,
@@ -159,6 +195,7 @@ module.exports = async function handler(req, res) {
       currency: pricing.currency,
       total,
       lineItems: pricing.lineItems,
+      categoryUnitPrices,
       availability: {
         id: availability.id,
         date,

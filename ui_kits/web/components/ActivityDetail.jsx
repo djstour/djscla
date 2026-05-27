@@ -7,6 +7,29 @@
     useResponsiveImageProfile, useMobileViewport,
     sanitizeVendorHtml, vendorHtmlIsMeaningful,
   } = window.AuralisUI;
+  const Pax = window.AuralisPax || {};
+
+  function getBookableCategories(tour) {
+    if (!tour) return [];
+    if (Pax.bookablePricingCategories) return Pax.bookablePricingCategories(tour);
+    const list = tour.pricingCategories || tour.raw?.pricingCategories || [];
+    return [...list]
+      .filter((c) => c && c.id != null && !c.internalUseOnly)
+      .sort((a, b) => {
+        const order = { ADULT: 0, TEENAGER: 1, CHILD: 2 };
+        const ao = order[a.ticketCategory];
+        const bo = order[b.ticketCategory];
+        if (ao != null && bo != null && ao !== bo) return ao - bo;
+        return (Number(b.minAge) || 0) - (Number(a.minAge) || 0);
+      });
+  }
+
+  function paxLabel(cat) {
+    if (!cat) return '';
+    if (Pax.paxCategoryLabel) return Pax.paxCategoryLabel(cat);
+    if (cat.fullTitle) return String(cat.fullTitle).trim();
+    return cat.title || '';
+  }
 
   const DESC_PREVIEW_CHARS = 320;
   const COMPACT_HEADER_SCROLL = 180;
@@ -38,55 +61,6 @@
     const d = new Date();
     d.setDate(d.getDate() + offsetDays);
     return d.toISOString().slice(0, 10);
-  }
-
-  function findPricingCategory(activity, matcher) {
-    return (activity?.raw?.pricingCategories || []).find(matcher) || null;
-  }
-
-  /**
-   * Derive the Adult / Child pricing categories from the tour's `pricingCategories`
-   * list so the BookPanel can render proper "Adult (13-99)" / "Child (6-12)" labels
-   * and feed Bókun's availability API with the right category IDs.
-   */
-  function resolvePaxCategories(tour) {
-    const list = tour?.raw?.pricingCategories || [];
-    const adultMatcher = (c) =>
-      c.defaultCategory
-      || c.ticketCategory === 'ADULT'
-      || /adult/i.test(c.title || c.fullTitle || '');
-    const childMatcher = (c) =>
-      c.ticketCategory === 'CHILD'
-      || /child|youth|kid/i.test(c.title || c.fullTitle || '');
-    const adult = list.find(adultMatcher) || list[0] || null;
-    const child = list.find(childMatcher) || null;
-    return { adult, child };
-  }
-
-  function paxCategoryLabel(cat) {
-    if (!cat) return '';
-    if (cat.fullTitle) return cat.fullTitle;
-    const title = cat.title || (cat.ticketCategory === 'CHILD' ? 'Child' : 'Adult');
-    const min = cat.minAge ?? '';
-    const max = cat.maxAge ?? '';
-    if (min === '' && max === '') return title;
-    return `${title} (${min} - ${max})`;
-  }
-
-  function buildAvailabilityPax(tour, counts) {
-    const adultCategory = findPricingCategory(tour, (row) => row.defaultCategory || /adult/i.test(row.title || row.fullTitle || ''))
-      || tour?.raw?.pricingCategories?.[0]
-      || null;
-    const childCategory = findPricingCategory(tour, (row) => /child|youth|kid/i.test(row.title || row.fullTitle || ''));
-    const pax = [];
-
-    if (adultCategory && counts.adults > 0) {
-      pax.push({ pricingCategoryId: adultCategory.id, quantity: counts.adults });
-    }
-    if (childCategory && counts.children > 0) {
-      pax.push({ pricingCategoryId: childCategory.id, quantity: counts.children });
-    }
-    return pax;
   }
 
   /** Reuse card-sized derivative first, then fade into the larger hero asset. */
@@ -199,10 +173,7 @@
     // dropdown to slots that actually exist on that day.
     const [selectedDayInfo, setSelectedDayInfo] = useState(null);
     const [selectedStartTime, setSelectedStartTime] = useState('');
-    const [guestCounts, setGuestCounts] = useState(() => ({
-      adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
-      children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
-    }));
+    const [paxCounts, setPaxCounts] = useState({});
     const [selectedPickupId, setSelectedPickupId] = useState(() => String(initialBookingSelection?.pickupPlaceId || ''));
     const [selectedExtras, setSelectedExtras] = useState(() => (
       Array.isArray(initialBookingSelection?.extras)
@@ -225,6 +196,7 @@
       budgetRange: '',
       notes: '',
     });
+    const [detailTab, setDetailTab] = useState('description');
     const touchStart = useRef({ x: 0, y: 0 });
 
     const galleryPhotos = tour
@@ -254,14 +226,23 @@
       setLightboxOpen(false);
       setLightboxIndex(0);
       setDescExpanded(false);
+      setDetailTab('description');
       setPriceSheetOpen(false);
       setCompactHeader(false);
       setSelectedDate(fromTrip || nextIsoDate(14));
       setSelectedStartTime(initialBookingSelection?.startTimeId ? String(initialBookingSelection.startTimeId) : '');
-      setGuestCounts({
-        adults: Math.min(DETAIL_PAX_MAX, Math.max(1, Number(initialGuestCounts?.adults) || 2)),
-        children: Math.min(DETAIL_PAX_MAX, Math.max(0, Number(initialGuestCounts?.children) || 0)),
-      });
+      if (tour) {
+        const cats = getBookableCategories(tour);
+        if (Pax.initPaxCounts) {
+          setPaxCounts(Pax.initPaxCounts(cats, initialGuestCounts));
+        } else {
+          const next = {};
+          cats.forEach((c) => { next[String(c.id)] = c.defaultCategory ? 1 : 0; });
+          setPaxCounts(next);
+        }
+      } else {
+        setPaxCounts({});
+      }
       setSelectedPickupId(String(initialBookingSelection?.pickupPlaceId || ''));
       setSelectedExtras(
         Array.isArray(initialBookingSelection?.extras)
@@ -367,7 +348,7 @@
         .join(',');
     }, [selectedExtras]);
     useEffect(() => {
-      if (!tour || !selectedDate || !guestCounts.adults) return undefined;
+      if (!tour || !selectedDate || !Pax.paxCountsTotal(paxCounts)) return undefined;
       const handle = setTimeout(() => { checkAvailability(); }, 400);
       return () => clearTimeout(handle);
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,8 +356,7 @@
       tour && tour.id,
       selectedDate,
       selectedStartTime,
-      guestCounts.adults,
-      guestCounts.children,
+      JSON.stringify(paxCounts),
       selectedPickupId,
       extrasKey,
       lang,
@@ -422,7 +402,23 @@
           ? proxyImageUrl(activePhotoAsset.sourceUrl, imgProfile.heroHi)
           : null))
       : null;
-    const hasMultiPrice = tour.priceTable && tour.priceTable.length > 1;
+    const bookableCategories = getBookableCategories(tour);
+    const hasMultiPrice = bookableCategories.length > 1;
+    const categoryUnitPrices = (availabilityState.data && availabilityState.data.categoryUnitPrices) || [];
+    const unitPriceByCategoryId = new Map();
+    categoryUnitPrices.forEach((row) => {
+      if (row && row.pricingCategoryId != null && Number(row.unitAmount) > 0) {
+        unitPriceByCategoryId.set(String(row.pricingCategoryId), Number(row.unitAmount));
+      }
+    });
+    bookableCategories.forEach((cat) => {
+      const key = String(cat.id);
+      if (!unitPriceByCategoryId.has(key) && Pax.unitPriceFromTour) {
+        const fromTour = Pax.unitPriceFromTour(tour, cat.id);
+        if (fromTour != null && fromTour > 0) unitPriceByCategoryId.set(key, fromTour);
+      }
+    });
+    const guestTotalLive = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
     const stopsNamed = (tour.stops || []).filter((s) => s.name);
     // Bókun ships descriptions as inline-styled HTML (rich paragraphs with
     // <p>, <br>, vendor styles). Detect that and route through the sanitiser
@@ -457,8 +453,6 @@
     const paxCap = Number.isFinite(Number(tour.passCapacity)) && Number(tour.passCapacity) > 0
       ? Number(tour.passCapacity)
       : DETAIL_PAX_MAX;
-    const { adult: adultCategory, child: childCategory } = resolvePaxCategories(tour);
-    const guestTotalLive = guestCounts.adults + guestCounts.children;
     // Client-side extras subtotal so the booking summary mirrors Bókun's "Total".
     const extrasSubtotal = optionalExtras.reduce((sum, ex) => {
       if (!selectedExtras[ex.id]) return sum;
@@ -568,35 +562,52 @@
     ].filter(Boolean);
     const hasQuickFacts = quickFacts.length > 0;
 
-    const anchorItems = [
-      tour.description && { id: 'detail-about', label: 'Description' },
-      hasIncluded && { id: 'detail-included', label: 'Included' },
-      hasExcluded && { id: 'detail-excluded', label: 'Excluded' },
-      stopsNamed.length > 0 && { id: 'detail-stops', label: 'Itinerary' },
-      hasRequirements && { id: 'detail-requirements', label: 'Requirements' },
-      hasAttention && { id: 'detail-attention', label: 'Attention' },
-      hasCancellationPolicy && { id: 'detail-cancellation', label: 'Cancellation policy' },
-      hasQuickFacts && { id: 'detail-quick-facts', label: 'Quick facts' },
-      tour.meetingPoint && { id: 'detail-meeting', label: 'Meeting point' },
-      showPickupInfo && { id: 'detail-pickup', label: 'Pick-up' },
-      tour.startTimes && tour.startTimes.length > 0 && { id: 'detail-times', label: 'Start times' },
+    const hasDescriptionTab = !!(
+      tour.description
+      || loading
+      || hasIncluded
+      || hasExcluded
+      || hasRequirements
+      || hasAttention
+      || hasCancellationPolicy
+      || hasQuickFacts
+    );
+    const hasItineraryTab = stopsNamed.length > 0;
+    const hasPickupTab = !!(
+      (showPickupInfo && (pickupPlaces.length > 0 || pickupInfo.noPickupMessage))
+      || tour.meetingPoint
+    );
+
+    const detailTabs = [
+      hasDescriptionTab && {
+        id: 'description',
+        label: T({ hant: '行程說明', hans: '行程说明', en: 'Description' }),
+      },
+      hasItineraryTab && {
+        id: 'itinerary',
+        label: T({ hant: '行程安排', hans: '行程安排', en: 'Itinerary' }),
+      },
+      hasPickupTab && {
+        id: 'pickup',
+        label: T({ hant: '接送地點', hans: '接送地点', en: 'Pick-up' }),
+      },
     ].filter(Boolean);
+
+    const activeDetailTab = detailTabs.some((t) => t.id === detailTab)
+      ? detailTab
+      : (detailTabs[0]?.id || 'description');
+
     // `hasExtras` flag retained for future use; extras now live in BookPanel.
     void hasExtras;
 
-    function scrollToSection(id) {
-      const el = document.getElementById(id);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
     function estimateSelectionBaseTotalUsd() {
-      const rows = Array.isArray(tour.priceTable) ? tour.priceTable : [];
-      const adultAmount = Number(rows.find((row) => row.categoryId === adultCategory?.id)?.amount);
-      const childAmount = Number(rows.find((row) => row.categoryId === childCategory?.id)?.amount);
       const fallbackUnit = Number(resolvePriceUsd(tour)) || 0;
-      const adultUnit = Number.isFinite(adultAmount) && adultAmount > 0 ? adultAmount : fallbackUnit;
-      const childUnit = Number.isFinite(childAmount) && childAmount >= 0 ? childAmount : adultUnit;
-      return (adultUnit * guestCounts.adults) + (childUnit * guestCounts.children);
+      return bookableCategories.reduce((sum, cat) => {
+        const qty = Number(paxCounts[String(cat.id)]) || 0;
+        if (!qty) return sum;
+        const unit = unitPriceByCategoryId.get(String(cat.id)) ?? fallbackUnit;
+        return sum + unit * qty;
+      }, 0);
     }
 
     function buildBookingSelection() {
@@ -624,7 +635,9 @@
         date: selectedDate || null,
         startTimeId: selectedStartTime || null,
         startTimeLabel: startTimeRow ? (startTimeRow.label || startTimeRow.startTime || null) : null,
-        guests: { adults: guestCounts.adults, children: guestCounts.children },
+        guests: Pax.paxCountsToLegacyGuests
+          ? { ...Pax.paxCountsToLegacyGuests(bookableCategories, paxCounts), paxCounts: { ...paxCounts } }
+          : { adults: 1, children: 0 },
         pickupPlaceId: selectedPickupId ? Number(selectedPickupId) : null,
         pickupTitle: pickupRow ? pickupRow.title : null,
         extras: selectedExtrasRows,
@@ -655,7 +668,9 @@
     }
 
     async function checkAvailability() {
-      const pax = buildAvailabilityPax(tour, guestCounts);
+      const pax = Pax.buildAvailabilityPax
+        ? Pax.buildAvailabilityPax(bookableCategories, paxCounts)
+        : [];
       if (!selectedDate || !pax.length) {
         setAvailabilityState({
           loading: false,
@@ -710,7 +725,9 @@
           supplier: item.supplier,
           date: selectedDate || null,
           startTimeId: selectedStartTime || null,
-          guests: guestCounts,
+          guests: Pax.paxCountsToLegacyGuests
+            ? Pax.paxCountsToLegacyGuests(bookableCategories, paxCounts)
+            : { adults: 1, children: 0 },
         }));
 
         const res = await fetch('/api/inquiries', {
@@ -722,7 +739,7 @@
             phone: inquiryForm.phone,
             lang,
             travelStartDate: selectedDate || null,
-            pax: guestCounts.adults + guestCounts.children,
+            pax: guestTotalLive,
             budgetRange: inquiryForm.budgetRange || null,
             notes: [inquiryForm.notes, `${tour.title} · ${tour.supplier}`].filter(Boolean).join('\n'),
             selectedTrip,
@@ -894,257 +911,228 @@
               </p>
             )}
 
-            {isMobile && anchorItems.length > 1 && (
-              <nav className="detail-anchor-nav" aria-label={T({ hant: '頁面章節', hans: '页面章节', en: 'Page sections' })}>
-                {anchorItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="detail-anchor-nav__chip"
-                    onClick={() => scrollToSection(item.id)}
+            {detailTabs.length > 0 && (
+              <div className="detail-tabs-wrap">
+                <div
+                  className="detail-tabs"
+                  role="tablist"
+                  aria-label={T({ hant: '行程內容', hans: '行程内容', en: 'Activity details' })}
+                >
+                  {detailTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      id={`detail-tab-${tab.id}`}
+                      className={`detail-tabs__btn${activeDetailTab === tab.id ? ' is-active' : ''}`}
+                      aria-selected={activeDetailTab === tab.id}
+                      aria-controls={`detail-panel-${tab.id}`}
+                      onClick={() => setDetailTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {activeDetailTab === 'description' && hasDescriptionTab && (
+                  <div
+                    id="detail-panel-description"
+                    role="tabpanel"
+                    aria-labelledby="detail-tab-description"
+                    className="detail-tab-panel"
                   >
-                    {item.label}
-                  </button>
-                ))}
-              </nav>
-            )}
-
-            {(tour.description || loading) && (
-              <Section
-                id="detail-about"
-                title="Description"
-              >
-                {tour.description ? (
-                  <>
-                    {descriptionIsHtml ? (
-                      <div
-                        className={`detail-description detail-description--rich detail-vendor-html${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}
-                        dangerouslySetInnerHTML={{ __html: descriptionSanitizedHtml }}
-                      />
-                    ) : (
-                      <p className={`detail-description${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}>
-                        {descExpanded ? tour.description : descPreview}
-                      </p>
-                    )}
-                    {descNeedsCollapse && (
-                      <button
-                        type="button"
-                        className="detail-description-toggle"
-                        onClick={() => setDescExpanded((v) => !v)}
-                        aria-expanded={descExpanded}
-                      >
-                        {descExpanded
-                          ? T({ hant: '收合', hans: '收起', en: 'Show less' })
-                          : T({ hant: '閱讀全文', hans: '阅读全文', en: 'Read more' })}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="detail-description-skeleton" aria-hidden="true">
-                    {[0.92, 1, 0.78, 0.55].map((w, i) => (
-                      <div key={i} className="tour-card-image-shimmer" style={{ width: `${w * 100}%` }} />
-                    ))}
-                  </div>
-                )}
-              </Section>
-            )}
-
-            {hasIncluded && (
-              <Section
-                id="detail-included"
-                title="Included"
-              >
-                <div className="detail-vendor-html"
-                     dangerouslySetInnerHTML={{ __html: includedHtml }} />
-              </Section>
-            )}
-
-            {hasExcluded && (
-              <Section
-                id="detail-excluded"
-                title="Excluded"
-              >
-                <div className="detail-vendor-html"
-                     dangerouslySetInnerHTML={{ __html: excludedHtml }} />
-              </Section>
-            )}
-
-            {stopsNamed.length > 0 && (
-              <Section
-                id="detail-stops"
-                title="Itinerary"
-              >
-                <ol className="detail-stops-list">
-                  {stopsNamed.map((stop, i) => (
-                    <li key={stop.id} className="detail-stop">
-                      <span className="detail-stop__num">{i + 1}</span>
-                      <div>
-                        <div className="detail-stop__name">{stop.name}</div>
-                        {stop.durationMinutes > 0 && (
-                          <div className="detail-stop__dur">{stop.durationMinutes} min</div>
+                    {(tour.description || loading) && (
+                      <div className="detail-tab-panel__block">
+                        {tour.description ? (
+                          <>
+                            {descriptionIsHtml ? (
+                              <div
+                                className={`detail-description detail-description--rich detail-vendor-html${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}
+                                dangerouslySetInnerHTML={{ __html: descriptionSanitizedHtml }}
+                              />
+                            ) : (
+                              <p className={`detail-description${descNeedsCollapse && !descExpanded ? ' is-clamped' : ''}`}>
+                                {descExpanded ? tour.description : descPreview}
+                              </p>
+                            )}
+                            {descNeedsCollapse && (
+                              <button
+                                type="button"
+                                className="detail-description-toggle"
+                                onClick={() => setDescExpanded((v) => !v)}
+                                aria-expanded={descExpanded}
+                              >
+                                {descExpanded
+                                  ? T({ hant: '收合', hans: '收起', en: 'Show less' })
+                                  : T({ hant: '閱讀全文', hans: '阅读全文', en: 'Read more' })}
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <div className="detail-description-skeleton" aria-hidden="true">
+                            {[0.92, 1, 0.78, 0.55].map((w, i) => (
+                              <div key={i} className="tour-card-image-shimmer" style={{ width: `${w * 100}%` }} />
+                            ))}
+                          </div>
                         )}
                       </div>
-                    </li>
-                  ))}
-                </ol>
-              </Section>
-            )}
-
-            {tour.meetingPoint && (
-              <Section
-                id="detail-meeting"
-                title="Meeting point"
-              >
-                <div className="detail-meeting">
-                  <Icon name="map-pin" size={20} color="var(--coral)" />
-                  <div className="detail-meeting__body">
-                    {(tour.meetingPoint.title || tour.meetingPoint.name) && (
-                      <div className="detail-meeting__title">
-                        {tour.meetingPoint.title || tour.meetingPoint.name}
-                      </div>
                     )}
-                    {tour.meetingPoint.address && (
-                      <div className="detail-meeting__address">{tour.meetingPoint.address}</div>
+
+                    {hasIncluded && (
+                      <SubSection title={T({ hant: '費用包含', hans: '费用包含', en: 'Included' })}>
+                        <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: includedHtml }} />
+                      </SubSection>
+                    )}
+
+                    {hasExcluded && (
+                      <SubSection title={T({ hant: '費用不含', hans: '费用不含', en: 'Excluded' })}>
+                        <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: excludedHtml }} />
+                      </SubSection>
+                    )}
+
+                    {hasRequirements && (
+                      <SubSection title={T({ hant: '參加條件', hans: '参加条件', en: 'Requirements' })}>
+                        <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: requirementsHtml }} />
+                      </SubSection>
+                    )}
+
+                    {hasAttention && (
+                      <SubSection title={T({ hant: '注意事項', hans: '注意事项', en: 'Attention' })}>
+                        <div className="detail-attention-card">
+                          <Icon name="info" size={18} color="var(--warning, #FFB347)" />
+                          <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: attentionHtml }} />
+                        </div>
+                      </SubSection>
+                    )}
+
+                    {hasCancellationPolicy && (
+                      <SubSection title={T({ hant: '取消政策', hans: '取消政策', en: 'Cancellation policy' })}>
+                        <div className="detail-attention-card">
+                          <Icon name="shield-check" size={18} color="var(--aurora-deep, #00837A)" />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', minWidth: 0 }}>
+                            {tour.cancellationPolicyTitle && (
+                              <div style={{ font: '600 13px/1.45 var(--font-text)', color: 'var(--fg-1)' }}>
+                                {tour.cancellationPolicyTitle}
+                              </div>
+                            )}
+                            <div
+                              className="detail-vendor-html"
+                              dangerouslySetInnerHTML={{ __html: cancellationPolicyHtml }}
+                            />
+                          </div>
+                        </div>
+                      </SubSection>
+                    )}
+
+                    {hasQuickFacts && (
+                      <SubSection title={T({ hant: '快速資訊', hans: '快速资讯', en: 'Quick facts' })}>
+                        <div className="detail-facts-card">
+                          <div className="detail-facts-grid">
+                            {quickFacts.map((f, i) => {
+                              const fullRow = f.valueChips || (f.valueItems && f.valueItems.length > 1);
+                              return (
+                                <div key={i} className={`detail-fact${fullRow ? ' detail-fact--full' : ''}`}>
+                                  <div className="detail-fact__label">{f.label}</div>
+                                  {f.valueChips ? (
+                                    <div className="detail-fact__chips">
+                                      {f.valueChips.map((chip, ci) => (
+                                        <span key={ci} className="detail-chip">{chip}</span>
+                                      ))}
+                                    </div>
+                                  ) : f.valueItems ? (
+                                    f.valueItems.length === 1 ? (
+                                      <div className="detail-fact__value">{f.valueItems[0]}</div>
+                                    ) : (
+                                      <ul className="detail-fact__items">
+                                        {f.valueItems.map((it, ii) => (<li key={ii}>{it}</li>))}
+                                      </ul>
+                                    )
+                                  ) : (
+                                    <div className="detail-fact__value">{f.value}</div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </SubSection>
                     )}
                   </div>
-                </div>
-              </Section>
-            )}
+                )}
 
-            {tour.startTimes && tour.startTimes.length > 0 && (
-              <Section
-                id="detail-times"
-                title="Start times"
-              >
-                <div className="detail-chips">
-                  {tour.startTimes.map((st, i) => {
-                    const label = st.label || (st.hour != null
-                      ? `${String(st.hour).padStart(2, '0')}:${String(st.minute || 0).padStart(2, '0')}`
-                      : null);
-                    if (!label) return null;
-                    return <span key={i} className="detail-chip">{label}</span>;
-                  })}
-                </div>
-              </Section>
-            )}
+                {activeDetailTab === 'itinerary' && hasItineraryTab && (
+                  <div
+                    id="detail-panel-itinerary"
+                    role="tabpanel"
+                    aria-labelledby="detail-tab-itinerary"
+                    className="detail-tab-panel"
+                  >
+                    <ol className="detail-stops-list">
+                      {stopsNamed.map((stop, i) => (
+                        <li key={stop.id} className="detail-stop">
+                          <span className="detail-stop__num">{i + 1}</span>
+                          <div>
+                            <div className="detail-stop__name">{stop.name}</div>
+                            {stop.durationMinutes > 0 && (
+                              <div className="detail-stop__dur">{stop.durationMinutes} min</div>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
 
-            {tour.languages && tour.languages.length > 0 && (
-              <Section title="Guide languages">
-                <div className="detail-chips">
-                  {tour.languages.map((l) => (
-                    <span key={l} className="detail-chip detail-chip--lang">{l}</span>
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {hasRequirements && (
-              <Section
-                id="detail-requirements"
-                title="Requirements"
-              >
-                <div className="detail-vendor-html"
-                     dangerouslySetInnerHTML={{ __html: requirementsHtml }} />
-              </Section>
-            )}
-
-            {showPickupInfo && (
-              <Section
-                id="detail-pickup"
-                title="Pick-up"
-              >
-                <div className="detail-pickup-card">
-                  <Icon name="bus" size={18} color="var(--aurora-deep, #00837A)" />
-                  <div className="detail-pickup-card__body">
-                    {pickupPlaces.length > 0 && (
-                      <ul className="detail-pickup-card__list">
-                        {pickupPlaces.map((place) => (
-                          <li key={place.id}>{place.title}</li>
-                        ))}
-                      </ul>
+                {activeDetailTab === 'pickup' && hasPickupTab && (
+                  <div
+                    id="detail-panel-pickup"
+                    role="tabpanel"
+                    aria-labelledby="detail-tab-pickup"
+                    className="detail-tab-panel"
+                  >
+                    {showPickupInfo && pickupPlaces.length > 0 && (
+                      <>
+                        <p className="detail-tab-panel__lead">
+                          {T({
+                            hant: '本行程提供以下地點接送：',
+                            hans: '本行程提供以下地点接送：',
+                            en: 'We offer pick-up to the following places for this experience:',
+                          })}
+                        </p>
+                        <ul className="detail-pickup-bokun-list">
+                          {pickupPlaces.map((place) => (
+                            <li key={place.id}>{place.title}</li>
+                          ))}
+                        </ul>
+                      </>
                     )}
-                    {pickupInfo.noPickupMessage && (
-                      <div className="detail-vendor-html">
+
+                    {showPickupInfo && pickupInfo.noPickupMessage && (
+                      <div className="detail-vendor-html detail-tab-panel__block">
                         {pickupInfo.noPickupMessage}
                       </div>
                     )}
-                  </div>
-                </div>
-              </Section>
-            )}
 
-            {hasAttention && (
-              <Section
-                id="detail-attention"
-                title="Attention"
-              >
-                <div className="detail-attention-card">
-                  <Icon name="info" size={18} color="var(--warning, #FFB347)" />
-                  <div className="detail-vendor-html"
-                       dangerouslySetInnerHTML={{ __html: attentionHtml }} />
-                </div>
-              </Section>
-            )}
-
-            {hasCancellationPolicy && (
-              <Section
-                id="detail-cancellation"
-                title="Cancellation policy"
-              >
-                <div className="detail-attention-card">
-                  <Icon name="shield-check" size={18} color="var(--aurora-deep, #00837A)" />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', minWidth: 0 }}>
-                    {tour.cancellationPolicyTitle && (
-                      <div style={{ font: '600 13px/1.45 var(--font-text)', color: 'var(--fg-1)' }}>
-                        {tour.cancellationPolicyTitle}
-                      </div>
-                    )}
-                    <div
-                      className="detail-vendor-html"
-                      dangerouslySetInnerHTML={{ __html: cancellationPolicyHtml }}
-                    />
-                  </div>
-                </div>
-              </Section>
-            )}
-
-            {hasQuickFacts && (
-              <Section
-                id="detail-quick-facts"
-                title={T({ hant: '快速資訊', hans: '快速资讯', en: 'Quick facts' })}
-              >
-                <div className="detail-facts-card">
-                  <div className="detail-facts-grid">
-                    {quickFacts.map((f, i) => {
-                      // Categories spans the full row — Bókun does the same so
-                      // long chip lists don't squeeze a sibling value out.
-                      const fullRow = f.valueChips || (f.valueItems && f.valueItems.length > 1);
-                      return (
-                        <div key={i} className={`detail-fact${fullRow ? ' detail-fact--full' : ''}`}>
-                          <div className="detail-fact__label">{f.label}</div>
-                          {f.valueChips ? (
-                            <div className="detail-fact__chips">
-                              {f.valueChips.map((chip, ci) => (
-                                <span key={ci} className="detail-chip">{chip}</span>
-                              ))}
-                            </div>
-                          ) : f.valueItems ? (
-                            f.valueItems.length === 1 ? (
-                              <div className="detail-fact__value">{f.valueItems[0]}</div>
-                            ) : (
-                              <ul className="detail-fact__items">
-                                {f.valueItems.map((it, ii) => (<li key={ii}>{it}</li>))}
-                              </ul>
-                            )
-                          ) : (
-                            <div className="detail-fact__value">{f.value}</div>
-                          )}
+                    {tour.meetingPoint && (
+                      <SubSection title={T({ hant: '集合地點', hans: '集合地点', en: 'Meeting point' })}>
+                        <div className="detail-meeting">
+                          <Icon name="map-pin" size={20} color="var(--coral)" />
+                          <div className="detail-meeting__body">
+                            {(tour.meetingPoint.title || tour.meetingPoint.name) && (
+                              <div className="detail-meeting__title">
+                                {tour.meetingPoint.title || tour.meetingPoint.name}
+                              </div>
+                            )}
+                            {tour.meetingPoint.address && (
+                              <div className="detail-meeting__address">{tour.meetingPoint.address}</div>
+                            )}
+                          </div>
                         </div>
-                      );
-                    })}
+                      </SubSection>
+                    )}
                   </div>
-                </div>
-              </Section>
+                )}
+              </div>
             )}
 
           </div>
@@ -1169,10 +1157,10 @@
             dayAvailableTimes={dayAvailableTimes}
             selectedStartTime={selectedStartTime}
             onSelectedStartTime={setSelectedStartTime}
-            guestCounts={guestCounts}
-            onGuestCounts={setGuestCounts}
-            adultCategory={adultCategory}
-            childCategory={childCategory}
+            bookableCategories={bookableCategories}
+            paxCounts={paxCounts}
+            onPaxCounts={setPaxCounts}
+            unitPriceByCategoryId={unitPriceByCategoryId}
             paxCap={paxCap}
             pickupInfo={pickupInfo}
             pickupPlaces={pickupPlaces}
@@ -1225,8 +1213,7 @@
   function BookPanel({
     tour, T, lang, displayCurrency, fxRates, priceUsd, loading, hasMultiPrice, inTrip, onAddSelection, onBookNow, trip,
     isMobile, onOpenPrices, selectedDate, onSelectedDate, dayAvailableTimes,
-    selectedStartTime, onSelectedStartTime, guestCounts,
-    onGuestCounts, adultCategory, childCategory, paxCap,
+    selectedStartTime, onSelectedStartTime, bookableCategories, paxCounts, onPaxCounts, unitPriceByCategoryId, paxCap,
     pickupInfo, pickupPlaces, selectedPickupId, onSelectedPickupId,
     optionalExtras, selectedExtras, onSelectedExtras, extrasSubtotal,
     stickyBarVisible, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
@@ -1237,7 +1224,16 @@
       : (loading
         ? '…'
         : T({ hant: '價格載入中', hans: '价格加载中', en: 'Price loading' }));
-    const guestTotal = guestCounts.adults + guestCounts.children;
+    const guestTotal = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
+    const peopleUnitPriceLine = bookableCategories
+      .map((cat) => {
+        const unit = unitPriceByCategoryId && unitPriceByCategoryId.get(String(cat.id));
+        if (unit == null) return null;
+        const shortName = (cat.title || paxLabel(cat)).trim();
+        return `${shortName} ${formatDisplayPrice(unit, displayCurrency, fxRates)}`;
+      })
+      .filter(Boolean)
+      .join(', ');
     const showAvailabilityPanel = !isMobile || availabilityOpen;
     // Concierge form is collapsed by default on both desktop AND mobile —
     // it's a high-LTV escape hatch for users with complex needs, not a
@@ -1415,34 +1411,60 @@
                     </label>
                   );
                 })()}
-                <div style={{ display: 'grid', gridTemplateColumns: childCategory ? '1fr 1fr' : '1fr', gap: 10 }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="detail-book-label">
-                      {adultCategory
-                        ? paxCategoryLabel(adultCategory)
-                        : T({ hant: '成人', hans: '成人', en: 'Adults' })}
-                    </span>
-                    <select
-                      value={guestCounts.adults}
-                      onChange={(e) => onGuestCounts((prev) => ({ ...prev, adults: Number(e.target.value) }))}
-                      className="detail-book-field"
+
+                {bookableCategories.length > 0 ? (
+                  <div className="detail-book-people">
+                    <div className="detail-book-extra__title">
+                      {T({ hant: '人數', hans: '人数', en: 'People' })}
+                    </div>
+                    <div
+                      className="detail-book-people__grid"
+                      style={{ '--people-cols': bookableCategories.length }}
                     >
-                      {paxRange(1, paxCap).map((n) => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </label>
-                  {childCategory && (
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span className="detail-book-label">{paxCategoryLabel(childCategory)}</span>
-                      <select
-                        value={guestCounts.children}
-                        onChange={(e) => onGuestCounts((prev) => ({ ...prev, children: Number(e.target.value) }))}
-                        className="detail-book-field"
-                      >
-                        {paxRange(0, paxCap).map((n) => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </label>
-                  )}
-                </div>
+                      {bookableCategories.map((cat) => {
+                        const minQty = cat.defaultCategory ? 1 : 0;
+                        const qty = Number(paxCounts[String(cat.id)]) || 0;
+                        const unit = unitPriceByCategoryId && unitPriceByCategoryId.get(String(cat.id));
+                        return (
+                          <label key={cat.id} className="detail-book-people__field">
+                            <span className="detail-book-label">{paxLabel(cat)}</span>
+                            <select
+                              value={qty}
+                              onChange={(e) => {
+                                const next = Number(e.target.value);
+                                onPaxCounts((prev) => ({
+                                  ...prev,
+                                  [String(cat.id)]: next,
+                                }));
+                              }}
+                              className="detail-book-field"
+                            >
+                              {paxRange(minQty, paxCap).map((n) => (
+                                <option key={n} value={n}>{n}</option>
+                              ))}
+                            </select>
+                            {unit != null ? (
+                              <span className="detail-book-people__unit">
+                                {formatDisplayPrice(unit, displayCurrency, fxRates)}
+                              </span>
+                            ) : null}
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {peopleUnitPriceLine ? (
+                      <p className="detail-book-people__unitprices">{peopleUnitPriceLine}</p>
+                    ) : (
+                      <p className="detail-book-people__unitprices detail-book-people__unitprices--muted">
+                        {T({
+                          hant: '選擇日期後顯示各票種單價',
+                          hans: '选择日期后显示各票种单价',
+                          en: 'Select a date to load per-category prices',
+                        })}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
 
                 {pickupInfo && pickupInfo.enabled && pickupPlaces.length > 0 && (
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1477,20 +1499,17 @@
                     <ul className="detail-extras-checklist">
                       {optionalExtras.map((ex) => {
                         const checked = !!selectedExtras[ex.id];
-                        const adultPax = Math.max(1, guestCounts.adults);
-                        const childPax = Math.max(0, guestCounts.children);
                         const unit = Number(ex.price) || 0;
                         let priceLabel;
                         if (ex.free) {
                           priceLabel = T({ hant: '免費', hans: '免费', en: 'Free' });
                         } else if (ex.pricedPerPerson) {
-                          const parts = [];
-                          if (adultCategory) {
-                            parts.push(`${paxCategoryLabel(adultCategory).split(' (')[0]} ${formatDisplayPrice(unit, displayCurrency, fxRates)}`);
-                          }
-                          if (childCategory && childPax > 0) {
-                            parts.push(`${paxCategoryLabel(childCategory).split(' (')[0]} ${formatDisplayPrice(unit, displayCurrency, fxRates)}`);
-                          }
+                          const parts = bookableCategories
+                            .filter((cat) => (Number(paxCounts[String(cat.id)]) || 0) > 0)
+                            .map((cat) => {
+                              const name = (cat.title || '').trim();
+                              return `${name} ${formatDisplayPrice(unit, displayCurrency, fxRates)}`;
+                            });
                           priceLabel = parts.join(' · ');
                         } else {
                           priceLabel = formatDisplayPrice(unit, displayCurrency, fxRates);
@@ -1929,12 +1948,12 @@
     return ReactDOM.createPortal(modal, document.body);
   }
 
-  function Section({ id, title, children }) {
+  function SubSection({ title, children }) {
     return (
-      <section id={id} className="detail-section">
-        <h2 className="detail-section__title">{title}</h2>
+      <div className="detail-subsection">
+        {title ? <h3 className="detail-subsection__title">{title}</h3> : null}
         {children}
-      </section>
+      </div>
     );
   }
 

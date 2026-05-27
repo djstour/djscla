@@ -409,17 +409,30 @@
         || activity.defaultCurrency
         || 'USD';
 
-      const priceTable = (activity.pricing || [])
-        .map((row) => {
-          const catRaw = (activity.pricingCategories || []).find((c) => c.id === row.pricingCategoryId);
+      const pricingById = new Map(
+        (activity.pricing || []).map((row) => [String(row.pricingCategoryId), row]),
+      );
+      const priceTable = (activity.pricingCategories || []).length
+        ? (activity.pricingCategories || []).map((catRaw) => {
+          const row = pricingById.get(String(catRaw.id));
           return {
-            categoryId: row.pricingCategoryId,
-            label: catRaw?.fullTitle || catRaw?.title || (lang === 'en' ? 'Traveler' : ''),
-            amount: row.amount,
-            currency: row.currency,
+            categoryId: catRaw.id,
+            label: catRaw.fullTitle || catRaw.title || (lang === 'en' ? 'Traveler' : ''),
+            amount: row && Number(row.amount) > 0 ? row.amount : null,
+            currency: row?.currency || resolvedPriceCurrency,
           };
         })
-        .filter((row) => row.label);
+        : (activity.pricing || [])
+          .map((row) => {
+            const catRaw = (activity.pricingCategories || []).find((c) => c.id === row.pricingCategoryId);
+            return {
+              categoryId: row.pricingCategoryId,
+              label: catRaw?.fullTitle || catRaw?.title || (lang === 'en' ? 'Traveler' : ''),
+              amount: row.amount,
+              currency: row.currency,
+            };
+          })
+          .filter((row) => row.label);
 
       // ---- stops (for the trip-with-map screen) ----
       const stops = (activity.stops || []).map(stop => ({
@@ -457,6 +470,7 @@
         price: resolvedPriceAmount,
         priceCurrency: resolvedPriceCurrency,
         priceTable,
+        pricingCategories: activity.pricingCategories || [],
         badge: null,
         badgeKey: null,
         photo: activity.coverImagePlaceholder || 'aurora',

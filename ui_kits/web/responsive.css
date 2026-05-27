@@ -1935,6 +1935,100 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   color: var(--fg-3);
 }
 
+/* Bókun-style tab bar (Description / Itinerary / Pick-up) */
+.detail-tabs-wrap {
+  min-width: 0;
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+
+.detail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.detail-tabs__btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 12px 16px;
+  margin-bottom: -1px;
+  font: 600 15px/1.2 var(--font-text);
+  color: var(--fg-3);
+  border-bottom: 2px solid transparent;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.detail-tabs__btn:hover {
+  color: var(--fg-2);
+}
+
+.detail-tabs__btn.is-active {
+  color: var(--aurora-deep, #00A3D1);
+  border-bottom-color: var(--aurora-deep, #00A3D1);
+}
+
+html[data-site-theme="sun"] .detail-tabs__btn.is-active {
+  color: #9ad4ff;
+  border-bottom-color: #9ad4ff;
+}
+
+.detail-tab-panel {
+  min-width: 0;
+  animation: detail-tab-fade 0.22s ease;
+}
+
+@keyframes detail-tab-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.detail-tab-panel__block {
+  margin-bottom: 8px;
+}
+
+.detail-tab-panel__lead {
+  margin: 0 0 14px;
+  font: 500 15px/1.55 var(--font-text);
+  color: var(--fg-2);
+}
+
+.detail-subsection {
+  margin-top: 28px;
+  padding-top: 4px;
+}
+
+.detail-subsection__title {
+  margin: 0 0 12px;
+  font: 600 17px/1.25 var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: -0.01em;
+}
+
+.detail-pickup-bokun-list {
+  list-style: disc;
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--fg-2);
+  font: 500 14px/1.55 var(--font-text);
+}
+
+.detail-pickup-bokun-list li {
+  padding-left: 4px;
+  color: var(--fg-1);
+}
+
 .detail-anchor-nav {
   display: flex;
   gap: 8px;
@@ -2253,6 +2347,49 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   color: var(--fg-3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.detail-book-people {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-soft, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+}
+
+.detail-book-people__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--people-cols, 3), minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.detail-book-people__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.detail-book-people__unitprices {
+  margin: 12px 0 0;
+  font: 500 12px/1.5 var(--font-text);
+  color: var(--fg-2);
+}
+
+.detail-book-people__unitprices--muted {
+  color: var(--fg-3);
+}
+
+.detail-book-people__unit {
+  font: 600 13px/1.35 var(--font-text);
+  color: var(--fg-1);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 520px) {
+  .detail-book-people__grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .detail-book-field {
