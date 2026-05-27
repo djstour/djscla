@@ -4,7 +4,10 @@
 (function () {
   const { useState, useEffect, useRef } = React;
   const { createPortal } = ReactDOM;
-  const { Icon, LANGS, DISPLAY_CURRENCIES, pick, currencyLabel, ThemePicker } = window.AuralisUI;
+  const {
+    Icon, LANGS, DISPLAY_CURRENCIES, pick, currencyLabel, ThemePicker,
+    brandFullTitle, brandLogoSrc,
+  } = window.AuralisUI;
 
   const LOCALE_MENU_MAX_H = 288;
 
@@ -169,7 +172,7 @@
       <header className="nav-header">
         <a href="#" className="nav-logo" onClick={(e) => { e.preventDefault(); onNav('home'); }}
            style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-          <img src="../../assets/logo-wordmark.svg" alt="DJS Tour · 獨角獸旅遊" />
+          <img src={brandLogoSrc(lang)} alt={brandFullTitle(lang)} />
         </a>
 
         <nav className="nav-links" aria-label={T({ hant: '主要導覽', hans: '主要导航', en: 'Main' })}>

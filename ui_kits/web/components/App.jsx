@@ -8,7 +8,7 @@
   const { useState, useMemo, useEffect, useRef } = React;
   const {
     Icon,
-    CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, defaultCurrencyForLang, formatCatalogCount, formatToursToolbarSummary, formatToursPageTitle,
+    CATEGORIES, ROUTES, FACETS, LANGS, pick, applyHtmlLang, applyBrandDocument, defaultCurrencyForLang, formatCatalogCount, formatToursToolbarSummary, formatToursPageTitle,
     loadTripSearch, saveTripSearch, normalizeTripSearch, facetsFromTripSearch, formatTripSearchSummary,
     TRIP_HUBS,
     readUrlState, buildUrlForState, currentUrlString,
@@ -82,6 +82,7 @@
 
     useEffect(() => {
       applyHtmlLang(lang);
+      applyBrandDocument(lang);
       try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) {}
     }, [lang]);
 

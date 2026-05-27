@@ -279,6 +279,32 @@
     }
   }
 
+  /** Customer-facing Chinese brand — hant / hans only differ here. */
+  function brandZhName(lang) {
+    return pick(lang, {
+      hant: '獨角獸旅遊',
+      hans: '独角兽旅游',
+      en: 'Unicorn Travel',
+    });
+  }
+
+  function brandFullTitle(lang) {
+    return `DJS Tour · ${brandZhName(lang)}`;
+  }
+
+  function brandLogoSrc(lang) {
+    return lang === 'hans'
+      ? '../../assets/logo-wordmark-hans.svg'
+      : '../../assets/logo-wordmark.svg';
+  }
+
+  function applyBrandDocument(lang) {
+    if (typeof document === 'undefined') return;
+    const title = brandFullTitle(lang);
+    document.title = title;
+    if (document.body) document.body.dataset.screenLabel = title;
+  }
+
   // ------------------------------------------------------------------
   // Site-wide theme (aurora | mist | sun) — user picks via ThemePicker; stored in localStorage.
   // Sets html[data-site-theme] → remaps CSS vars app-wide; hero uses heroBackground.
@@ -1181,6 +1207,7 @@
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,
+    brandZhName, brandFullTitle, brandLogoSrc, applyBrandDocument,
     SITE_THEMES, HERO_THEMES, ThemePicker,
     getInitialSiteTheme, setSiteThemeById, applySiteTheme,
     pickSiteThemeForSession, pickHeroThemeForSession, getOrPickHeroTheme,
