@@ -357,21 +357,81 @@
     const fetchPct = timings.fetchMs ? Math.round((timings.fetchMs / totalMs) * 100) : 0;
     const writePct = timings.writeMs ? Math.round((timings.writeMs / totalMs) * 100) : 0;
 
-    const stats = [
-      { label: 'Unique in channel', value: counts.uniqueInChannel, tone: 'neutral' },
-      { label: 'Contract products', value: counts.contractTotal, tone: 'neutral' },
-      { label: 'Upserted', value: counts.upserted, tone: counts.upserted > 0 ? 'accent' : 'muted' },
-      { label: 'Unchanged', value: counts.unchanged, tone: 'muted' },
+    const links = counts.vendorActivityLinks;
+    const linkTotal = links && typeof links === 'object' ? links.total : links;
+    const linkAdded = links && typeof links === 'object' ? links.added : 0;
+    const linkRemoved = links && typeof links === 'object' ? links.removed : 0;
+
+    const summaryChips = [];
+    if (counts.upserted > 0) {
+      summaryChips.push({ text: `${formatNumber(counts.upserted)} upserted`, tone: 'accent' });
+    }
+    if (counts.unchanged > 0) {
+      summaryChips.push({ text: `${formatNumber(counts.unchanged)} unchanged`, tone: 'muted' });
+    }
+    if (counts.deactivated > 0) {
+      summaryChips.push({ text: `${formatNumber(counts.deactivated)} deactivated`, tone: 'warn' });
+    }
+    if ((counts.imageSynced || 0) > 0) {
+      summaryChips.push({ text: `${formatNumber(counts.imageSynced)} images mirrored`, tone: 'accent' });
+    }
+    if (counts.detailErrors > 0) {
+      summaryChips.push({
+        text: `${formatNumber(counts.detailErrors)} detail error${counts.detailErrors === 1 ? '' : 's'}`,
+        tone: 'warn',
+      });
+    }
+    if (linkAdded > 0 || linkRemoved > 0) {
+      summaryChips.push({
+        text: `links +${formatNumber(linkAdded)} / −${formatNumber(linkRemoved)}`,
+        tone: 'neutral',
+      });
+    }
+    if (!summaryChips.length) {
+      summaryChips.push({ text: 'Catalog already up to date', tone: 'muted' });
+    }
+
+    const statGroups = [
       {
-        label: 'Deactivated',
-        value: counts.deactivated,
-        tone: counts.deactivated > 0 ? 'warn' : 'muted',
+        id: 'channel',
+        title: 'Channel (source)',
+        stats: [
+          { label: 'Unique in channel', value: counts.uniqueInChannel, tone: 'neutral' },
+          { label: 'Contract products', value: counts.contractTotal, tone: 'neutral' },
+          { label: 'Vendors', value: counts.vendors, tone: 'neutral' },
+        ],
       },
-      { label: 'Vendor links', value: counts.vendorActivityLinks, tone: 'neutral' },
+      {
+        id: 'writes',
+        title: 'Writes',
+        stats: [
+          { label: 'Upserted', value: counts.upserted, tone: counts.upserted > 0 ? 'accent' : 'muted' },
+          { label: 'Unchanged', value: counts.unchanged, tone: 'muted' },
+        ],
+      },
+      {
+        id: 'maintenance',
+        title: 'Maintenance',
+        stats: [
+          {
+            label: 'Deactivated',
+            value: counts.deactivated,
+            tone: counts.deactivated > 0 ? 'warn' : 'muted',
+          },
+          {
+            label: 'Vendor links',
+            value: linkTotal,
+            tone: 'neutral',
+            hint: linkAdded || linkRemoved
+              ? `+${formatNumber(linkAdded)} new · −${formatNumber(linkRemoved)} removed`
+              : null,
+          },
+        ],
+      },
     ];
 
     if (options.syncImages || (counts.imageSynced != null && counts.imageSynced > 0)) {
-      stats.push({
+      statGroups[1].stats.push({
         label: 'Images mirrored',
         value: counts.imageSynced || 0,
         tone: counts.imageSynced > 0 ? 'accent' : 'muted',
@@ -380,9 +440,9 @@
 
     if (options.forceDetail || counts.detailSynced > 0 || counts.detailPending > 0) {
       const detailLabel = counts.detailErrors > 0
-        ? `Detail synced (${counts.detailErrors} errors)`
+        ? `Detail synced (${counts.detailErrors} err.)`
         : 'Detail synced';
-      stats.push({
+      statGroups[1].stats.push({
         label: detailLabel,
         value: `${formatNumber(counts.detailSynced)} / ${formatNumber(counts.detailPending)}`,
         tone: counts.detailErrors > 0 ? 'warn' : 'neutral',
@@ -404,14 +464,33 @@
           </div>
         </div>
 
-        <div className="admin-sync-result__stats">
-          {stats.map((s) => (
-            <div key={s.label} className={`admin-sync-stat admin-sync-stat--${s.tone}`}>
-              <span className="admin-sync-stat__value">
-                {s.raw ? s.value : formatNumber(s.value)}
-              </span>
-              <span className="admin-sync-stat__label">{s.label}</span>
-            </div>
+        <div className="admin-sync-summary" role="status">
+          {summaryChips.map((chip) => (
+            <span
+              key={chip.text}
+              className={`admin-sync-summary__chip admin-sync-summary__chip--${chip.tone}`}
+            >
+              {chip.text}
+            </span>
+          ))}
+        </div>
+
+        <div className="admin-sync-stat-groups">
+          {statGroups.map((group) => (
+            <section key={group.id} className="admin-sync-stat-group">
+              <h3 className="admin-sync-stat-group__title">{group.title}</h3>
+              <div className="admin-sync-stat-group__grid">
+                {group.stats.map((s) => (
+                  <div key={s.label} className={`admin-sync-stat admin-sync-stat--${s.tone}`}>
+                    <span className="admin-sync-stat__value">
+                      {s.raw ? s.value : formatNumber(s.value)}
+                    </span>
+                    <span className="admin-sync-stat__label">{s.label}</span>
+                    {s.hint ? <span className="admin-sync-stat__hint">{s.hint}</span> : null}
+                  </div>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
 

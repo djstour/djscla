@@ -71,6 +71,7 @@ sync_one_activity() {
       -H "Authorization: Bearer ${TRANSLATION_SYNC_SECRET}" \
       -H "Content-Type: application/json" \
       -d "{\"activityIds\": [${id}], \"langs\": [\"hant\", \"hans\"], \"maxTranslations\": ${CHUNK}}" \
+      -w "\n__HTTP_CODE__%{http_code}__REDIRECT__%{redirect_url}__" \
       2>&1) || {
       echo "  round ${round}: curl failed — retrying in 5s…"
       curl_fail_rounds=$((curl_fail_rounds + 1))
@@ -86,10 +87,32 @@ sync_one_activity() {
     local parsed
     parsed=$(echo "$body" | python3 -c "
 import sys, json
+raw = sys.stdin.read()
+marker = '\n__HTTP_CODE__'
+http_code = '?'
+redirect = ''
+if marker in raw:
+    payload, tail = raw.rsplit(marker, 1)
+    # tail: <code>__REDIRECT__<url>__
+    try:
+        http_code, rest = tail.split('__REDIRECT__', 1)
+        redirect = rest[:-2] if rest.endswith('__') else rest
+    except Exception:
+        pass
+else:
+    payload = raw
+
+payload = payload.strip()
+if not payload:
+    print(f'false\t0\t0\t1\thttp={http_code} empty response')
+    raise SystemExit(0)
+
 try:
-    d = json.load(sys.stdin)
+    d = json.loads(payload)
 except Exception:
-    print('false\t0\t0\t1\t<non-json response>')
+    snippet = payload[:120].replace('\\n', ' ')
+    redir_note = f' redirect={redirect}' if redirect else ''
+    print(f'false\t0\t0\t1\thttp={http_code}{redir_note} non-json: {snippet!r}')
     raise SystemExit(0)
 s = d.get('summary', {})
 complete = 'true' if s.get('complete') else 'false'
