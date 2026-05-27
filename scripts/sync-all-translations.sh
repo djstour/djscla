@@ -57,6 +57,8 @@ sync_one_activity() {
   local id="$1"
   local round=0
   local max_rounds=40
+  local stale_rounds=0
+  local prev_body=""
 
   while [[ $round -lt $max_rounds ]]; do
     round=$((round + 1))
@@ -84,6 +86,17 @@ sync_one_activity() {
     if [[ "$translated" == "0" && "$errors" == "0" ]]; then
       return 0
     fi
+    # Same failing response repeatedly (e.g. length sanity on mode/title) — do not burn 40 rounds.
+    if [[ "$translated" == "0" && "$errors" != "0" && "$body" == "$prev_body" ]]; then
+      stale_rounds=$((stale_rounds + 1))
+      if [[ $stale_rounds -ge 2 ]]; then
+        echo "  stopping early: repeated errors with no progress (fix field manually or redeploy lengthOk fix)"
+        return 1
+      fi
+    else
+      stale_rounds=0
+    fi
+    prev_body="$body"
     sleep 1
   done
 
