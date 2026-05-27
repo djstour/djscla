@@ -1443,9 +1443,7 @@
                         );
                       })}
                     </div>
-                    {peopleUnitPriceLine ? (
-                      <p className="detail-book-people__unitprices">{peopleUnitPriceLine}</p>
-                    ) : (
+                    {!peopleUnitPriceLine ? (
                       <p className="detail-book-people__unitprices detail-book-people__unitprices--muted">
                         {T({
                           hant: '選擇日期後顯示各票種單價',
@@ -1453,7 +1451,7 @@
                           en: 'Select a date to load per-category prices',
                         })}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 ) : null}
 
