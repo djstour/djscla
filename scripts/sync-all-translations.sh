@@ -6,7 +6,7 @@
 #   export TRANSLATION_SYNC_SECRET='…'
 #   ./scripts/sync-all-translations.sh
 #
-# Optional: BASE_URL, MAX_ITEMS, SLEEP_SEC, CHUNK (default 6), CURL_MAX_TIME (default 90)
+# Optional: BASE_URL, MAX_ITEMS, SLEEP_SEC, CHUNK (default 6), CURL_MAX_TIME (default 180)
 
 set -uo pipefail
 
@@ -15,7 +15,8 @@ BASE_URL="${BASE_URL:-https://www.djstour.com}"
 MAX_ITEMS="${MAX_ITEMS:-2000}"
 SLEEP_SEC="${SLEEP_SEC:-2}"
 CHUNK="${CHUNK:-6}"
-CURL_MAX_TIME="${CURL_MAX_TIME:-90}"
+# Vercel /api/translations/sync allows up to 300s on Pro; client must wait long enough.
+CURL_MAX_TIME="${CURL_MAX_TIME:-180}"
 CURL_FLAGS=(-fsSL --max-time "${CURL_MAX_TIME}")
 
 if [[ -z "${TRANSLATION_SYNC_SECRET:-}" ]]; then
@@ -53,67 +54,32 @@ fi
 COUNT=$(echo "$IDS" | wc -w | tr -d ' ')
 echo "Syncing ${COUNT} activities (chunk=${CHUNK} translations per request, max ${CURL_MAX_TIME}s each)…"
 
-sync_one_activity() {
-  local id="$1"
-  local round=0
-  local max_rounds=40
-  local stale_rounds=0
-  local curl_fail_rounds=0
-  local prev_body=""
-  local total_translated=0
-  local total_skipped=0
-  local total_errors=0
-
-  while [[ $round -lt $max_rounds ]]; do
-    round=$((round + 1))
-    local body
-    body=$(curl "${CURL_FLAGS[@]/-f/}" -X POST "${BASE_URL}/api/translations/sync" \
-      -H "Authorization: Bearer ${TRANSLATION_SYNC_SECRET}" \
-      -H "Content-Type: application/json" \
-      -d "{\"activityIds\": [${id}], \"langs\": [\"hant\", \"hans\"], \"maxTranslations\": ${CHUNK}}" \
-      -w "\n__HTTP_CODE__%{http_code}__REDIRECT__%{redirect_url}__" \
-      2>&1) || {
-      echo "  round ${round}: curl failed — retrying in 5s…"
-      curl_fail_rounds=$((curl_fail_rounds + 1))
-      if [[ $curl_fail_rounds -ge 6 ]]; then
-        echo "  stopping early: 6 consecutive curl failures (network/timeout/5xx)."
-        return 1
-      fi
-      sleep 5
-      continue
-    }
-    curl_fail_rounds=0
-
-    local parsed
-    parsed=$(echo "$body" | python3 -c "
+parse_sync_response() {
+  local http_code="$1"
+  local body_file="$2"
+  python3 - "$http_code" "$body_file" <<'PY'
 import sys, json
-raw = sys.stdin.read()
-marker = '\n__HTTP_CODE__'
-http_code = '?'
-redirect = ''
-if marker in raw:
-    payload, tail = raw.rsplit(marker, 1)
-    # tail: <code>__REDIRECT__<url>__
-    try:
-        http_code, rest = tail.split('__REDIRECT__', 1)
-        redirect = rest[:-2] if rest.endswith('__') else rest
-    except Exception:
-        pass
-else:
-    payload = raw
 
-payload = payload.strip()
+http_code = sys.argv[1]
+with open(sys.argv[2], 'r', encoding='utf-8', errors='replace') as f:
+    payload = f.read().strip().lstrip('\ufeff')
+
 if not payload:
-    print(f'false\t0\t0\t1\thttp={http_code} empty response')
+    print(f'false\t0\t0\t1\tHTTP {http_code}: empty body')
     raise SystemExit(0)
 
 try:
     d = json.loads(payload)
-except Exception:
-    snippet = payload[:120].replace('\\n', ' ')
-    redir_note = f' redirect={redirect}' if redirect else ''
-    print(f'false\t0\t0\t1\thttp={http_code}{redir_note} non-json: {snippet!r}')
+except json.JSONDecodeError:
+    snippet = payload[:160].replace('\n', ' ')
+    print(f'false\t0\t0\t1\tHTTP {http_code} non-JSON: {snippet!r}')
     raise SystemExit(0)
+
+if not d.get('ok'):
+    err = d.get('error') or d.get('hint') or 'API returned ok=false'
+    print(f'false\t0\t0\t1\t{err}')
+    raise SystemExit(0)
+
 s = d.get('summary', {})
 complete = 'true' if s.get('complete') else 'false'
 translated = int(s.get('translated', 0) or 0)
@@ -125,10 +91,57 @@ for e in errors:
     msg = str(e.get('message', '')).strip() if isinstance(e, dict) else str(e).strip()
     if msg:
         err_types.append(msg)
-uniq = sorted(set(err_types))
-err_hint = '; '.join(uniq[:2]) if uniq else '-'
+err_hint = '; '.join(sorted(set(err_types))[:2]) if err_types else '-'
 print(f'{complete}\t{translated}\t{skipped}\t{err_count}\t{err_hint}')
-" 2>/dev/null || echo "false	0	0	1	<parse-error>")
+PY
+}
+
+sync_one_activity() {
+  local id="$1"
+  local round=0
+  local max_rounds=40
+  local stale_rounds=0
+  local curl_fail_rounds=0
+  local prev_key=""
+  local total_translated=0
+  local total_skipped=0
+  local total_errors=0
+  local tmp
+  tmp=$(mktemp)
+
+  while [[ $round -lt $max_rounds ]]; do
+    round=$((round + 1))
+    local http_code parsed
+    : >"$tmp"
+    http_code=$(curl -sS -L --max-time "$CURL_MAX_TIME" \
+      -o "$tmp" \
+      -w "%{http_code}" \
+      -X POST "${BASE_URL}/api/translations/sync" \
+      -H "Authorization: Bearer ${TRANSLATION_SYNC_SECRET}" \
+      -H "Content-Type: application/json" \
+      -d "{\"activityIds\": [${id}], \"langs\": [\"hant\", \"hans\"], \"maxTranslations\": ${CHUNK}}" \
+      2>/dev/null) || {
+      echo "  round ${round}: curl failed — retrying in 5s…"
+      curl_fail_rounds=$((curl_fail_rounds + 1))
+      if [[ $curl_fail_rounds -ge 6 ]]; then
+        echo "  stopping early: 6 consecutive curl failures (network/timeout/5xx)."
+        rm -f "$tmp"
+        return 1
+      fi
+      sleep 5
+      continue
+    }
+    curl_fail_rounds=0
+
+    if [[ "$http_code" != "200" ]]; then
+      local snippet
+      snippet=$(head -c 160 "$tmp" | tr '\n' ' ')
+      echo "  round ${round}: HTTP ${http_code} — ${snippet}"
+      sleep 2
+      continue
+    fi
+
+    parsed=$(parse_sync_response "$http_code" "$tmp" 2>/dev/null || echo "false	0	0	1	<parse-error>")
 
     local complete translated skipped errors err_hint
     IFS=$'\t' read -r complete translated skipped errors err_hint <<< "$parsed"
@@ -149,20 +162,23 @@ print(f'{complete}\t{translated}\t{skipped}\t{err_count}\t{err_hint}')
       echo "  done: no remaining work after ${round} rounds (translated=${total_translated}, skipped=${total_skipped})"
       return 0
     fi
-    # Same failing response repeatedly (e.g. length sanity on mode/title) — do not burn 40 rounds.
-    if [[ "$translated" == "0" && "$errors" != "0" && "$body" == "$prev_body" ]]; then
+    # Same failing response repeatedly — do not burn 40 rounds.
+    local round_key="${complete}:${translated}:${skipped}:${err_hint}"
+    if [[ "$translated" == "0" && "$errors" != "0" && "$round_key" == "$prev_key" ]]; then
       stale_rounds=$((stale_rounds + 1))
       if [[ $stale_rounds -ge 2 ]]; then
         echo "  stopping early: repeated errors with no progress (translated=${total_translated}, skipped=${total_skipped}, errors=${total_errors})"
+        rm -f "$tmp"
         return 1
       fi
     else
       stale_rounds=0
     fi
-    prev_body="$body"
+    prev_key="$round_key"
     sleep 1
   done
 
+  rm -f "$tmp"
   echo "  warning: activity ${id} may be incomplete after ${max_rounds} rounds (translated=${total_translated}, skipped=${total_skipped}, errors=${total_errors})" >&2
   return 1
 }
