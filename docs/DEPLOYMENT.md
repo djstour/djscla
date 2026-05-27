@@ -134,7 +134,7 @@ npm run deploy   # production
 
 | Task | How |
 |------|-----|
-| Translation catch-up | Cron every 6h (`vercel.json`) or `CHUNK=12 ./scripts/sync-all-translations.sh` |
+| Translation catch-up | Cron every 15m (`vercel.json`, 12h SLA) or `CHUNK=12 ./scripts/sync-all-translations.sh` |
 | Chip ID cache | `npm run enrich:chips:api` or see [CHIP_IDS_AUTOMATION.md](./CHIP_IDS_AUTOMATION.md) |
 
 Do **not** rely on one 300s function to translate the entire catalog in a single request.
@@ -146,7 +146,7 @@ Do **not** rely on one 300s function to translate the entire catalog in a single
 | Area | Setting |
 |------|---------|
 | Git | Production branch `main`, repo `djstour/djscla` |
-| Cron | Keep `0 */6 * * *` on `/api/translations/cron` |
+| Cron | `*/15 * * * *` on `/api/translations/cron` (12h hant+hans SLA) |
 | Functions | Translation routes use `maxDuration: 300` in code |
 | Observability | Vercel **Logs** for `/api/*` failures |
 | Domains | `djstour.com` (primary) + `djscla.vercel.app` (Vercel default alias) |

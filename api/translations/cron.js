@@ -31,10 +31,15 @@ async function handler(req, res) {
     Number(process.env.TRANSLATION_CRON_MAX_ACTIVITIES) || 12,
     30,
   );
+  const maxTranslationsPerActivity = Math.min(
+    Number(process.env.TRANSLATION_CRON_MAX_TRANSLATIONS_PER_ACTIVITY) || 10,
+    24,
+  );
 
   try {
     const summary = await runAutoTranslationSync({
       maxActivities,
+      maxTranslationsPerActivity,
       langs: ['hant', 'hans'],
       uiLang: 'hant',
     });
@@ -43,6 +48,7 @@ async function handler(req, res) {
       ok: true,
       mode: 'auto',
       maxActivities,
+      maxTranslationsPerActivity,
       summary,
     });
   } catch (err) {

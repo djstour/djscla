@@ -52,7 +52,8 @@ Apply migration in Supabase SQL editor or `supabase db push` if using CLI.
 | `OPENAI_TRANSLATION_MODEL` | No | Override model |
 | `TRANSLATION_SYNC_SECRET` | Prod recommended | Bearer token for `POST /api/translations/sync` |
 | `CRON_SECRET` | Auto cron | Vercel Cron `Authorization` bearer (can match `TRANSLATION_SYNC_SECRET`) |
-| `TRANSLATION_CRON_MAX_ACTIVITIES` | No | Activities per cron run (default `12` in code, max `30`) |
+| `TRANSLATION_CRON_MAX_ACTIVITIES` | No | Activities per cron run (default `12`, max `30`) |
+| `TRANSLATION_CRON_MAX_TRANSLATIONS_PER_ACTIVITY` | No | Fields×langs per activity per run (default `10`, max `24`); remainder on next cron |
 
 ## Automatic translation (Vercel Cron)
 
@@ -60,7 +61,9 @@ Apply migration in Supabase SQL editor or `supabase db push` if using CLI.
 
 | Schedule | Endpoint | Behaviour |
 |----------|----------|-------------|
-| Every 6 hours | `GET /api/translations/cron` | Scan **Supabase** active catalog (same queue as Admin); translate up to `TRANSLATION_CRON_MAX_ACTIVITIES` activities that are missing or stale |
+| Every **15 minutes** | `GET /api/translations/cron` | Scan **Supabase** active catalog; up to `TRANSLATION_CRON_MAX_ACTIVITIES` pending activities, up to `TRANSLATION_CRON_MAX_TRANSLATIONS_PER_ACTIVITY` strings per activity per run (fits Pro `maxDuration: 300`) |
+
+**12-hour SLA (~140 SKUs):** 48 runs × 12 activities ≈ 576 queue slots per 12h. Each activity may need several runs (title/summary first, then description/stops). Empty queue → fast no-op (no OpenAI). For a one-shot full backfill, still use `./scripts/sync-all-translations.sh`.
 
 Setup after deploy:
 
@@ -161,7 +164,7 @@ OpenAI runs **only** when `/api/translations/sync` or `/api/translations/cron` *
 | OpenAI on laptop | **Omit** unless testing sync code | — |
 | Run translation cron | **No** — `vercel dev` does not run Vercel Cron | `vercel.json` → `/api/translations/cron` |
 | Bulk catch-up | **Do not** run `sync-all-translations.sh` locally | Once: `./scripts/sync-all-translations.sh` (default `BASE_URL=https://www.djstour.com`) |
-| Steady-state gaps | — | Cron every 6h + optional Admin → Translations → Run batch |
+| Steady-state gaps | — | Cron every 15m + optional Admin → Translations → Run batch |
 | Avoid double spend | Never second Supabase project for “dev translations” | Single `translations` table |
 | Re-translate | Avoid `force: true` unless English copy changed | Same |
 

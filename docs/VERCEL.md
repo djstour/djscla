@@ -50,7 +50,7 @@ After upgrading, configure once in the [project dashboard](https://vercel.com/dj
 |------|----------------|
 | **Git** | Reconnect `djstour/djscla` if deploys failed on Hobby; Production branch `main` |
 | **Function duration** | `/api/translations/*` use `maxDuration: 300` in code (Pro max) |
-| **Cron** | Keep `0 */6 * * *`; set `TRANSLATION_CRON_MAX_ACTIVITIES=12` in env |
+| **Cron** | `*/15 * * * *` on `/api/translations/cron`; optional `TRANSLATION_CRON_MAX_ACTIVITIES=12`, `TRANSLATION_CRON_MAX_TRANSLATIONS_PER_ACTIVITY=10` |
 | **Catch-up script** | `CHUNK=12 CURL_MAX_TIME=180 ./scripts/sync-all-translations.sh` (fewer rounds per activity) |
 | **Observability** | Enable Log Drains only if you use Datadog etc.; otherwise **Logs** tab is enough |
 | **Domains** | Primary `djstour.com`; Vercel alias `djscla.vercel.app` (keep both for fallback) |
