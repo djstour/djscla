@@ -336,6 +336,45 @@
     );
   }
 
+  /** Theme + language + currency — shared by marketing nav and admin console. */
+  function PrefToolbar({
+    lang,
+    onLangChange,
+    displayCurrency,
+    onCurrencyChange,
+    siteThemeId,
+    onSiteThemeChange,
+    className = '',
+  }) {
+    const T = (opts) => pick(lang, opts);
+    return (
+      <div
+        className={`pref-toolbar${className ? ` ${className}` : ''}`}
+        role="group"
+        aria-label={T({
+          hant: '主題、語言與顯示幣別',
+          hans: '主题、语言与显示币别',
+          en: 'Theme, language and display currency',
+        })}
+      >
+        {onSiteThemeChange ? (
+          <ThemePicker
+            themeId={siteThemeId || 'aurora'}
+            onChange={onSiteThemeChange}
+            lang={lang}
+            className="theme-picker--compact"
+          />
+        ) : null}
+        <LocaleControls
+          lang={lang}
+          onLangChange={onLangChange}
+          displayCurrency={displayCurrency}
+          onCurrencyChange={onCurrencyChange}
+        />
+      </div>
+    );
+  }
+
   function LangPicker({ lang, onChange, inMobileSheet = false, menuUp = false }) {
     const T = (opts) => pick(lang, opts);
     const [open, setOpen] = useState(false);
@@ -592,4 +631,6 @@
   }
 
   window.AuralisUI.Nav = Nav;
+  window.AuralisUI.LocaleControls = LocaleControls;
+  window.AuralisUI.PrefToolbar = PrefToolbar;
 })();

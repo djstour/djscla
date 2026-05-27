@@ -12,6 +12,119 @@
   const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
   const STORAGE_KEY = 'auralis.admin.token';
+  const LANG_STORAGE_KEY = 'auralis.lang';
+  const CURRENCY_STORAGE_KEY = 'auralis.currency';
+
+  function getAuralisUI() {
+    return window.AuralisUI || null;
+  }
+
+  function readLang() {
+    const UI = getAuralisUI();
+    const langs = UI && UI.LANGS ? UI.LANGS : [
+      { id: 'hant' }, { id: 'hans' }, { id: 'en' },
+    ];
+    try {
+      const saved = localStorage.getItem(LANG_STORAGE_KEY) || '';
+      return langs.find((l) => l.id === saved) ? saved : 'hant';
+    } catch {
+      return 'hant';
+    }
+  }
+
+  function readCurrency(lang) {
+    const UI = getAuralisUI();
+    try {
+      const saved = localStorage.getItem(CURRENCY_STORAGE_KEY) || '';
+      const codes = UI && UI.DISPLAY_CURRENCIES
+        ? UI.DISPLAY_CURRENCIES.map((c) => c.code)
+        : ['TWD', 'CNY', 'USD'];
+      if (codes.includes(saved)) return saved;
+    } catch { /* noop */ }
+    if (UI && UI.defaultCurrencyForLang) return UI.defaultCurrencyForLang(lang);
+    return lang === 'hans' ? 'CNY' : lang === 'en' ? 'USD' : 'TWD';
+  }
+
+  function localeForLang(lang) {
+    if (lang === 'hans') return 'zh-CN';
+    if (lang === 'en') return 'en-GB';
+    return 'zh-TW';
+  }
+
+  function useAdminPreferences() {
+    const UI = getAuralisUI();
+    const [lang, setLang] = useState(readLang);
+    const [displayCurrency, setDisplayCurrency] = useState(() => readCurrency(readLang()));
+    const [siteThemeId, setSiteThemeId] = useState(() => {
+      if (UI && UI.getInitialSiteTheme) return UI.getInitialSiteTheme().id;
+      return 'aurora';
+    });
+    const [fxRates, setFxRates] = useState({ USD: 1 });
+
+    useEffect(() => {
+      if (UI && UI.applyHtmlLang) UI.applyHtmlLang(lang);
+      try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch { /* noop */ }
+    }, [lang, UI]);
+
+    useEffect(() => {
+      try { localStorage.setItem(CURRENCY_STORAGE_KEY, displayCurrency); } catch { /* noop */ }
+    }, [displayCurrency]);
+
+    useEffect(() => {
+      if (!UI || !UI.setSiteThemeById) return;
+      UI.setSiteThemeById(siteThemeId);
+    }, [siteThemeId, UI]);
+
+    useEffect(() => {
+      fetch('/api/fx/rates')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && data.rates) setFxRates({ USD: 1, ...data.rates });
+        })
+        .catch(() => { /* optional for admin price preview */ });
+    }, []);
+
+    const handleLangChange = useCallback((nextLang) => {
+      setLang(nextLang);
+      if (UI && UI.defaultCurrencyForLang) {
+        setDisplayCurrency(UI.defaultCurrencyForLang(nextLang));
+      } else {
+        setDisplayCurrency(readCurrency(nextLang));
+      }
+    }, [UI]);
+
+    const handleThemeChange = useCallback((themeId) => {
+      if (UI && UI.setSiteThemeById) UI.setSiteThemeById(themeId);
+      setSiteThemeId(themeId);
+    }, [UI]);
+
+    const prefToolbar = UI && UI.PrefToolbar ? (
+      <UI.PrefToolbar
+        lang={lang}
+        onLangChange={handleLangChange}
+        displayCurrency={displayCurrency}
+        onCurrencyChange={setDisplayCurrency}
+        siteThemeId={siteThemeId}
+        onSiteThemeChange={handleThemeChange}
+        className="pref-toolbar--admin"
+      />
+    ) : null;
+
+    return {
+      lang,
+      displayCurrency,
+      siteThemeId,
+      fxRates,
+      prefToolbar,
+      pick: UI && UI.pick ? (opts) => UI.pick(lang, opts) : (opts) => opts[lang] || opts.hant || '',
+      formatDisplayPrice: (amountUsd) => {
+        if (UI && UI.formatDisplayPrice) {
+          return UI.formatDisplayPrice(amountUsd, displayCurrency, fxRates);
+        }
+        return formatPrice(amountUsd, displayCurrency);
+      },
+    };
+  }
 
   function readToken() {
     try {
@@ -55,12 +168,12 @@
     return Number(n).toLocaleString();
   }
 
-  function formatDateTime(iso) {
+  function formatDateTime(iso, lang) {
     if (!iso) return '—';
     try {
       const d = new Date(iso);
       if (Number.isNaN(d.getTime())) return iso;
-      return d.toLocaleString('zh-TW', { hour12: false });
+      return d.toLocaleString(localeForLang(lang || 'hant'), { hour12: false });
     } catch {
       return iso;
     }
@@ -114,7 +227,7 @@
   }
 
   // ---------------- Login ----------------
-  function LoginScreen({ onLoggedIn }) {
+  function LoginScreen({ onLoggedIn, prefToolbar }) {
     const [password, setPassword] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -146,6 +259,9 @@
 
     return (
       <div className="admin-login">
+        {prefToolbar ? (
+          <div className="admin-login__prefs">{prefToolbar}</div>
+        ) : null}
         <form className="admin-login__card" onSubmit={onSubmit}>
           <h1 className="admin-login__title">DJS Tour · Admin</h1>
           <p className="admin-login__sub">Catalog control room — sync, detail refresh, activate/deactivate.</p>
@@ -174,7 +290,7 @@
   }
 
   // ---------------- Sidebar ----------------
-  function Sidebar({ tab, setTab, counts, onLogout }) {
+  function Sidebar({ tab, setTab, counts, onLogout, prefToolbar }) {
     const items = [
       { id: 'overview', label: 'Overview' },
       { id: 'vendors', label: 'Vendors', badge: counts.vendors },
@@ -202,6 +318,9 @@
           </button>
         ))}
         <div className="admin-nav-spacer" />
+        {prefToolbar ? (
+          <div className="admin-sidebar__prefs">{prefToolbar}</div>
+        ) : null}
         <div className="admin-sidebar__footer">
           Phase 5 · ops<br />
           <button onClick={onLogout}>Sign out</button>
@@ -317,7 +436,7 @@
   }
 
   // ---------------- Overview ----------------
-  function OverviewPage({ overview, token, onRefresh }) {
+  function OverviewPage({ overview, token, onRefresh, lang }) {
     const [syncing, setSyncing] = useState(false);
     const [syncError, setSyncError] = useState('');
     const [syncResult, setSyncResult] = useState(null);
@@ -370,7 +489,7 @@
       <div>
         <h1 className="admin-page-title">Overview</h1>
         <p className="admin-page-sub">
-          Last activity sync: <strong>{formatDateTime(lastSyncedAt)}</strong>
+          Last activity sync: <strong>{formatDateTime(lastSyncedAt, lang)}</strong>
           {lastSyncedAt ? <span> · {timeAgo(lastSyncedAt)}</span> : null}
         </p>
 
@@ -906,7 +1025,7 @@
   }
 
   // ---------------- Activities page ----------------
-  function ActivitiesPage({ token, vendors, reloadKey }) {
+  function ActivitiesPage({ token, vendors, reloadKey, formatDisplayPrice }) {
     const [page, setPage] = useState(1);
     const [pageSize] = useState(50);
     const [statusFilter, setStatusFilter] = useState('all');
@@ -1038,7 +1157,7 @@
                     </td>
                     <td>{row.bokunActivityId}</td>
                     <td>{row.vendor ? row.vendor.name : '—'}</td>
-                    <td>{formatPrice(row.priceFrom, row.currency)}</td>
+                    <td>{formatDisplayPrice ? formatDisplayPrice(row.priceFrom) : formatPrice(row.priceFrom, row.currency)}</td>
                     <td>
                       {formatDateTime(row.lastSyncedAt)}
                       <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{timeAgo(row.lastSyncedAt)}</div>
@@ -1893,7 +2012,12 @@
   }
 
   // ---------------- Shell ----------------
-  function AdminShell({ token, onLogout }) {
+  function AdminShell({ token, onLogout, prefs }) {
+    const {
+      lang,
+      prefToolbar,
+      formatDisplayPrice,
+    } = prefs || {};
     const [tab, setTab] = useState('overview');
     const [overview, setOverview] = useState(null);
     const [overviewError, setOverviewError] = useState('');
@@ -1925,8 +2049,11 @@
 
     return (
       <div className="admin-shell">
-        <Sidebar tab={tab} setTab={setTab} counts={counts} onLogout={onLogout} />
+        <Sidebar tab={tab} setTab={setTab} counts={counts} onLogout={onLogout} prefToolbar={prefToolbar} />
         <main className="admin-main">
+          {prefToolbar ? (
+            <div className="admin-topbar admin-topbar--mobile-only">{prefToolbar}</div>
+          ) : null}
           {overviewError ? (
             <div className="admin-login__error" style={{ marginBottom: 16 }}>
               {overviewError}
@@ -1942,6 +2069,7 @@
               token={token}
               vendors={overview?.vendors || []}
               reloadKey={reloadKey}
+              formatDisplayPrice={formatDisplayPrice}
             />
           )}
           {tab === 'content' && (
@@ -1967,12 +2095,15 @@
 
   function AuralisAdmin() {
     const [token, setToken] = useState(() => readToken());
+    const prefs = useAdminPreferences();
 
     const onLoggedIn = (t) => setToken(t);
     const onLogout = () => { writeToken(''); setToken(''); };
 
-    if (!token) return <LoginScreen onLoggedIn={onLoggedIn} />;
-    return <AdminShell token={token} onLogout={onLogout} />;
+    if (!token) {
+      return <LoginScreen onLoggedIn={onLoggedIn} prefToolbar={prefs.prefToolbar} />;
+    }
+    return <AdminShell token={token} onLogout={onLogout} prefs={prefs} />;
   }
 
   window.AuralisAdmin = AuralisAdmin;

@@ -105,6 +105,40 @@
   width: 100%;
 }
 
+.admin-topbar {
+  margin-bottom: 16px;
+}
+
+.admin-topbar--mobile-only {
+  display: none;
+}
+
+.admin-sidebar__prefs {
+  margin-bottom: 12px;
+}
+
+.admin-login__prefs {
+  width: min(400px, 100%);
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.pref-toolbar {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pref-toolbar--admin {
+  width: 100%;
+}
+
+.pref-toolbar--admin .locale-strip {
+  flex-shrink: 0;
+}
+
 .admin-page-title {
   font-size: 22px;
   font-weight: 700;
@@ -247,8 +281,10 @@
 /* Login */
 .admin-login {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-page);
   padding: 24px;
 }
@@ -911,6 +947,15 @@
   .admin-nav-item { white-space: nowrap; }
   .admin-sidebar__footer { display: none; }
   .admin-main { padding: 18px; }
+
+  .admin-sidebar__prefs {
+    display: none;
+  }
+
+  .admin-topbar--mobile-only {
+    display: flex;
+    justify-content: flex-start;
+  }
 }
 
 [data-site-theme="aurora"] .admin-shell,
