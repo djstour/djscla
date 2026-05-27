@@ -52,7 +52,7 @@ Apply migration in Supabase SQL editor or `supabase db push` if using CLI.
 | `OPENAI_TRANSLATION_MODEL` | No | Override model |
 | `TRANSLATION_SYNC_SECRET` | Prod recommended | Bearer token for `POST /api/translations/sync` |
 | `CRON_SECRET` | Auto cron | Vercel Cron `Authorization` bearer (can match `TRANSLATION_SYNC_SECRET`) |
-| `TRANSLATION_CRON_MAX_ACTIVITIES` | No | Activities per cron run (default `5`, max `20`) |
+| `TRANSLATION_CRON_MAX_ACTIVITIES` | No | Activities per cron run (default `12` in code, max `30`) |
 
 ## Automatic translation (Vercel Cron)
 
@@ -60,7 +60,7 @@ Apply migration in Supabase SQL editor or `supabase db push` if using CLI.
 
 | Schedule | Endpoint | Behaviour |
 |----------|----------|-------------|
-| Every 6 hours | `GET /api/translations/cron` | Scan full catalog; translate up to `TRANSLATION_CRON_MAX_ACTIVITIES` activities that are missing or stale |
+| Every 6 hours | `GET /api/translations/cron` | Scan **Supabase** active catalog (same queue as Admin); translate up to `TRANSLATION_CRON_MAX_ACTIVITIES` activities that are missing or stale |
 
 Setup after deploy:
 
@@ -129,6 +129,68 @@ Response shape:
 | `/api/bokun/activity?id=` | GET | — | Includes `translations` for one id |
 
 Local preview: `npm start` from repo root (not `npm run preview:static`).
+
+## Local vs Production — one translation, zero duplicate OpenAI billing
+
+OpenAI runs **only** when `/api/translations/sync` or `/api/translations/cron` **writes** to Supabase. Browsing the site (local or prod) **reads** `translations` — no per-page API cost.
+
+### Architecture
+
+```
+                    ┌─────────────────────────────────────┐
+                    │  Supabase `translations` (shared)  │
+                    └─────────────────┬───────────────────┘
+                                      │ read (anon key)
+              ┌───────────────────────┼───────────────────────┐
+              ▼                       ▼                       ▼
+       Local vercel dev         djstour.com              Admin UI
+              │                       │
+              │ write (OpenAI)        │ write (OpenAI)
+              └───────────┬───────────┘
+                          ▼
+              Run sync/cron in ONE place only (prod recommended)
+```
+
+### Checklist
+
+| Step | Local (`vercel dev`) | Production (Vercel) |
+|------|----------------------|---------------------|
+| Same Supabase project | `SUPABASE_URL` + `SUPABASE_ANON_KEY` = prod values | Already set |
+| Serve catalog from mirror | `CATALOG_SOURCE=db` | `CATALOG_SOURCE=db` |
+| OpenAI for browsing | **Not required** | `OPENAI_API_KEY` (sync only) |
+| OpenAI on laptop | **Omit** unless testing sync code | — |
+| Run translation cron | **No** — `vercel dev` does not run Vercel Cron | `vercel.json` → `/api/translations/cron` |
+| Bulk catch-up | **Do not** run `sync-all-translations.sh` locally | Once: `./scripts/sync-all-translations.sh` with `BASE_URL=https://djstour.com` |
+| Steady-state gaps | — | Cron every 6h + optional Admin → Translations → Run batch |
+| Avoid double spend | Never second Supabase project for “dev translations” | Single `translations` table |
+| Re-translate | Avoid `force: true` unless English copy changed | Same |
+
+### `.env.local` (read-only local preview)
+
+```bash
+# Same as production — shared translation overlay
+SUPABASE_URL=https://pmdfdkhfkjyuvucsfsoe.supabase.co
+SUPABASE_ANON_KEY=<prod anon key>
+CATALOG_SOURCE=db
+
+# Optional: same Bókun keys if local API must hit Bókun for booking
+# BOKUN_ACCESS_KEY=…
+# BOKUN_SECRET_KEY=…
+
+# Omit on local unless developing the sync pipeline:
+# OPENAI_API_KEY=
+# TRANSLATION_SYNC_SECRET=
+```
+
+After prod sync/cron writes translations, refresh local Tours — 繁中/简中 should match prod without another OpenAI run.
+
+### When you *would* pay twice
+
+- Separate Supabase projects and running full sync on **both**.
+- Running `sync-all-translations.sh` **and** a full manual sync on the **same** DB with `force: true`.
+- Hitting OpenAI from a second custom script outside `translationSync.js`.
+
+Same DB + `sourceHash` skip logic: a second sync run on already-translated fields **does not** call OpenAI again.
 
 ## Client merge
 
