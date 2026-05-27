@@ -2143,6 +2143,9 @@
                     {runResult.summary.coveragePercent != null
                       ? ` · coverage now ~${runResult.summary.coveragePercent}%`
                       : ''}
+                    {runResult.summary.transientErrors != null || runResult.summary.permanentErrors != null
+                      ? ` · errors T:${formatNumber(runResult.summary.transientErrors || 0)} / P:${formatNumber(runResult.summary.permanentErrors || 0)}`
+                      : ''}
                   </span>
                 </div>
               </div>
@@ -2153,6 +2156,11 @@
               ) : null}
               {runResult.summary.errors && runResult.summary.errors.length ? (
                 <pre className="admin-pre" style={{ marginTop: 10 }}>{JSON.stringify(runResult.summary.errors, null, 2)}</pre>
+              ) : null}
+              {runResult.summary.dlq && runResult.summary.dlq.length ? (
+                <div className="admin-result admin-result--warn" style={{ marginTop: 10 }}>
+                  DLQ candidates ({runResult.summary.dlq.length}): repeated failures, retry manually from queue after upstream stabilizes.
+                </div>
               ) : null}
             </div>
           ) : null}
