@@ -48,8 +48,18 @@ async function handler(req, res) {
         Math.max(parseInt(body.maxActivities || process.env.TRANSLATION_CRON_MAX_ACTIVITIES || '12', 10) || 12, 1),
         30,
       );
+      const maxTranslationsPerActivity = Math.min(
+        Math.max(parseInt(body.maxTranslationsPerActivity || process.env.TRANSLATION_CRON_MAX_TRANSLATIONS_PER_ACTIVITY || '6', 10) || 6, 1),
+        24,
+      );
+      const budgetMs = Math.min(
+        Math.max(parseInt(body.budgetMs || process.env.TRANSLATION_CRON_BUDGET_MS || '255000', 10) || 255000, 30000),
+        290000,
+      );
       const summary = await runAutoTranslationSync({
         maxActivities,
+        maxTranslationsPerActivity,
+        deadlineAtMs: Date.now() + budgetMs,
         langs: Array.isArray(body.langs) ? body.langs : ['hant', 'hans'],
         force: body.force === true,
         uiLang: body.uiLang || 'hant',
@@ -58,6 +68,8 @@ async function handler(req, res) {
         ok: true,
         action,
         maxActivities,
+        maxTranslationsPerActivity,
+        budgetMs,
         summary,
       });
     }
