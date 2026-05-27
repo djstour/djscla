@@ -4,7 +4,7 @@
 
 ## 一句話總結
 
-DJS Tour · 極光旅（djstour.com）是為華語旅人打造的冰島 OTA。透過 Bókun API 串接在地嚮導庫存，採用 vibrant glassmorphism 視覺語言。目前已完成設計系統定義、3 種語系（繁/簡/EN）的 UI Kit Prototype、Bókun adapter 資料層、Phase B Supabase 快取，以及 Phase 1 Admin 控制台。
+DJS Tour · 獨角獸旅遊（djstour.com）是為華語旅人打造的冰島 OTA。透過 Bókun API 串接在地嚮導庫存，採用 vibrant glassmorphism 視覺語言。目前已完成設計系統定義、3 種語系（繁/簡/EN）的 UI Kit Prototype、Bókun adapter 資料層、Phase B Supabase 快取，以及 Phase 1 Admin 控制台。
 
 ## 專案結構
 

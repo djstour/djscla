@@ -1,4 +1,4 @@
-# DJS Tour · 極光旅 — Design System
+# DJS Tour · 獨角獸旅遊 — Design System
 
 > A premium Online Travel Agency (OTA) for the Mandarin-speaking world, specialising in **Iceland** adventure and independent road-trip itineraries. Built atop the Bókun multi-supplier inventory API.
 
@@ -10,7 +10,7 @@ This is a **branding + UI design system**, not a production codebase. It defines
 
 | | |
 |---|---|
-| **Name** | DJS Tour · 極光旅 (jíguāng lǚ — "Aurora Journey") |
+| **Name** | DJS Tour · 獨角獸旅遊 (dújiǎoshòu lǚyóu — "Unicorn Travel") |
 | **Domain** | https://djstour.com |
 | **Category** | Premium OTA · Iceland adventure · independent road-trip |
 | **Audience** | Digital-savvy travellers, 20–40, Taiwan + Mandarin-speaking regions |
@@ -218,7 +218,7 @@ For CSS-only previews without APIs: `npm run preview:static`. Details: [`docs/BO
 
 The brand-name, gradients, voice and component grammar above are **first-draft assumptions** from your brief. Treat them as a starting point. The fastest way to dial it in:
 
-1. **Brand wordmark** — Customer-facing copy is now "DJS Tour · 極光旅" (domain: `djstour.com`). The current wordmark SVGs (`assets/logo-wordmark*.svg`) are a typographic placeholder using Sora 700; a finalized logo from the design team should drop in at the same paths to inherit all references.
+1. **Brand wordmark** — Customer-facing copy is now "DJS Tour · 獨角獸旅遊" (domain: `djstour.com`). The current wordmark SVGs (`assets/logo-wordmark*.svg`) are a typographic placeholder using Sora 700; a finalized logo from the design team should drop in at the same paths to inherit all references.
 2. **Photography** — drop 4–6 real Iceland photos into `assets/photos/` and I'll wire them into the hero, itinerary cards and tour tiles. Until then, all photo slots in the UI kit are placeholder gradients.
 3. **Fonts** — Sora + Manrope are free stand-ins. If you've licensed a display face (Söhne, GT Walsheim, GT America, etc.) ship me the woff2 and I'll swap them in.
 4. **Real components** — if any existing UI code or a Figma file is available, share it and I'll re-derive tokens from source rather than from this brief.

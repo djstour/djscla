@@ -95,7 +95,7 @@
           {/* Link columns */}
           <div className="footer-cols">
             <div>
-              <img src="../../assets/logo-wordmark.svg" style={{ height: 44, width: 'auto', display: 'block' }} alt="DJS Tour · 極光旅" />
+              <img src="../../assets/logo-wordmark.svg" style={{ height: 44, width: 'auto', display: 'block' }} alt="DJS Tour · 獨角獸旅遊" />
               <p style={{ margin: '14px 0 0', font: '400 13px/1.6 var(--font-text)', color: 'var(--fg-3)', maxWidth: 240 }}>
                 {T({
                   hant: '為華語旅人精選的冰島 OTA。一次規劃，無縫預訂。',
@@ -137,7 +137,7 @@
             display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
             font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-3)',
           }}>
-            <span>© 2026 DJS Tour · 極光旅 Ltd. · Reykjavík · Taipei</span>
+            <span>© 2026 DJS Tour · 獨角獸旅遊 Ltd. · Reykjavík · Taipei</span>
             <span>{T({
               hant: '庫存由 Bókun 提供 · ISO 27001 · GDPR 合規',
               hans: '库存由 Bókun 提供 · ISO 27001 · GDPR 合规',

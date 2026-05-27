@@ -1,6 +1,6 @@
 ---
 name: djstour-design
-description: Use this skill to generate well-branded interfaces and assets for DJS Tour · 極光旅 (djstour.com) — a premium Iceland OTA for the Mandarin-speaking (primarily Taiwanese) market. Works for production code, throwaway prototypes, mock screens, slides, marketing assets, anything visual. Contains the colour system, type tokens, fonts, gradients, glass primitives, brand voice (繁中 + EN), icon policy, and a working web UI kit.
+description: Use this skill to generate well-branded interfaces and assets for DJS Tour · 獨角獸旅遊 (djstour.com) — a premium Iceland OTA for the Mandarin-speaking (primarily Taiwanese) market. Works for production code, throwaway prototypes, mock screens, slides, marketing assets, anything visual. Contains the colour system, type tokens, fonts, gradients, glass primitives, brand voice (繁中 + EN), icon policy, and a working web UI kit.
 user-invocable: true
 ---
 
