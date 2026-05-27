@@ -453,7 +453,7 @@
                 fxRates={fxRates}
               />
             ))}
-            <Footer lang={lang} />
+            <Footer lang={lang} siteThemeId={siteTheme.id} />
           </>
         )}
 
