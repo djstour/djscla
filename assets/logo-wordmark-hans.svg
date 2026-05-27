@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 56" fill="none" aria-label="DJS Tour ∑ Ï“}≈8">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 56" fill="none" aria-label="?????">
   <defs>
     <linearGradient id="awl-grad-hans" x1="0" y1="48" x2="48" y2="8" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2EFFB8"></stop>
@@ -11,6 +11,5 @@
     <path d="M24 16 C 21 22, 18 30, 16.5 38 L 31.5 38 C 30 30, 27 22, 24 16 Z" fill="#FFFFFF" opacity="0.7"></path>
     <circle cx="24" cy="11" r="2.4" fill="#FFFFFF"></circle>
   </g>
-  <text x="60" y="34" font-family="Sora, system-ui, sans-serif" font-weight="700" font-size="26" letter-spacing="-0.02em" fill="#11151F">DJS Tour</text>
-  <text x="60" y="50" font-family="'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif" font-weight="500" font-size="9.5" letter-spacing="0.04em" fill="#6B7689">Ï“}≈8</text>
+  <text x="56" y="36" font-family="'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif" font-weight="600" font-size="20" letter-spacing="0.02em" fill="#11151F">?????</text>
 </svg>

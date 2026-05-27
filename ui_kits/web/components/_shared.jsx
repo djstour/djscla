@@ -293,9 +293,15 @@
   }
 
   function brandLogoSrc(lang) {
-    return lang === 'hans'
-      ? '../../assets/logo-wordmark-hans.svg'
-      : '../../assets/logo-wordmark.svg';
+    if (lang === 'hans') return '../../assets/logo-wordmark-hans.svg';
+    if (lang === 'en') return '../../assets/logo-wordmark-en.svg';
+    return '../../assets/logo-wordmark.svg';
+  }
+
+  /** Logo alt text — matches visible wordmark language (no mixed EN/ZH). */
+  function brandLogoAlt(lang) {
+    if (lang === 'en') return 'DJS Tour · Unicorn Travel';
+    return brandZhName(lang);
   }
 
   function applyBrandDocument(lang) {
@@ -1207,7 +1213,7 @@
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,
-    brandZhName, brandFullTitle, brandLogoSrc, applyBrandDocument,
+    brandZhName, brandFullTitle, brandLogoSrc, brandLogoAlt, applyBrandDocument,
     SITE_THEMES, HERO_THEMES, ThemePicker,
     getInitialSiteTheme, setSiteThemeById, applySiteTheme,
     pickSiteThemeForSession, pickHeroThemeForSession, getOrPickHeroTheme,

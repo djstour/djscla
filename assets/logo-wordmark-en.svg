@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 56" fill="none" aria-label="DJS Tour · Unicorn Travel">
+  <defs>
+    <linearGradient id="awl-grad-en" x1="0" y1="48" x2="48" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2EFFB8"></stop>
+      <stop offset="0.55" stop-color="#00D5FF"></stop>
+      <stop offset="1" stop-color="#6B2FE6"></stop>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0,4)">
+    <path d="M24 4 C 12 18, 8 28, 6 42 L 14 42 C 16 32, 20 22, 24 16 C 28 22, 32 32, 34 42 L 42 42 C 40 28, 36 18, 24 4 Z" fill="url(#awl-grad-en)"></path>
+    <path d="M24 16 C 21 22, 18 30, 16.5 38 L 31.5 38 C 30 30, 27 22, 24 16 Z" fill="#FFFFFF" opacity="0.7"></path>
+    <circle cx="24" cy="11" r="2.4" fill="#FFFFFF"></circle>
+  </g>
+  <text x="56" y="32" font-family="Sora, system-ui, sans-serif" font-weight="700" font-size="26" letter-spacing="-0.02em" fill="#11151F">DJS Tour</text>
+  <text x="56" y="48" font-family="Sora, system-ui, sans-serif" font-weight="500" font-size="11" letter-spacing="0.04em" fill="#6B7689">Unicorn Travel</text>
+</svg>

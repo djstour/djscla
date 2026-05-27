@@ -1,7 +1,7 @@
 /* Footer — newsletter capture + link columns. */
 
 (function () {
-  const { Icon, pick, brandFullTitle, brandLogoSrc, brandZhName } = window.AuralisUI;
+  const { Icon, pick, brandLogoSrc, brandLogoAlt, brandZhName } = window.AuralisUI;
 
   function Footer({ lang }) {
     const T = (opts) => pick(lang, opts);
@@ -95,7 +95,7 @@
           {/* Link columns */}
           <div className="footer-cols">
             <div>
-              <img src={brandLogoSrc(lang)} style={{ height: 44, width: 'auto', display: 'block' }} alt={brandFullTitle(lang)} />
+              <img src={brandLogoSrc(lang)} style={{ height: 44, width: 'auto', display: 'block' }} alt={brandLogoAlt(lang)} />
               <p style={{ margin: '14px 0 0', font: '400 13px/1.6 var(--font-text)', color: 'var(--fg-3)', maxWidth: 240 }}>
                 {T({
                   hant: '為華語旅人精選的冰島 OTA。一次規劃，無縫預訂。',
