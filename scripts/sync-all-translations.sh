@@ -58,39 +58,79 @@ sync_one_activity() {
   local round=0
   local max_rounds=40
   local stale_rounds=0
+  local curl_fail_rounds=0
   local prev_body=""
+  local total_translated=0
+  local total_skipped=0
+  local total_errors=0
 
   while [[ $round -lt $max_rounds ]]; do
     round=$((round + 1))
     local body
-    body=$(curl "${CURL_FLAGS[@]}" -X POST "${BASE_URL}/api/translations/sync" \
+    body=$(curl "${CURL_FLAGS[@]/-f/}" -X POST "${BASE_URL}/api/translations/sync" \
       -H "Authorization: Bearer ${TRANSLATION_SYNC_SECRET}" \
       -H "Content-Type: application/json" \
       -d "{\"activityIds\": [${id}], \"langs\": [\"hant\", \"hans\"], \"maxTranslations\": ${CHUNK}}" \
       2>&1) || {
       echo "  round ${round}: curl failed — retrying in 5s…"
+      curl_fail_rounds=$((curl_fail_rounds + 1))
+      if [[ $curl_fail_rounds -ge 6 ]]; then
+        echo "  stopping early: 6 consecutive curl failures (network/timeout/5xx)."
+        return 1
+      fi
       sleep 5
       continue
     }
+    curl_fail_rounds=0
 
-    echo "  round ${round}: ${body}"
+    local parsed
+    parsed=$(echo "$body" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print('false\t0\t0\t1\t<non-json response>')
+    raise SystemExit(0)
+s = d.get('summary', {})
+complete = 'true' if s.get('complete') else 'false'
+translated = int(s.get('translated', 0) or 0)
+skipped = int(s.get('skipped', 0) or 0)
+errors = s.get('errors', []) or []
+err_count = len(errors)
+err_types = []
+for e in errors:
+    msg = str(e.get('message', '')).strip() if isinstance(e, dict) else str(e).strip()
+    if msg:
+        err_types.append(msg)
+uniq = sorted(set(err_types))
+err_hint = '; '.join(uniq[:2]) if uniq else '-'
+print(f'{complete}\t{translated}\t{skipped}\t{err_count}\t{err_hint}')
+" 2>/dev/null || echo "false	0	0	1	<parse-error>")
 
-    local complete translated errors
-    complete=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print('true' if d.get('summary',{}).get('complete') else 'false')" 2>/dev/null || echo "false")
-    translated=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('summary',{}).get('translated',0))" 2>/dev/null || echo "0")
-    errors=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('summary',{}).get('errors',[])))" 2>/dev/null || echo "1")
+    local complete translated skipped errors err_hint
+    IFS=$'\t' read -r complete translated skipped errors err_hint <<< "$parsed"
+    total_translated=$((total_translated + translated))
+    total_skipped=$((total_skipped + skipped))
+    total_errors=$((total_errors + errors))
+
+    echo "  round ${round}: +${translated} translated, +${skipped} skipped, +${errors} errors | totals: t=${total_translated}, s=${total_skipped}, e=${total_errors}"
+    if [[ "$errors" != "0" && -n "$err_hint" && "$err_hint" != "-" ]]; then
+      echo "    error hint: ${err_hint}"
+    fi
 
     if [[ "$complete" == "true" ]]; then
+      echo "  done: complete=true after ${round} rounds (translated=${total_translated}, skipped=${total_skipped}, errors=${total_errors})"
       return 0
     fi
     if [[ "$translated" == "0" && "$errors" == "0" ]]; then
+      echo "  done: no remaining work after ${round} rounds (translated=${total_translated}, skipped=${total_skipped})"
       return 0
     fi
     # Same failing response repeatedly (e.g. length sanity on mode/title) — do not burn 40 rounds.
     if [[ "$translated" == "0" && "$errors" != "0" && "$body" == "$prev_body" ]]; then
       stale_rounds=$((stale_rounds + 1))
       if [[ $stale_rounds -ge 2 ]]; then
-        echo "  stopping early: repeated errors with no progress (fix field manually or redeploy lengthOk fix)"
+        echo "  stopping early: repeated errors with no progress (translated=${total_translated}, skipped=${total_skipped}, errors=${total_errors})"
         return 1
       fi
     else
@@ -100,7 +140,7 @@ sync_one_activity() {
     sleep 1
   done
 
-  echo "  warning: activity ${id} may be incomplete after ${max_rounds} rounds" >&2
+  echo "  warning: activity ${id} may be incomplete after ${max_rounds} rounds (translated=${total_translated}, skipped=${total_skipped}, errors=${total_errors})" >&2
   return 1
 }
 
