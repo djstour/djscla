@@ -10,11 +10,13 @@
 
 set -uo pipefail
 
-BASE_URL="${BASE_URL:-https://djstour.com}"
+# Use www — bare djstour.com 307-redirects and curl without -L returns "Redirecting..." (not JSON).
+BASE_URL="${BASE_URL:-https://www.djstour.com}"
 MAX_ITEMS="${MAX_ITEMS:-2000}"
 SLEEP_SEC="${SLEEP_SEC:-2}"
 CHUNK="${CHUNK:-6}"
 CURL_MAX_TIME="${CURL_MAX_TIME:-90}"
+CURL_FLAGS=(-fsSL --max-time "${CURL_MAX_TIME}")
 
 if [[ -z "${TRANSLATION_SYNC_SECRET:-}" ]]; then
   echo "Set TRANSLATION_SYNC_SECRET first." >&2
@@ -22,8 +24,26 @@ if [[ -z "${TRANSLATION_SYNC_SECRET:-}" ]]; then
 fi
 
 echo "Fetching activity IDs from ${BASE_URL}/api/catalog/activities?all=true …"
-IDS=$(curl -fsS "${BASE_URL}/api/catalog/activities?all=true&maxItems=${MAX_ITEMS}&lang=hant" \
-  | python3 -c "import sys,json; d=json.load(sys.stdin); print(' '.join(str(a['id']) for a in d.get('activities',[])))")
+CATALOG_JSON=$(curl "${CURL_FLAGS[@]}" "${BASE_URL}/api/catalog/activities?all=true&maxItems=${MAX_ITEMS}&lang=hant") || {
+  echo "Failed to fetch catalog (check BASE_URL and network)." >&2
+  exit 1
+}
+
+IDS=$(echo "$CATALOG_JSON" | python3 -c "
+import sys, json
+raw = sys.stdin.read().strip()
+if not raw:
+    sys.exit('empty response', 2)
+try:
+    d = json.loads(raw)
+except json.JSONDecodeError as e:
+    sys.exit(f'not JSON (often a redirect page): {raw[:120]!r} … ({e})', 2)
+ids = [str(a['id']) for a in d.get('activities', []) if a.get('id') is not None]
+print(' '.join(ids))
+") || {
+  echo "Could not parse catalog response." >&2
+  exit 1
+}
 
 if [[ -z "$IDS" ]]; then
   echo "No activities returned." >&2
@@ -41,7 +61,7 @@ sync_one_activity() {
   while [[ $round -lt $max_rounds ]]; do
     round=$((round + 1))
     local body
-    body=$(curl -sS --max-time "$CURL_MAX_TIME" -X POST "${BASE_URL}/api/translations/sync" \
+    body=$(curl "${CURL_FLAGS[@]}" -X POST "${BASE_URL}/api/translations/sync" \
       -H "Authorization: Bearer ${TRANSLATION_SYNC_SECRET}" \
       -H "Content-Type: application/json" \
       -d "{\"activityIds\": [${id}], \"langs\": [\"hant\", \"hans\"], \"maxTranslations\": ${CHUNK}}" \

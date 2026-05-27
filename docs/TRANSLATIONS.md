@@ -71,7 +71,7 @@ Setup after deploy:
 Manual test:
 
 ```bash
-curl -s "https://djstour.com/api/translations/cron" \
+curl -sSL "https://www.djstour.com/api/translations/cron" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
@@ -86,7 +86,7 @@ Response includes `summary.catalogSize`, `summary.pendingActivities`, and `summa
 After env vars are set and redeployed:
 
 ```bash
-curl -X POST "https://djstour.com/api/translations/sync" \
+curl -sSL -X POST "https://www.djstour.com/api/translations/sync" \
   -H "Authorization: Bearer $TRANSLATION_SYNC_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"limit": 20, "langs": ["hant", "hans"]}'
@@ -160,7 +160,7 @@ OpenAI runs **only** when `/api/translations/sync` or `/api/translations/cron` *
 | OpenAI for browsing | **Not required** | `OPENAI_API_KEY` (sync only) |
 | OpenAI on laptop | **Omit** unless testing sync code | — |
 | Run translation cron | **No** — `vercel dev` does not run Vercel Cron | `vercel.json` → `/api/translations/cron` |
-| Bulk catch-up | **Do not** run `sync-all-translations.sh` locally | Once: `./scripts/sync-all-translations.sh` with `BASE_URL=https://djstour.com` |
+| Bulk catch-up | **Do not** run `sync-all-translations.sh` locally | Once: `./scripts/sync-all-translations.sh` (default `BASE_URL=https://www.djstour.com`) |
 | Steady-state gaps | — | Cron every 6h + optional Admin → Translations → Run batch |
 | Avoid double spend | Never second Supabase project for “dev translations” | Single `translations` table |
 | Re-translate | Avoid `force: true` unless English copy changed | Same |
