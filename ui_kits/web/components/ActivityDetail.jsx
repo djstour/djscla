@@ -53,6 +53,94 @@
     return null;
   }
 
+  // --- Itinerary map (stylized Iceland silhouette + route pins) -----------------
+  // Matches the TripPanel map projection so we can reuse Bókun stops geoPoints
+  // without needing a third-party map API.
+  const ITINERARY_ICELAND_PATH = "M120 320 Q 100 250 160 200 Q 200 160 280 170 Q 340 130 420 145 Q 510 110 600 150 Q 690 130 770 180 Q 850 200 890 260 Q 920 320 870 380 Q 830 430 740 440 Q 670 470 580 450 Q 500 480 420 470 Q 340 490 260 460 Q 180 440 140 390 Z";
+  const ITINERARY_PROJ = {
+    lngMin: -24.5, lngMax: -13.5,
+    latMin: 63.0, latMax: 67.0,
+    xMin: 80, xMax: 920,
+    yMin: 130, yMax: 470,
+  };
+  function projectStop(lat, lng) {
+    const x = ITINERARY_PROJ.xMin + (lng - ITINERARY_PROJ.lngMin) / (ITINERARY_PROJ.lngMax - ITINERARY_PROJ.lngMin) * (ITINERARY_PROJ.xMax - ITINERARY_PROJ.xMin);
+    const y = ITINERARY_PROJ.yMin + (ITINERARY_PROJ.latMax - lat) / (ITINERARY_PROJ.latMax - ITINERARY_PROJ.latMin) * (ITINERARY_PROJ.yMax - ITINERARY_PROJ.yMin);
+    return { x, y };
+  }
+
+  function ItineraryMap({ stops = [] }) {
+    const pins = stops
+      .map((s, i) => {
+        const geo = s?.geo || s?.geoPoint || s?.geo_point || null;
+        const lat = geo?.latitude ?? geo?.lat;
+        const lng = geo?.longitude ?? geo?.lng ?? geo?.lon;
+        if (lat == null || lng == null) return null;
+        const { x, y } = projectStop(Number(lat), Number(lng));
+        return { id: s.id ?? i, x, y, name: s.name || s.title || '', idx: i + 1 };
+      })
+      .filter(Boolean);
+
+    if (!pins.length) return null;
+
+    return (
+      <div className="detail-itinerary-map" aria-label="Route map">
+        <svg className="detail-itinerary-map__svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+          <g opacity="0.18" stroke="rgba(17,21,31,0.7)" strokeWidth="0.5">
+            {Array.from({ length: 12 }, (_, i) => (
+              <line key={'h'+i} x1="0" y1={i*50} x2="1000" y2={i*50}/>
+            ))}
+            {Array.from({ length: 20 }, (_, i) => (
+              <line key={'v'+i} x1={i*50} y1="0" x2={i*50} y2="600"/>
+            ))}
+          </g>
+          <path d={ITINERARY_ICELAND_PATH} fill="rgba(255,255,255,0.80)" stroke="rgba(11,21,31,0.18)" strokeWidth="1.5"/>
+
+          {pins.map((p, i) => {
+            const next = pins[i + 1];
+            if (!next) return null;
+            return (
+              <line
+                key={'l'+p.id}
+                x1={p.x}
+                y1={p.y}
+                x2={next.x}
+                y2={next.y}
+                stroke="rgba(0,213,255,0.55)"
+                strokeWidth="2.4"
+                strokeDasharray="2 8"
+                strokeLinecap="round"
+              />
+            );
+          })}
+
+          {pins.map((p) => (
+            <g key={p.id} transform={`translate(${p.x} ${p.y})`}>
+              <circle
+                r="18"
+                fill="rgba(107,47,230,0.95)"
+                stroke="rgba(255,255,255,0.95)"
+                strokeWidth="3"
+                filter="drop-shadow(0 6px 14px rgba(0,0,0,0.25))"
+              />
+              <text
+                x="0"
+                y="6"
+                textAnchor="middle"
+                fill="#fff"
+                fontFamily="Sora, system-ui"
+                fontSize="16"
+                fontWeight="800"
+              >
+                {p.idx}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
+    );
+  }
+
   function todayIso() {
     return new Date().toISOString().slice(0, 10);
   }
@@ -1067,6 +1155,7 @@
                     aria-labelledby="detail-tab-itinerary"
                     className="detail-tab-panel"
                   >
+                    <ItineraryMap stops={stopsNamed} />
                     <ol className="detail-stops-list">
                       {stopsNamed.map((stop, i) => (
                         <li key={stop.id} className="detail-stop">

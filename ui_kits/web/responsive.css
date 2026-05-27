@@ -2395,9 +2395,33 @@ html[data-site-theme="sun"] .detail-tabs__btn.is-active {
   font-variant-numeric: tabular-nums;
 }
 
+/* Itinerary map (stylized Iceland silhouette) */
+.detail-itinerary-map {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 80% at 20% 30%, rgba(46,255,184,0.35) 0%, transparent 60%),
+    radial-gradient(55% 70% at 80% 20%, rgba(0,213,255,0.30) 0%, transparent 60%),
+    radial-gradient(70% 90% at 60% 90%, rgba(107,47,230,0.22) 0%, transparent 60%),
+    var(--brand-panel, #11151F);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  margin: 0 0 14px;
+}
+
+.detail-itinerary-map__svg {
+  display: block;
+  width: 100%;
+  height: clamp(200px, 26vw, 320px);
+}
+
 @media (max-width: 520px) {
   .detail-book-people__grid {
     grid-template-columns: 1fr;
+  }
+
+  .detail-itinerary-map__svg {
+    height: 200px;
   }
 }
 
