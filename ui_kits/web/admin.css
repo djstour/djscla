@@ -335,6 +335,103 @@
 }
 .admin-btn--ghost:hover { background: rgba(0,0,0,0.04); filter: none; }
 
+.admin-btn--sm {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.admin-btn--danger {
+  background: transparent;
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.admin-btn--danger:hover { filter: none; background: rgba(239, 68, 68, 0.08); }
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-sync-panel {
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+
+.admin-sync-panel h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--fg-1);
+}
+
+.admin-sync-panel p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--fg-3, rgba(0,0,0,0.65));
+}
+
+.admin-sync-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--fg-2);
+}
+
+.admin-sync-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.admin-sync-options input[type="number"] {
+  width: 56px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.12));
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.admin-sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-result {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: var(--fg-2);
+}
+
+.admin-result--error {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #b91c1c;
+}
+
+.admin-result pre {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
 .admin-empty {
   padding: 40px 20px;
   text-align: center;

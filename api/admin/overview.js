@@ -110,6 +110,9 @@ function envHealth() {
     catalog: {
       source: process.env.CATALOG_SOURCE || 'bokun',
     },
+    admin: {
+      password: !!(process.env.ADMIN_PASSWORD || '').trim(),
+    },
   };
 }
 

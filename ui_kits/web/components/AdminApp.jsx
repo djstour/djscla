@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 /* global React, ReactDOM */
 
-  // DJS Tour · Admin Console — Phase 1 (read-only).
+  // DJS Tour · Admin Console — Phase 2 (read + catalog ops).
 //
 // Self-contained app: does NOT import the public AuralisUI/AuralisData stacks
 // so we can iterate independently and keep the admin bundle lean. Auth is a
@@ -129,7 +129,7 @@
       <div className="admin-login">
         <form className="admin-login__card" onSubmit={onSubmit}>
           <h1 className="admin-login__title">DJS Tour · Admin</h1>
-          <p className="admin-login__sub">Read-only control room (Phase 1).</p>
+          <p className="admin-login__sub">Catalog control room — sync, detail refresh, activate/deactivate.</p>
 
           {error ? <div className="admin-login__error">{error}</div> : null}
 
@@ -181,7 +181,7 @@
         ))}
         <div className="admin-nav-spacer" />
         <div className="admin-sidebar__footer">
-          Phase 1 · read-only<br />
+          Phase 2 · catalog ops<br />
           <button onClick={onLogout}>Sign out</button>
         </div>
       </aside>
@@ -189,10 +189,39 @@
   }
 
   // ---------------- Overview ----------------
-  function OverviewPage({ overview }) {
+  function OverviewPage({ overview, token, onRefresh }) {
+    const [syncing, setSyncing] = useState(false);
+    const [syncError, setSyncError] = useState('');
+    const [syncResult, setSyncResult] = useState(null);
+    const [syncOpts, setSyncOpts] = useState({
+      deactivateMissing: true,
+      forceDetail: false,
+      syncImages: false,
+      maxDetailPerRun: 40,
+    });
+
+    const runCatalogSync = async () => {
+      setSyncing(true);
+      setSyncError('');
+      setSyncResult(null);
+      try {
+        const res = await adminFetch('/api/admin/sync', token, {
+          method: 'POST',
+          body: syncOpts,
+        });
+        setSyncResult(res);
+        onRefresh();
+      } catch (err) {
+        setSyncError(err.message || 'Sync failed');
+      } finally {
+        setSyncing(false);
+      }
+    };
+
     if (!overview) return <div className="admin-empty">Loading…</div>;
 
     const { activities, vendors, totals, lastSyncedAt, inquiries } = overview;
+    const counts = syncResult && syncResult.counts;
 
     return (
       <div>
@@ -201,6 +230,96 @@
           Last activity sync: <strong>{formatDateTime(lastSyncedAt)}</strong>
           {lastSyncedAt ? <span> · {timeAgo(lastSyncedAt)}</span> : null}
         </p>
+
+        <section className="admin-sync-panel">
+          <h2>Catalog sync</h2>
+          <p>
+            Pull the latest Bókun contract channel into Supabase. Typical runtime 30–90s;
+            do not close this tab while running.
+          </p>
+          <div className="admin-sync-options">
+            <label>
+              <input
+                type="checkbox"
+                checked={syncOpts.deactivateMissing}
+                onChange={(e) => setSyncOpts((o) => ({ ...o, deactivateMissing: e.target.checked }))}
+                disabled={syncing}
+              />
+              Deactivate products no longer in channel
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={syncOpts.forceDetail}
+                onChange={(e) => setSyncOpts((o) => ({ ...o, forceDetail: e.target.checked }))}
+                disabled={syncing}
+              />
+              Force detail re-fetch (slow)
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={syncOpts.syncImages}
+                onChange={(e) => setSyncOpts((o) => ({ ...o, syncImages: e.target.checked }))}
+                disabled={syncing}
+              />
+              Mirror images to Supabase Storage
+            </label>
+            <label>
+              Detail batch cap
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={syncOpts.maxDetailPerRun}
+                onChange={(e) => setSyncOpts((o) => ({
+                  ...o,
+                  maxDetailPerRun: Math.min(120, Math.max(1, Number(e.target.value) || 40)),
+                }))}
+                disabled={syncing}
+              />
+            </label>
+          </div>
+          <div className="admin-sync-actions">
+            <button
+              type="button"
+              className="admin-btn"
+              onClick={runCatalogSync}
+              disabled={syncing}
+            >
+              {syncing ? 'Syncing…' : 'Run catalog sync'}
+            </button>
+            <button
+              type="button"
+              className="admin-btn admin-btn--ghost"
+              onClick={onRefresh}
+              disabled={syncing}
+            >
+              Refresh stats
+            </button>
+          </div>
+          {syncError ? (
+            <div className="admin-result admin-result--error">{syncError}</div>
+          ) : null}
+          {syncResult && counts ? (
+            <div className="admin-result">
+              <strong>Sync complete</strong>
+              {' · '}
+              {formatNumber(counts.uniqueInChannel)} unique in channel
+              {' · '}
+              {formatNumber(counts.upserted)} upserted
+              {' · '}
+              {formatNumber(counts.unchanged)} unchanged
+              {' · '}
+              {formatNumber(counts.deactivated)} deactivated
+              {' · '}
+              detail {formatNumber(counts.detailSynced)}/{formatNumber(counts.detailPending)} pending
+              {syncResult.timings ? (
+                <pre>{JSON.stringify(syncResult.timings, null, 2)}</pre>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
 
         <div className="admin-grid">
           <div className="admin-card">
@@ -307,7 +426,7 @@
   }
 
   // ---------------- Activities page ----------------
-  function ActivitiesPage({ token, vendors }) {
+  function ActivitiesPage({ token, vendors, reloadKey }) {
     const [page, setPage] = useState(1);
     const [pageSize] = useState(50);
     const [statusFilter, setStatusFilter] = useState('all');
@@ -317,6 +436,8 @@
     const [data, setData] = useState({ rows: [], total: 0 });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [rowBusy, setRowBusy] = useState(null);
+    const [actionMsg, setActionMsg] = useState('');
 
     useEffect(() => {
       const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -325,10 +446,7 @@
 
     useEffect(() => { setPage(1); }, [statusFilter, vendorFilter, debouncedQ]);
 
-    useEffect(() => {
-      let alive = true;
-      setLoading(true);
-      setError('');
+    const fetchList = useCallback(() => {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(pageSize),
@@ -336,7 +454,14 @@
       });
       if (vendorFilter) params.set('vendorId', vendorFilter);
       if (debouncedQ) params.set('q', debouncedQ);
-      adminFetch(`/api/admin/activities?${params}`, token)
+      return adminFetch(`/api/admin/activities?${params}`, token);
+    }, [token, page, pageSize, statusFilter, vendorFilter, debouncedQ]);
+
+    useEffect(() => {
+      let alive = true;
+      setLoading(true);
+      setError('');
+      fetchList()
         .then((res) => {
           if (!alive) return;
           setData({ rows: res.rows || [], total: res.total || 0 });
@@ -347,14 +472,40 @@
         })
         .finally(() => { if (alive) setLoading(false); });
       return () => { alive = false; };
-    }, [token, page, pageSize, statusFilter, vendorFilter, debouncedQ]);
+    }, [fetchList, reloadKey]);
+
+    const runRowAction = async (row, action, isActive) => {
+      const id = row.bokunActivityId;
+      setRowBusy(id);
+      setActionMsg('');
+      try {
+        await adminFetch('/api/admin/activity', token, {
+          method: 'POST',
+          body: { action, bokunActivityId: id, isActive },
+        });
+        const res = await fetchList();
+        setData({ rows: res.rows || [], total: res.total || 0 });
+        setActionMsg(
+          action === 'resync-detail'
+            ? `Detail re-synced for ${id}`
+            : `${id} is now ${isActive ? 'active' : 'inactive'}`,
+        );
+      } catch (err) {
+        setActionMsg(err.message || 'Action failed');
+      } finally {
+        setRowBusy(null);
+      }
+    };
 
     const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
 
     return (
       <div>
         <h1 className="admin-page-title">Activities</h1>
-        <p className="admin-page-sub">{formatNumber(data.total)} matching rows.</p>
+        <p className="admin-page-sub">
+          {formatNumber(data.total)} matching rows.
+          {actionMsg ? <span style={{ marginLeft: 12, color: 'var(--fg-3)' }}>{actionMsg}</span> : null}
+        </p>
 
         <div className="admin-table-wrap">
           <div className="admin-table-toolbar">
@@ -392,11 +543,12 @@
                   <th>Price from</th>
                   <th>Last sync</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {data.rows.length === 0 ? (
-                  <tr><td colSpan="6" className="admin-empty">No activities match.</td></tr>
+                  <tr><td colSpan="7" className="admin-empty">No activities match.</td></tr>
                 ) : data.rows.map((row) => (
                   <tr key={row.id}>
                     <td>
@@ -414,6 +566,46 @@
                       {row.isActive
                         ? <span className="admin-badge admin-badge--ok">active</span>
                         : <span className="admin-badge admin-badge--off">inactive</span>}
+                    </td>
+                    <td>
+                      <div className="admin-actions">
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
+                          disabled={rowBusy === row.bokunActivityId}
+                          onClick={() => runRowAction(row, 'resync-detail')}
+                        >
+                          {rowBusy === row.bokunActivityId ? '…' : 'Re-sync detail'}
+                        </button>
+                        {row.isActive ? (
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn--danger admin-btn--sm"
+                            disabled={rowBusy === row.bokunActivityId}
+                            onClick={() => runRowAction(row, 'set-active', false)}
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn--ghost admin-btn--sm"
+                            disabled={rowBusy === row.bokunActivityId}
+                            onClick={() => runRowAction(row, 'set-active', true)}
+                          >
+                            Activate
+                          </button>
+                        )}
+                        <a
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
+                          href={`/tours/${encodeURIComponent(row.bokunActivityId)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          View site
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -598,6 +790,9 @@
               <tr><td>CRON_SECRET</td><td>{flagBadge(env.cron?.cronSecret)}</td></tr>
               <tr><td>CATALOG_SYNC_SECRET</td><td>{flagBadge(env.cron?.catalogSyncSecret)}</td></tr>
               <tr><td>CATALOG_SOURCE</td><td><code>{env.catalog?.source}</code></td></tr>
+
+              <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>Admin</th></tr>
+              <tr><td>ADMIN_PASSWORD</td><td>{flagBadge(env.admin?.password)}</td></tr>
             </tbody>
           </table>
         </div>
@@ -610,6 +805,7 @@
     const [tab, setTab] = useState('overview');
     const [overview, setOverview] = useState(null);
     const [overviewError, setOverviewError] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
 
     const loadOverview = useCallback(() => {
       adminFetch('/api/admin/overview', token)
@@ -621,6 +817,11 @@
     }, [token, onLogout]);
 
     useEffect(() => { loadOverview(); }, [loadOverview]);
+
+    const refreshAll = useCallback(() => {
+      loadOverview();
+      setReloadKey((k) => k + 1);
+    }, [loadOverview]);
 
     const counts = {
       vendors: overview?.vendors?.length,
@@ -638,10 +839,16 @@
             </div>
           ) : null}
 
-          {tab === 'overview' && <OverviewPage overview={overview} />}
+          {tab === 'overview' && (
+            <OverviewPage overview={overview} token={token} onRefresh={refreshAll} />
+          )}
           {tab === 'vendors' && <VendorsPage overview={overview} />}
           {tab === 'activities' && (
-            <ActivitiesPage token={token} vendors={overview?.vendors || []} />
+            <ActivitiesPage
+              token={token}
+              vendors={overview?.vendors || []}
+              reloadKey={reloadKey}
+            />
           )}
           {tab === 'inquiries' && <InquiriesPage token={token} />}
           {tab === 'env' && <EnvironmentPage overview={overview} />}
