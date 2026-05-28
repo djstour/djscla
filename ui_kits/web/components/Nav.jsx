@@ -156,6 +156,10 @@
       { id: 'trip',    label: { hant: '我的旅程', hans: '我的旅程', en: 'My trip' } },
       { id: 'journal', label: { hant: '旅誌',     hans: '旅志',     en: 'Journal' } },
     ];
+    const navHref = (id) => {
+      if (id === 'home') return '/';
+      return `/${id}`;
+    };
 
     const linkStyle = (active) => ({
       padding: '10px 14px',
@@ -170,7 +174,7 @@
 
     return (
       <header className="nav-header">
-        <a href="#" className="nav-logo" onClick={(e) => { e.preventDefault(); onNav('home'); }}
+        <a href="/" className="nav-logo" onClick={(e) => { e.preventDefault(); onNav('home'); }}
            style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
           <img src={brandLogoSrc(lang, siteThemeId)} alt={brandLogoAlt(lang)} />
         </a>
@@ -179,7 +183,7 @@
           {navItems.map((item) => {
             const active = currentScreen === item.id;
             return (
-              <a key={item.id} href="#" style={linkStyle(active)}
+              <a key={item.id} href={navHref(item.id)} style={linkStyle(active)}
                  onClick={(e) => { e.preventDefault(); onNav(item.id); }}>
                 {T(item.label)}
               </a>
@@ -191,7 +195,7 @@
           {navItems.map((item) => {
             const active = currentScreen === item.id;
             return (
-              <a key={`m-${item.id}`} href="#"
+              <a key={`m-${item.id}`} href={navHref(item.id)}
                  className={`nav-mobile-sheet__link${active ? ' is-active' : ''}`}
                  style={linkStyle(active)}
                  onClick={(e) => { e.preventDefault(); onNav(item.id); setMenuOpen(false); }}>

@@ -122,7 +122,20 @@
                 <ul style={{ margin: '14px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {c.items.map(i => (
                     <li key={i}>
-                      <a href="#" style={{ font: '500 13px/1 var(--font-text)', color: 'var(--fg-2)', textDecoration: 'none' }}>{i}</a>
+                      <button
+                        type="button"
+                        style={{
+                          font: '500 13px/1 var(--font-text)',
+                          color: 'var(--fg-2)',
+                          textDecoration: 'none',
+                          background: 'transparent',
+                          border: 0,
+                          padding: 0,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {i}
+                      </button>
                     </li>
                   ))}
                 </ul>
