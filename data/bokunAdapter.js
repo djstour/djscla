@@ -380,6 +380,8 @@
       const sourceAttentionHtml = String(activity.attentionHtml || '');
       const sourceCancellationPolicyTitle = String(activity.cancellationPolicyTitle || '');
       const sourceCancellationPolicyHtml = String(activity.cancellationPolicyHtml || '');
+      const sourceDurationText = String(activity.durationText || activity.duration || '');
+      const sourceKnowItems = Array.isArray(activity.knowBeforeYouGoItems) ? activity.knowBeforeYouGoItems : [];
       const title = pickFromOverlay(overlay.title, lang, sourceTitle)
         || (lang === 'en' ? sourceTitle : '');
       const summary = pickFromOverlay(overlay.summary, lang, sourceSummary)
@@ -399,6 +401,15 @@
         || (lang === 'en' ? sourceCancellationPolicyTitle : '');
       const cancellationPolicyHtml = pickFromOverlay(overlay.cancellationPolicyHtml, lang, sourceCancellationPolicyHtml)
         || (lang === 'en' ? sourceCancellationPolicyHtml : '');
+      const durationText = pickFromOverlay(overlay.durationText, lang, sourceDurationText)
+        || (lang === 'en' ? sourceDurationText : '');
+      const knowBeforeYouGoItems = sourceKnowItems
+        .map((item, idx) => {
+          const base = typeof item === 'string' ? item : (item && (item.text || item.label)) || '';
+          const translated = pickFromOverlay(overlay[`know.${idx}`], lang, base);
+          return translated || (lang === 'en' ? base : '');
+        })
+        .filter(Boolean);
       const catKey = activity.categories && activity.categories[0];
       const mode = pickFromOverlay(overlay.mode, lang, '')
         || (catKey ? pickFromOverlay(T.CATEGORY[catKey], lang, lang === 'en' ? catKey : '') : '');
@@ -409,8 +420,7 @@
         : '';
       const supplierRole = '';
 
-      // Supplier-authored duration text should stay verbatim.
-      const duration = String(activity.durationText || activity.duration || '');
+      const duration = durationText || '';
 
       // ---- pricing ----
       const defaultCategoryId = (activity.pricingCategories || []).find(c => c.defaultCategory)?.id
@@ -532,7 +542,7 @@
         attentionHtml,
         inclusionsList: activity.inclusionsList || [],
         exclusionsList: activity.exclusionsList || [],
-        knowBeforeYouGoItems: activity.knowBeforeYouGoItems || [],
+        knowBeforeYouGoItems,
         bookableExtras: activity.bookableExtras || [],
         pickupInfo: activity.pickupInfo || null,
         passCapacity: activity.passCapacity ?? null,
@@ -547,7 +557,7 @@
         bookingCutoffHours: activity.bookingCutoffHours ?? null,
         bookingCutoffDays: activity.bookingCutoffDays ?? null,
         bookingCutoffWeeks: activity.bookingCutoffWeeks ?? null,
-        durationText: activity.durationText || null,
+        durationText: durationText || null,
         guidanceTypes: activity.guidanceTypes || [],
         cancellationFreeHours: activity.cancellationFreeHours ?? null,
         cancellationPolicyTitle: cancellationPolicyTitle || null,

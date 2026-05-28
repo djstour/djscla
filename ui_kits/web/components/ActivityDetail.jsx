@@ -680,6 +680,14 @@
     // fall back to the raw `languages` codes via GUIDE_LANGUAGE overlay.
     const liveGuideNames = [];
     (tour.guidanceTypes || []).forEach((g) => {
+      // zh locales: prefer language-code mapping to avoid English displayLanguages.
+      const codes = Array.isArray(g.languages) ? g.languages : [];
+      codes.forEach((code) => {
+        const lbl = window.AuralisData?.BokunAdapter?.guideLanguageLabel
+          ? window.AuralisData.BokunAdapter.guideLanguageLabel(code, lang)
+          : enumLabel('GUIDE_LANGUAGE', code);
+        if (lbl && !liveGuideNames.includes(lbl)) liveGuideNames.push(lbl);
+      });
       (g.displayLanguages || []).forEach((d) => {
         if (d && !liveGuideNames.includes(d)) liveGuideNames.push(d);
       });
