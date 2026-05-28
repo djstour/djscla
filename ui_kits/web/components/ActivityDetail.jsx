@@ -594,6 +594,8 @@
     const pickupInfo = tour.pickupInfo || null;
     const showPickupInfo = pickupInfo && pickupInfo.enabled;
     const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
+    const pickupNoMessageHtml = sanitizeVendorHtml(pickupInfo?.noPickupMessage || '');
+    const pickupNoMessageHasHtml = vendorHtmlIsMeaningful(pickupNoMessageHtml);
     const paxCap = livePaxMax;
     // Client-side extras subtotal so the booking summary mirrors Bókun's "Total".
     const extrasSubtotal = optionalExtras.reduce((sum, ex) => {
@@ -1260,7 +1262,11 @@
 
                     {showPickupInfo && pickupInfo.noPickupMessage && (
                       <div className="detail-vendor-html detail-tab-panel__block">
-                        {pickupInfo.noPickupMessage}
+                        {pickupNoMessageHasHtml ? (
+                          <span dangerouslySetInnerHTML={{ __html: pickupNoMessageHtml }} />
+                        ) : (
+                          pickupInfo.noPickupMessage
+                        )}
                       </div>
                     )}
 
@@ -1414,6 +1420,8 @@
     const mobileInquirySummary = inquiryStatus.ok
       ? inquiryStatus.message
       : T({ hant: '需要包車、客製行程或中文協助', hans: '需要包车、定制行程或中文协助', en: 'Private tours, custom itineraries, and planning help' });
+    const pickupNoMessageHtml = sanitizeVendorHtml(pickupInfo?.noPickupMessage || '');
+    const pickupNoMessageHasHtml = vendorHtmlIsMeaningful(pickupNoMessageHtml);
 
     return (
       <>
@@ -1645,7 +1653,11 @@
                     </select>
                     {pickupInfo.noPickupMessage && (
                       <span className="detail-book-helper" style={{ font: '500 12px/1.4 var(--font-text)', color: 'var(--fg-2)' }}>
-                        {pickupInfo.noPickupMessage}
+                        {pickupNoMessageHasHtml ? (
+                          <span dangerouslySetInnerHTML={{ __html: pickupNoMessageHtml }} />
+                        ) : (
+                          pickupInfo.noPickupMessage
+                        )}
                       </span>
                     )}
                   </label>
