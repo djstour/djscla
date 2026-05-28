@@ -369,11 +369,18 @@
       const overlay = getActivityOverlay(activity.id);
 
       // ---- core text ----
-      // Supplier-authored content should match Bókun verbatim. Do not
-      // translate or rewrite title / summary / description in the UI layer.
-      const title = String(activity.title || '');
-      const summary = String(activity.summary || '');
-      const description = String(activity.description || activity.summary || '');
+      // zh locales should prefer translation overlays from Supabase/static map;
+      // English continues to fall back to Bókun source text.
+      const sourceTitle = String(activity.title || '');
+      const sourceSummary = String(activity.summary || '');
+      const sourceDescription = String(activity.description || activity.summary || '');
+      const title = pickFromOverlay(overlay.title, lang, sourceTitle)
+        || (lang === 'en' ? sourceTitle : '');
+      const summary = pickFromOverlay(overlay.summary, lang, sourceSummary)
+        || (lang === 'en' ? sourceSummary : '');
+      const description = pickFromOverlay(overlay.description, lang, sourceDescription)
+        || pickFromOverlay(overlay.summary, lang, sourceSummary)
+        || (lang === 'en' ? sourceDescription : '');
       const catKey = activity.categories && activity.categories[0];
       const mode = pickFromOverlay(overlay.mode, lang, '')
         || (catKey ? pickFromOverlay(T.CATEGORY[catKey], lang, lang === 'en' ? catKey : '') : '');
