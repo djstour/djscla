@@ -374,6 +374,12 @@
       const sourceTitle = String(activity.title || '');
       const sourceSummary = String(activity.summary || '');
       const sourceDescription = String(activity.description || activity.summary || '');
+      const sourceIncludedHtml = String(activity.includedHtml || '');
+      const sourceExcludedHtml = String(activity.excludedHtml || '');
+      const sourceRequirementsHtml = String(activity.requirementsHtml || '');
+      const sourceAttentionHtml = String(activity.attentionHtml || '');
+      const sourceCancellationPolicyTitle = String(activity.cancellationPolicyTitle || '');
+      const sourceCancellationPolicyHtml = String(activity.cancellationPolicyHtml || '');
       const title = pickFromOverlay(overlay.title, lang, sourceTitle)
         || (lang === 'en' ? sourceTitle : '');
       const summary = pickFromOverlay(overlay.summary, lang, sourceSummary)
@@ -381,6 +387,18 @@
       const description = pickFromOverlay(overlay.description, lang, sourceDescription)
         || pickFromOverlay(overlay.summary, lang, sourceSummary)
         || (lang === 'en' ? sourceDescription : '');
+      const includedHtml = pickFromOverlay(overlay.includedHtml, lang, sourceIncludedHtml)
+        || (lang === 'en' ? sourceIncludedHtml : '');
+      const excludedHtml = pickFromOverlay(overlay.excludedHtml, lang, sourceExcludedHtml)
+        || (lang === 'en' ? sourceExcludedHtml : '');
+      const requirementsHtml = pickFromOverlay(overlay.requirementsHtml, lang, sourceRequirementsHtml)
+        || (lang === 'en' ? sourceRequirementsHtml : '');
+      const attentionHtml = pickFromOverlay(overlay.attentionHtml, lang, sourceAttentionHtml)
+        || (lang === 'en' ? sourceAttentionHtml : '');
+      const cancellationPolicyTitle = pickFromOverlay(overlay.cancellationPolicyTitle, lang, sourceCancellationPolicyTitle)
+        || (lang === 'en' ? sourceCancellationPolicyTitle : '');
+      const cancellationPolicyHtml = pickFromOverlay(overlay.cancellationPolicyHtml, lang, sourceCancellationPolicyHtml)
+        || (lang === 'en' ? sourceCancellationPolicyHtml : '');
       const catKey = activity.categories && activity.categories[0];
       const mode = pickFromOverlay(overlay.mode, lang, '')
         || (catKey ? pickFromOverlay(T.CATEGORY[catKey], lang, lang === 'en' ? catKey : '') : '');
@@ -508,10 +526,10 @@
           .filter(Boolean),
         // Rich Bókun product content — passed through as HTML; the renderer
         // sanitises inline styles before inserting via dangerouslySetInnerHTML.
-        includedHtml: activity.includedHtml || '',
-        excludedHtml: activity.excludedHtml || '',
-        requirementsHtml: activity.requirementsHtml || '',
-        attentionHtml: activity.attentionHtml || '',
+        includedHtml,
+        excludedHtml,
+        requirementsHtml,
+        attentionHtml,
         inclusionsList: activity.inclusionsList || [],
         exclusionsList: activity.exclusionsList || [],
         knowBeforeYouGoItems: activity.knowBeforeYouGoItems || [],
@@ -532,8 +550,8 @@
         durationText: activity.durationText || null,
         guidanceTypes: activity.guidanceTypes || [],
         cancellationFreeHours: activity.cancellationFreeHours ?? null,
-        cancellationPolicyTitle: activity.cancellationPolicyTitle || null,
-        cancellationPolicyHtml: activity.cancellationPolicyHtml || '',
+        cancellationPolicyTitle: cancellationPolicyTitle || null,
+        cancellationPolicyHtml,
         raw: activity,
       };
     },
