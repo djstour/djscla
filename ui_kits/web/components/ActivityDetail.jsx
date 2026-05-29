@@ -43,14 +43,31 @@
 
   /** Prefer catalog price; fall back to cheapest ticket row while detail loads. */
   function resolvePriceUsd(tour) {
+    const UI = window.AuralisUI || {};
+    const fxRates = (window.AuralisData && window.AuralisData._fxRates) || { USD: 1 };
+    const toUsd = (amount, currency) => (
+      UI.amountToUsd
+        ? UI.amountToUsd(amount, currency || 'USD', fxRates)
+        : Number(amount) || 0
+    );
+
     const direct = Number(tour.priceUsd ?? tour.price);
-    if (Number.isFinite(direct) && direct > 0) return direct;
+    if (Number.isFinite(direct) && direct > 0) {
+      return toUsd(direct, tour.priceCurrency || tour.sourcePriceCurrency || 'USD');
+    }
     const rows = tour.priceTable || [];
     const amounts = rows
-      .map((r) => Number(r.amount))
+      .map((r) => toUsd(r.amount, r.currency || r.sourceCurrency || tour.sourcePriceCurrency || 'USD'))
       .filter((n) => Number.isFinite(n) && n > 0);
     if (amounts.length) return Math.min(...amounts);
     return null;
+  }
+
+  function normalizeUnitUsd(amount, currency) {
+    const UI = window.AuralisUI || {};
+    const fxRates = (window.AuralisData && window.AuralisData._fxRates) || { USD: 1 };
+    if (UI.amountToUsd) return UI.amountToUsd(amount, currency || 'USD', fxRates);
+    return Number(amount) || 0;
   }
 
   // --- Itinerary map (stylized Iceland silhouette + route pins) -----------------
@@ -553,7 +570,10 @@
     const unitPriceByCategoryId = new Map();
     categoryUnitPrices.forEach((row) => {
       if (row && row.pricingCategoryId != null && Number(row.unitAmount) > 0) {
-        unitPriceByCategoryId.set(String(row.pricingCategoryId), Number(row.unitAmount));
+        unitPriceByCategoryId.set(
+          String(row.pricingCategoryId),
+          normalizeUnitUsd(row.unitAmount, row.currency),
+        );
       }
     });
     bookableCategories.forEach((cat) => {

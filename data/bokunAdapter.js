@@ -62,6 +62,10 @@
       activityDetailCache.delete(detailCacheKey(id, lang));
       return null;
     }
+    if (pricingLooksMislabeled(hit.activity)) {
+      activityDetailCache.delete(detailCacheKey(id, lang));
+      return null;
+    }
     return hit.activity;
   }
 
@@ -603,7 +607,8 @@
     },
     pricingCategoryLabel(id, lang) {
       const T = A.BOKUN_TRANSLATIONS || {};
-      return pickFromOverlay(T.PRICING_CATEGORY?.[id], lang, '');
+      return pickFromOverlay(T.PRICING_CATEGORY?.[id], lang, '')
+        || pickFromOverlay(T.PRICING_CATEGORY?.[String(id)], lang, '');
     },
     warningLabel(key, lang) {
       const T = A.BOKUN_TRANSLATIONS || {};
@@ -637,6 +642,17 @@
     return Number.isFinite(n) && n > 0;
   }
 
+  /** Legacy payloads stored ISK magnitudes with currency=USD (e.g. 26990). */
+  function pricingLooksMislabeled(activity) {
+    if (!activity || typeof activity !== 'object') return false;
+    const rows = Array.isArray(activity.pricing) ? activity.pricing : [];
+    return rows.some((row) => {
+      const amount = Number(row && row.amount);
+      const cur = String((row && row.currency) || activity.currency || 'USD').toUpperCase();
+      return cur === 'USD' && Number.isFinite(amount) && amount >= 5000;
+    });
+  }
+
   function tourHasResolvablePrice(tour) {
     if (!tour) return false;
     if (hasPositiveAmount(tour.priceUsd) || hasPositiveAmount(tour.price)) return true;
@@ -659,6 +675,10 @@
     }
 
     if (tourHasResolvablePrice(merged) || !tourHasResolvablePrice(previewVm)) return merged;
+
+    const previewPrice = previewVm.priceUsd ?? previewVm.price;
+    const previewLooksBad = Number(previewPrice) >= 5000;
+    if (previewLooksBad) return merged;
 
     return {
       ...merged,
@@ -818,8 +838,6 @@
           tour: stabilizedInitialTour,
           raw: initialRaw,
         });
-
-        if (cachedRaw) return () => { cancelled = true; };
 
         BokunAdapter.fetchActivityById(activityId, { lang })
           .then((raw) => {

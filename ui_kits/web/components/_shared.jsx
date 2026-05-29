@@ -240,7 +240,8 @@
   /** Bókun USD amount → user-selected display currency (no hardcoded rates). */
   function formatDisplayPrice(amountUsd, displayCurrency, rates) {
     const code = (displayCurrency || FX_BASE).toUpperCase();
-    const converted = roundForCurrency(convertFromUsd(amountUsd, code, rates), code);
+    const usd = amountToUsd(amountUsd, FX_BASE, rates);
+    const converted = roundForCurrency(convertFromUsd(usd, code, rates), code);
     return formatPrice(converted, code);
   }
 
@@ -251,7 +252,8 @@
    */
   function formatDisplayPriceCompact(amountUsd, displayCurrency, rates) {
     const code = (displayCurrency || FX_BASE).toUpperCase();
-    const converted = Math.round(convertFromUsd(amountUsd, code, rates));
+    const usd = amountToUsd(amountUsd, FX_BASE, rates);
+    const converted = Math.round(convertFromUsd(usd, code, rates));
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
