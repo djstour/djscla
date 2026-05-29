@@ -23,10 +23,10 @@ function unwrapActivity(payload) {
 }
 
 function resolveSource(req) {
-  const requested = (req.query.source || process.env.CATALOG_SOURCE || 'bokun')
+  const requested = (req.query.source || process.env.CATALOG_SOURCE || 'db')
     .toString()
     .toLowerCase();
-  return requested === 'db' ? 'db' : 'bokun';
+  return requested === 'bokun' ? 'bokun' : 'db';
 }
 
 function isFresh(lastSyncedAt) {

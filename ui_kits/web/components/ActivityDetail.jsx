@@ -1,4 +1,4 @@
-/* ActivityDetail — full product page from Bókun GET /activity.json/{id}. */
+/* ActivityDetail — product page; detail from GET /api/bokun/activity (Bókun REST v2 components). */
 
 (function () {
   const { useState, useEffect, useMemo, useRef, useCallback } = React;

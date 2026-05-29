@@ -6,7 +6,7 @@
  *   node scripts/resync-activity-detail.js 1101833 18571 …
  *
  * Useful after extending lib/normalizeActivity.js: pulls fresh data from
- * Bókun's /activity.json/{id} endpoint, re-runs the normalizer, and PATCHes
+ * Bókun REST v2 experience components (getActivityById), re-runs the normalizer, and PATCHes
  * Supabase's bokun_payload — without rebuilding the entire 141-row table.
  */
 const path = require('path');

@@ -6,14 +6,14 @@
 
 | 項目 | 做法 |
 |------|------|
-| 目錄來源 | Bókun `POST /activity.json/search`（分頁，單次最多 100） |
-| 對外 API | `GET /api/catalog/activities`（穩定契約；內部仍打 Bókun） |
-| 小型目錄 | `?all=true` 在伺服器串頁拉齊（上限 `maxItems`，預設 2000）— **僅適合總 SKU 在數千以內** |
-| 前台載入 | `bokunAdapter` 預設 `all=true`，顯示正確 `meta.total`（如 123） |
+| 目錄來源 | Bókun **REST v2**：Marketplace 合約 + `GET .../experience/{id}/components`（見 [BOKUN_REST_V2.md](./BOKUN_REST_V2.md)） |
+| 對外 API | `GET /api/catalog/activities`（預設 `CATALOG_SOURCE=db`；`?source=bokun` 僅除錯／同步） |
+| 小型目錄 | `?all=true&source=bokun` 對通道內每個 experience 打 components — **慢，僅 Admin sync／腳本** |
+| 前台載入 | `bokunAdapter` 讀 `source=db`；`meta.total` 來自 Supabase |
 | 翻譯 | Vercel Cron 每 6h 自動補齊缺漏；首次全量用 `scripts/sync-all-translations.sh` |
 | 供應商篩選 | Tours 左側欄 **supplier pills**；數字 = channel search 依供應商分組列數（`vendorContractCounts`，sync 全 channel 自動發現） |
 
-**已知限制：** Bókun search 未保證依 `vendorId` 伺服器端篩選；多供應商全庫很大時，不可長期依賴 `all=true`。
+**已知限制：** v2 合約發現後依 `vendorId` 在應用層篩選；多供應商全庫很大時，不可長期依賴即時 `?all=true&source=bokun`。
 
 ---
 
@@ -37,7 +37,7 @@
 | Schema | `supabase/migrations/20260524093000_ota_core.sql` + `20260525025000_catalog_chip_ids.sql`（GIN on chip/route/facet + tsvector on `title_en`） |
 | Sync | `lib/catalogSync.js` → `fetchChannelCatalogForSync()`（全 channel 一輪掃描、自動發現供應商）+ `source_hash` diff；遺失 SKU 標 `is_active=false` |
 | 排程 | Vercel Cron `15 */2 * * *`（`vercel.json`）→ `GET /api/catalog/sync`；Bearer auth 走 `CRON_SECRET`／`CATALOG_SYNC_SECRET` |
-| 列表 API | `GET /api/catalog/activities?source=db&vendorId=…&chips=&routes=&facets=&q=` → 查 Supabase（GIN array overlap + tsvector FTS；fallback Bókun on miss） |
+| 列表 API | `GET /api/catalog/activities?source=db&vendorId=…&chips=&routes=&facets=&q=` → 查 Supabase（GIN + tsvector）；DB 讀取失敗才 fallback `source=bokun` |
 | 供應商 API | `GET /api/catalog/vendors` → 從 `vendors` 表回 logo/簡介/contractCount；DB 空時 fallback `data/bokunVendors.json`（僅標籤，sync 不依賴此檔） |
 | 詳情 API | `GET /api/bokun/activity?id=…` 先讀 `activities.bokun_payload`（若 `last_synced_at` 在 `CATALOG_DETAIL_TTL_MS` 內）；過期或 miss 才打 Bókun |
 | 前台 | Tours 既有 `bokunAdapter` 客戶端不變；`meta.source` 顯示 `db` 表示走快取 |
@@ -45,7 +45,7 @@
 
 ```mermaid
 flowchart LR
-  Bokun[Bókun search]
+  Bokun[Bókun REST v2]
   Cron[Catalog sync cron]
   DB[(Supabase)]
   API[/api/catalog]
@@ -53,7 +53,7 @@ flowchart LR
 
   Bokun --> Cron --> DB
   UI --> API --> DB
-  UI -->|detail book| Bokun
+  UI -->|detail avail book| Bokun
 ```
 
 ---

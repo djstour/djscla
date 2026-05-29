@@ -2,6 +2,8 @@
 
 This folder is the **source-of-truth boundary** between the live Bókun OTA inventory and our DJS Tour UI. Everything UI-side reads through `bokunAdapter.js`; everything API-side conforms to what Bókun actually returns. Translations are an overlay, not a fork of the data. Internal namespace `window.AuralisData.*` is kept verbatim for stability.
 
+> **Bókun API:** Production code uses **REST v2 only** (`/restapi/v2.0/*`). Sections below that mention `activity.json` describe the **legacy v1 field shape** still mirrored in `normalizeActivity()` — not live HTTP paths. See [docs/BOKUN_REST_V2.md](../docs/BOKUN_REST_V2.md).
+
 ```
 data/
 ├── bokunTranslations.js      ← per-field i18n overlay keyed by Bókun ID
@@ -41,9 +43,9 @@ data/
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 2 · Bókun shape we mock
+## 2 · Bókun shape (normalized view-model)
 
-`mockBokunData.js` mirrors the real `GET /activity.json` payload. The fields we care about (verbatim from Bókun's docs):
+Live ingest maps **v2** `ExperienceComponentsDto` → `normalizeActivity()` → the same field names the UI expects (formerly documented against v1 `activity.json`). Key fields:
 
 | Field | Type | Used for |
 |---|---|---|
@@ -84,7 +86,7 @@ npm run enrich:chips:api      # uses deployed /api (no keys)
 
 **Automation (planned, not implemented):** see [`docs/CHIP_IDS_AUTOMATION.md`](../docs/CHIP_IDS_AUTOMATION.md) — Vercel Cron + Supabase/KV (long-term) or GitHub Actions weekly commit (quick win).
 
-The real `availability` endpoint is a separate `POST /activity.json/{id}/availabilities`. We model the activity-level *summary* on the activity payload (Bókun does this too for the search endpoint) and keep the per-date `availabilities[]` array for the date-picker call.
+Per-date slots come from **v2** `GET /restapi/v2.0/availability/{experienceId}`. We keep activity-level summary on the normalized payload and `availabilities[]` for the date-picker API.
 
 ## 3 · Translation overlay
 
@@ -260,7 +262,7 @@ Components receive the **fully-localised view-model**. They do not look up trans
 
 ## 6 · Where this lands in production code
 
-- `mockBokunData.js` → deleted, replaced by a Next.js route handler that wraps `fetch('https://api.bokun.is/activity.json', { headers: { 'X-Bokun-AccessKey': process.env.BOKUN_KEY } })`.
+- `mockBokunData.js` → removed; catalog/detail use `lib/bokunV2Catalog.js` + `lib/bokun.js` (REST v2) and Supabase mirror (`CATALOG_SOURCE=db`).
 - `bokunTranslations.js` → moved to a `translations` table in Postgres with the same key shape `{activityId, field, lang} → {text, meta}`.
 - `bokunAdapter.js` → stays nearly identical. The fetch stub becomes a real fetch. The translation lookup becomes a DB read (or, more likely, a single hydrated payload from a Server Component).
 - The OpenAI worker → a separate Node/Inngest/Trigger.dev function that listens for Bókun webhooks and the editorial team's manual "retranslate" command.

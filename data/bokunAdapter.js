@@ -4,7 +4,7 @@
  *
  * It does FOUR things:
  *
- *   1. fetchActivities()        → simulates `GET /activity.json`.
+ *   1. fetchActivities()        → GET /api/catalog/activities (Supabase mirror, source=db).
  *                                  Real implementation swaps this for
  *                                  `fetch('/api/bokun/activities')`.
  *   2. toViewModel(activity,lang)→ flattens a raw activity into the lean
@@ -761,7 +761,7 @@
     };
 
     /**
-     * Detail page: show list preview immediately, then refresh from GET /activity.json/{id}.
+     * Detail page: show list preview immediately, then refresh from GET /api/bokun/activity.
      */
     A.useActivityDetail = function useActivityDetail(activityId, lang, previewVm) {
       const [state, setState] = useState({

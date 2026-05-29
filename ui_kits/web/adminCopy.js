@@ -16,6 +16,8 @@
     navTranslations: { hant: '翻譯', hans: '翻译', en: 'Translations' },
     navHealth: { hant: '健康檢查', hans: '健康检查', en: 'Health' },
     signOut: { hant: '登出', hans: '登出', en: 'Sign out' },
+    navMenu: { hant: '開啟選單', hans: '打开菜单', en: 'Open menu' },
+    navClose: { hant: '關閉選單', hans: '关闭菜单', en: 'Close menu' },
 
     loginSub: {
       hant: '目錄控管中心 — 同步、詳情更新、上架／下架。',

@@ -19,14 +19,14 @@ function cors(res) {
 
 /**
  * Decide which catalog backend to read from.
- * - ?source=db|bokun query param (debugging / staged rollout)
- * - CATALOG_SOURCE env (default 'bokun' for safety until first sync runs)
+ * - ?source=db|bokun query param (debugging / forced live Bókun)
+ * - CATALOG_SOURCE env (default db after catalog sync)
  */
 function resolveSource(req) {
-  const requested = (req.query.source || process.env.CATALOG_SOURCE || 'bokun')
+  const requested = (req.query.source || process.env.CATALOG_SOURCE || 'db')
     .toString()
     .toLowerCase();
-  return requested === 'db' ? 'db' : 'bokun';
+  return requested === 'bokun' ? 'bokun' : 'db';
 }
 
 async function readFromDb(opts) {
@@ -89,10 +89,6 @@ module.exports = async function handler(req, res) {
     if (source === 'db') {
       try {
         result = await readFromDb(opts);
-        if (!result.activities || (!result.activities.length && !hasServerFilters && !vendorId)) {
-          result = await readFromBokun(opts);
-          usedSource = 'bokun';
-        }
       } catch (dbErr) {
         console.warn('[Auralis] catalog DB read failed, falling back to Bókun:', dbErr.message);
         result = await readFromBokun(opts);

@@ -321,28 +321,55 @@
   }
 
   // ---------------- Sidebar ----------------
-  function Sidebar({ tab, setTab, counts, onLogout, prefToolbar, t }) {
-    const items = [
-      { id: 'overview', label: t('navOverview') },
-      { id: 'vendors', label: t('navVendors'), badge: counts.vendors },
-      { id: 'activities', label: t('navActivities'), badge: counts.activities },
-      { id: 'content', label: t('navContent') },
-      { id: 'marketing', label: t('navMarketing'), badge: counts.collections },
-      { id: 'inquiries', label: t('navInquiries'), badge: counts.inquiries },
-      { id: 'translations', label: t('navTranslations'), badge: counts.translationPending },
-      { id: 'health', label: t('navHealth') },
-    ];
+  const ADMIN_NAV_ITEMS = [
+    { id: 'overview', labelKey: 'navOverview' },
+    { id: 'vendors', labelKey: 'navVendors', countKey: 'vendors' },
+    { id: 'activities', labelKey: 'navActivities', countKey: 'activities' },
+    { id: 'content', labelKey: 'navContent' },
+    { id: 'marketing', labelKey: 'navMarketing', countKey: 'collections' },
+    { id: 'inquiries', labelKey: 'navInquiries', countKey: 'inquiries' },
+    { id: 'translations', labelKey: 'navTranslations', countKey: 'translationPending' },
+    { id: 'health', labelKey: 'navHealth' },
+  ];
+
+  function buildNavItems(t, counts) {
+    return ADMIN_NAV_ITEMS.map((it) => ({
+      id: it.id,
+      label: t(it.labelKey),
+      badge: it.countKey != null ? counts[it.countKey] : null,
+    }));
+  }
+
+  function Sidebar({ tab, setTab, counts, onLogout, prefToolbar, t, onNavSelect, onNavClose }) {
+    const items = buildNavItems(t, counts);
+    const pickTab = (id) => {
+      setTab(id);
+      if (onNavSelect) onNavSelect();
+    };
     return (
-      <aside className="admin-sidebar">
-        <div className="admin-brand">
-          <span className="admin-brand__dot" />
-          <span>{t('brandShort')}</span>
+      <aside className="admin-sidebar" aria-label={t('brandShort')}>
+        <div className="admin-sidebar__head">
+          <div className="admin-brand">
+            <span className="admin-brand__dot" />
+            <span>{t('brandShort')}</span>
+          </div>
+          {onNavClose ? (
+            <button
+              type="button"
+              className="admin-sidebar__close"
+              onClick={onNavClose}
+              aria-label={t('navClose')}
+            >
+              ×
+            </button>
+          ) : null}
         </div>
         {items.map((it) => (
           <button
             key={it.id}
+            type="button"
             className={`admin-nav-item${tab === it.id ? ' is-active' : ''}`}
-            onClick={() => setTab(it.id)}
+            onClick={() => pickTab(it.id)}
           >
             <span>{it.label}</span>
             {it.badge != null ? <span className="admin-nav-badge">{formatNumber(it.badge)}</span> : null}
@@ -2332,9 +2359,24 @@
       formatDisplayPrice,
     } = prefs || {};
     const [tab, setTab] = useState('overview');
+    const [navOpen, setNavOpen] = useState(false);
     const [overview, setOverview] = useState(null);
     const [overviewError, setOverviewError] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
+
+    useEffect(() => {
+      if (!navOpen) return undefined;
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const onKey = (e) => {
+        if (e.key === 'Escape') setNavOpen(false);
+      };
+      window.addEventListener('keydown', onKey);
+      return () => {
+        document.body.style.overflow = prev;
+        window.removeEventListener('keydown', onKey);
+      };
+    }, [navOpen]);
 
     const loadOverview = useCallback(() => {
       adminFetch('/api/admin/overview', token)
@@ -2359,11 +2401,44 @@
       collections: overview?.marketing?.collectionsActive,
       translationPending: null,
     };
+    const navItems = buildNavItems(t, counts);
+    const activeNavLabel = (navItems.find((it) => it.id === tab) || navItems[0]).label;
 
     return (
-      <div className="admin-shell">
-        <Sidebar tab={tab} setTab={setTab} counts={counts} onLogout={onLogout} prefToolbar={prefToolbar} t={t} />
-        <main className="admin-main">
+      <div className={`admin-shell${navOpen ? ' admin-shell--nav-open' : ''}`}>
+        <button
+          type="button"
+          className="admin-nav-overlay"
+          aria-label={t('navClose')}
+          onClick={() => setNavOpen(false)}
+        />
+        <Sidebar
+          tab={tab}
+          setTab={setTab}
+          counts={counts}
+          onLogout={onLogout}
+          prefToolbar={prefToolbar}
+          t={t}
+          onNavSelect={() => setNavOpen(false)}
+          onNavClose={() => setNavOpen(false)}
+        />
+        <div className="admin-body">
+          <header className="admin-mobile-header">
+            <button
+              type="button"
+              className="admin-mobile-header__menu"
+              aria-expanded={navOpen}
+              aria-label={t('navMenu')}
+              onClick={() => setNavOpen(true)}
+            >
+              <span className="admin-mobile-header__menu-icon" aria-hidden="true" />
+            </button>
+            <div className="admin-mobile-header__title">{activeNavLabel}</div>
+            <button type="button" className="admin-mobile-header__logout" onClick={onLogout}>
+              {t('signOut')}
+            </button>
+          </header>
+          <main className="admin-main">
           {prefToolbar ? (
             <div className="admin-topbar admin-topbar--mobile-only">{prefToolbar}</div>
           ) : null}
@@ -2404,7 +2479,8 @@
             <TranslationsPage token={token} reloadKey={reloadKey} t={t} />
           )}
           {tab === 'health' && <HealthPage token={token} overview={overview} t={t} />}
-        </main>
+          </main>
+        </div>
       </div>
     );
   }

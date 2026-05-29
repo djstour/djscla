@@ -8,7 +8,7 @@ This document tracks the first productization routes added on top of the design-
 |------|--------|-------|
 | `POST /api/inquiries` | Live skeleton | Writes concierge leads into Supabase `inquiries` |
 | `POST /api/availability/check` | Live skeleton | Calls Bókun availability API for a single date and returns price summary |
-| `POST /api/checkout/questions` | Preview skeleton | Infers question fields from activity shape; **not** the final Bókun checkout-options integration |
+| `POST /api/checkout/questions` | Live (v2) | `BOOKING_QUESTIONS` from experience components + inferred fallback; checkout on **Hosted Shop** |
 
 ## Required env
 
@@ -76,16 +76,16 @@ Returns a single-date availability decision plus line-item totals.
 
 Current behavior:
 
-- Uses `GET /activity.json/{id}/availabilities`
+- Uses Bókun **REST v2** `GET /restapi/v2.0/availability/{experienceId}?from=&to=`
 - Matches one date and optional `startTimeId`
-- Estimates totals from `pricesByRate`
+- Estimates totals from v2 slot / rate pricing
 - Falls back to normalized product pricing if rate pricing is missing
 
 Current limitations:
 
 - No extras / pickup / dropoff pricing yet
 - No multi-day range search yet
-- No reservation / cart creation yet
+- No REST cart creation — booking uses **Hosted Checkout** (`BOKUN_SHOP_URL`)
 
 ## `POST /api/checkout/questions`
 
@@ -115,13 +115,10 @@ Returns:
 
 Important:
 
-This route is a **preview contract** so frontend work can continue now. Before launch, replace the inference layer with Bókun checkout options:
-
-- `POST /checkout.json/options/booking-request`
-- then `POST /checkout.json/submit`
+- Questions: v2 `BOOKING_QUESTIONS` component when present; else inferred from normalized activity.
+- **No v1 `checkout.json`** — guests complete payment on the Bókun reseller shop (`lib/bokunCheckoutUrl.js`).
 
 Official references:
 
-- [Checking availability and pricing](https://bokun.dev/booking-api-restful/vU6sCfxwYdJWd1QAcLt12i/checking-availability-and-pricing/9x4PcziToX5g8WG4j5KMxt)
-- [Checkout](https://bokun.dev/booking-api-restful/vU6sCfxwYdJWd1QAcLt12i/checkout/qfxwephtAWaRgPt22kpyLF)
-- [Booking questions and answers](https://bokun.dev/booking-api-rest/vU6sCfxwYdJWd1QAcLt12i/booking-questions-and-answers/r69Hx5qrLtMXpYzBCC6NPp)
+- [Bókun REST v2](https://api-docs.bokun.dev/rest-v2)
+- [Hosted checkout (sales tools)](https://bokun.dev/)

@@ -1,6 +1,6 @@
 # Bókun API integration
 
-> **開發請依 [BOKUN_REST_V2.md](./BOKUN_REST_V2.md)**（官方 [REST v2](https://api-docs.bokun.dev/rest-v2) + v1 訂位流程分工）。本文件為環境變數與除錯速查。
+> **開發請依 [BOKUN_REST_V2.md](./BOKUN_REST_V2.md)**（官方 [REST v2](https://api-docs.bokun.dev/rest-v2)；結帳為 Hosted Shop）。本文件為環境變數與除錯速查。
 
 ## Architecture
 
@@ -68,7 +68,7 @@ npm start
 | Changed `.env.local` | Run `npm run stop:dev` then `npm start` (use the port printed in the terminal, not an old tab). |
 | Keys in file but still `BOKUN_CONFIG` | `vercel dev` may not load `.env.local` — use `npm start` (runs `scripts/dev.mjs` which injects env). |
 
-Quick check: http://localhost:3000/api/catalog/activities?lang=hant&all=true should return `"source":"bokun"` and an `activities` array.
+Quick check: `http://localhost:3000/api/catalog/activities?lang=hant&page=1&pageSize=12` should return `"source":"db"` and an `activities` array (after catalog sync).
 
 Production: https://djstour.com/
 
@@ -84,7 +84,7 @@ There is **no mock catalog fallback**. If `/api/bokun/activities` fails, the UI 
 | Booking channel | API key must belong to a booking channel with products to sell |
 | Permissions | Key needs access to activity search / booking API |
 
-Verify: open `https://djstour.com/api/catalog/activities?lang=hant&all=true` — should return `"source":"db"` (cache) or `"bokun"` (first run), `meta.total` (e.g. 132+), and an `activities` array.
+Verify: `https://djstour.com/api/catalog/activities?lang=hant&page=1&pageSize=12` — should return `"source":"db"`, `meta.total` > 0, and `activities` (use `?source=bokun` only for live v2 debug / sync).
 
 **Multi-vendor scale:** see [VENDOR_SCALE.md](./VENDOR_SCALE.md).
 
