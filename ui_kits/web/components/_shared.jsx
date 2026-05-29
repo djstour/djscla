@@ -694,6 +694,52 @@
    * <strong>/<em>/<br>/<a>; removes <script>/<iframe>/<style>; drops style/
    * class/onclick attributes; and links are forced to noopener+target=_blank.
    */
+  function escapeHtmlText(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /**
+   * Bókun descriptions are HTML; OpenAI overlays are plain text with paragraph
+   * breaks stripped. Re-wrap plain copy into <p> blocks for readable layout.
+   */
+  function plainTextToParagraphHtml(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return '';
+    if (/<[a-z][\s\S]*?>/i.test(trimmed)) return trimmed;
+
+    let parts = trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+
+    if (parts.length <= 1) {
+      parts = trimmed
+        .split(/(?<=[。！？])\s*(?=[A-Z])/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+    }
+
+    if (parts.length <= 1) {
+      return `<p>${escapeHtmlText(trimmed)}</p>`;
+    }
+
+    return parts.map((p) => `<p>${escapeHtmlText(p)}</p>`).join('');
+  }
+
+  function prepareActivityDescription(description) {
+    const raw = String(description || '').trim();
+    if (!raw) return { html: '', isRich: false, textLen: 0 };
+    const hasTags = /<[a-z][\s\S]*?>/i.test(raw);
+    if (hasTags) {
+      const html = sanitizeVendorHtml(raw);
+      const textLen = html.replace(/<[^>]*>/g, '').length;
+      return { html, isRich: true, textLen };
+    }
+    const html = sanitizeVendorHtml(plainTextToParagraphHtml(raw));
+    const textLen = raw.length;
+    return { html, isRich: true, textLen };
+  }
+
   function sanitizeVendorHtml(html) {
     if (!html || typeof html !== 'string') return '';
     let out = html;
@@ -1248,7 +1294,7 @@
     TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
     isWishlisted, toggleWishlist, subscribeWishlist,
     showToast,
-    sanitizeVendorHtml, vendorHtmlIsMeaningful,
+    sanitizeVendorHtml, vendorHtmlIsMeaningful, plainTextToParagraphHtml, prepareActivityDescription,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,

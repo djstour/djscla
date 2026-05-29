@@ -5,7 +5,7 @@
   const {
     Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl,
     useResponsiveImageProfile, useMobileViewport,
-    sanitizeVendorHtml, vendorHtmlIsMeaningful,
+    sanitizeVendorHtml, vendorHtmlIsMeaningful, prepareActivityDescription,
   } = window.AuralisUI;
   const Pax = window.AuralisPax || {};
 
@@ -607,11 +607,10 @@
     // Bókun ships descriptions as inline-styled HTML (rich paragraphs with
     // <p>, <br>, vendor styles). Detect that and route through the sanitiser
     // so paragraphs actually render, instead of collapsing into a wall of text.
-    const descriptionIsHtml = typeof tour.description === 'string' && /<[a-z][\s\S]*?>/i.test(tour.description);
-    const descriptionSanitizedHtml = descriptionIsHtml ? sanitizeVendorHtml(tour.description) : '';
-    const descriptionTextLen = descriptionIsHtml
-      ? descriptionSanitizedHtml.replace(/<[^>]*>/g, '').length
-      : (tour.description || '').length;
+    const descriptionPrepared = prepareActivityDescription(tour.description);
+    const descriptionIsHtml = descriptionPrepared.isRich;
+    const descriptionSanitizedHtml = descriptionPrepared.html;
+    const descriptionTextLen = descriptionPrepared.textLen;
     const descNeedsCollapse = descriptionTextLen > DESC_PREVIEW_CHARS;
     const descPreview = descNeedsCollapse && !descExpanded && !descriptionIsHtml
       ? `${tour.description.slice(0, DESC_PREVIEW_CHARS).trim()}…`
