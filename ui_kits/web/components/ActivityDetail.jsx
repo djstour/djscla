@@ -7,6 +7,7 @@
     useResponsiveImageProfile, useMobileViewport,
     sanitizeVendorHtml, vendorHtmlIsMeaningful,
     prepareActivityDescription, prepareVendorHtml, alignStringListToSource,
+    buildLocalizedCancellationPolicyHtml, shouldUseStructuredCancellationPolicy,
   } = window.AuralisUI;
   const Pax = window.AuralisPax || {};
 
@@ -631,10 +632,13 @@
     const excludedHtml = prepVendorHtml(tour.excludedHtml, rawActivity.excludedHtml);
     const requirementsHtml = prepVendorHtml(tour.requirementsHtml, rawActivity.requirementsHtml);
     const attentionHtml = prepVendorHtml(tour.attentionHtml, rawActivity.attentionHtml);
-    const cancellationPolicyHtml = prepVendorHtml(
-      tour.cancellationPolicyHtml,
-      rawActivity.cancellationPolicyHtml,
-    );
+    const cancellationPolicy = rawActivity.cancellationPolicy || null;
+    const cancellationPolicyHtml = shouldUseStructuredCancellationPolicy(cancellationPolicy, lang)
+      ? sanitizeVendorHtml(buildLocalizedCancellationPolicyHtml(cancellationPolicy, T))
+      : prepVendorHtml(
+        tour.cancellationPolicyHtml || (lang === 'en' ? rawActivity.cancellationPolicyHtml : ''),
+        rawActivity.cancellationPolicyHtml,
+      );
     const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
     const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml)

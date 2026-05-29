@@ -756,11 +756,101 @@
     return html;
   }
 
-  function alignPlainPartsToSource(text, sourceTexts) {
+  /** Chinese head phrase likely starting each English <li> (for merged overlay strings). */
+  function chineseAnchorForEnglishListItem(englishText) {
+    const en = String(englishText || '').trim();
+    const lower = en.toLowerCase();
+    const phraseMap = [
+      ['shoe spike grips', '鞋釘'],
+      ['shoe spike', '鞋釘'],
+      ['shoe grips', '鞋釘'],
+      ['spike grips', '抓地器'],
+      ['hiking boots', '健行靴'],
+      ['very sturdy footwear', '堅固的鞋子'],
+      ['sturdy footwear', '堅固的鞋子'],
+      ['hiking', '健行'],
+      ['warm outdoor layers', '溫暖的戶外'],
+      ['warm outdoor', '溫暖的戶外'],
+      ['weatherproof top layer', '防風防水'],
+      ['weatherproof', '防風防水'],
+      ['northern lights photos', '極光照片'],
+      ['northern lights', '極光'],
+      ['hot cocoa', '熱可可'],
+      ['free wifi', 'wifi'],
+      ['english speaking', '英語'],
+      ['guided visit', '導覽'],
+      ['pick-up', '接送'],
+      ['drop off', '下車'],
+      ['drop-off', '下車'],
+      ['headwear', '頭飾'],
+      ['gloves', '手套'],
+      ['scarves', '圍巾'],
+      ['scarf', '圍巾'],
+      ['camera', '相機'],
+      ['complementary retry', '免費重試'],
+      ['icelandic', '冰島'],
+    ];
+    for (let i = 0; i < phraseMap.length; i += 1) {
+      const [key, zh] = phraseMap[i];
+      if (lower.includes(key)) return zh;
+    }
+    const paren = en.match(/\(([^)]+)\)/);
+    if (paren) {
+      const p = paren[1].toLowerCase();
+      if (/oct/.test(p) && /apr/.test(p)) return '（十月到四月）';
+      if (/oct/.test(p) && /mar/.test(p)) return '（十月';
+      if (/apr/.test(p)) return '（四月';
+    }
+    return '';
+  }
+
+  function alignPlainPartsToListItems(text, sourceItems) {
+    const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+    const sources = (sourceItems || []).map((s) => String(s || '').trim()).filter(Boolean);
+    if (!cleaned) return [];
+    if (sources.length <= 1) return [cleaned];
+
+    const starts = [0];
+    for (let i = 1; i < sources.length; i += 1) {
+      const anchor = chineseAnchorForEnglishListItem(sources[i]);
+      let pos = -1;
+      if (anchor) {
+        pos = cleaned.indexOf(anchor, starts[i - 1] + 1);
+        if (pos < 0) pos = cleaned.indexOf(anchor, starts[i - 1]);
+      }
+      if (pos <= starts[i - 1]) {
+        const rest = cleaned.slice(starts[i - 1]);
+        const sub = splitBySourceParagraphWeights(rest, sources.slice(i - 1));
+        const out = [];
+        for (let j = 0; j < i - 1; j += 1) {
+          out.push(cleaned.slice(starts[j], starts[j + 1]).trim());
+        }
+        sub.forEach((part) => out.push(part));
+        return out.map((p) => String(p || '').trim()).filter((p, idx, arr) => p || idx < arr.length);
+      }
+      starts.push(pos);
+    }
+
+    const parts = [];
+    for (let i = 0; i < sources.length; i += 1) {
+      const start = starts[i];
+      const end = i + 1 < starts.length ? starts[i + 1] : cleaned.length;
+      parts.push(cleaned.slice(start, end).trim());
+    }
+    return parts;
+  }
+
+  function alignPlainPartsToSource(text, sourceTexts, opts) {
     const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
     const source = (sourceTexts || []).map((s) => String(s || '').trim()).filter(Boolean);
     if (!cleaned) return [];
     if (!source.length) return [cleaned];
+
+    if (opts && opts.listItems) {
+      const listParts = alignPlainPartsToListItems(cleaned, source);
+      if (listParts.length === source.length) return listParts;
+    }
+
     let parts = cleaned.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
     if (parts.length !== source.length) {
       parts = alignTextToSourceParagraphs(cleaned, source);
@@ -941,7 +1031,8 @@
     const sourceBlocks = extractHtmlBlocks(sourceHtml);
     if (sourceBlocks.length > 0) {
       const sourceTexts = sourceBlocks.map((b) => b.text);
-      const parts = alignPlainPartsToSource(trimmed, sourceTexts);
+      const allListItems = sourceBlocks.every((b) => b.type === 'li');
+      const parts = alignPlainPartsToSource(trimmed, sourceTexts, { listItems: allListItems });
       return blocksToHtml(sourceBlocks, parts);
     }
 
@@ -968,6 +1059,84 @@
     if (!raw) return '';
     if (/<[a-z][\s\S]*?>/i.test(raw)) return raw;
     return plainTextToStructuredHtml(raw, sourceHtml);
+  }
+
+  function cancellationPolicyHasVendorHtml(policy) {
+    if (!policy || typeof policy !== 'object') return false;
+    return ['descriptionHtml', 'html', 'bodyHtml', 'contentHtml'].some(
+      (key) => typeof policy[key] === 'string' && /<[a-z][\s\S]*?>/i.test(policy[key]),
+    );
+  }
+
+  function shouldUseStructuredCancellationPolicy(policy, lang) {
+    if (!policy || lang === 'en') return false;
+    if (cancellationPolicyHasVendorHtml(policy)) return false;
+    return Array.isArray(policy.penaltyRules) && policy.penaltyRules.length > 0;
+  }
+
+  function cancellationLeadTimeLabel(hours, pick) {
+    const h = Number(hours);
+    if (!Number.isFinite(h) || h <= 0) return '';
+    const days = h % 24 === 0 ? h / 24 : null;
+    if (days != null) {
+      return pick({
+        hant: `${days} 天`,
+        hans: `${days} 天`,
+        en: `${days} day${days !== 1 ? 's' : ''}`,
+      });
+    }
+    return pick({
+      hant: `${h} 小時`,
+      hans: `${h} 小时`,
+      en: `${h} hour${h !== 1 ? 's' : ''}`,
+    });
+  }
+
+  /** Mirror normalizeActivity penaltyRules → <ul><li> with localized copy. */
+  function buildLocalizedCancellationPolicyHtml(policy, pick) {
+    if (!policy || typeof policy !== 'object') return '';
+
+    const policyType = String(policy.type || policy.policyType || policy.policyTypeEnum || '').toUpperCase();
+    if (policyType === 'NON_REFUNDABLE') {
+      return `<p>${pick({
+        hant: '此行程不可退款。',
+        hans: '此行程不可退款。',
+        en: 'This experience is non-refundable.',
+      })}</p>`;
+    }
+    if (policyType === 'FULL_REFUND') {
+      return `<p>${pick({
+        hant: '可免費取消——行程開始前可全額退款。',
+        hans: '可免费取消——行程开始前可全额退款。',
+        en: 'Free cancellation — full refund before the experience starts.',
+      })}</p>`;
+    }
+    if (policyType === 'SIMPLE' && Number.isFinite(Number(policy.simpleCutoffHours)) && policy.simpleCutoffHours > 0) {
+      const timeStr = cancellationLeadTimeLabel(policy.simpleCutoffHours, pick);
+      return `<p>${pick({
+        hant: `行程開始前 ${timeStr} 可免費取消。`,
+        hans: `行程开始前 ${timeStr} 可免费取消。`,
+        en: `Free cancellation up to ${timeStr} before the experience starts.`,
+      })}</p>`;
+    }
+
+    if (!Array.isArray(policy.penaltyRules) || !policy.penaltyRules.length) return '';
+
+    const rules = policy.penaltyRules.map((r) => {
+      const hours = Number(r.cutoffHours);
+      const charge = Number(r.charge ?? r.percentage ?? 0);
+      if (!Number.isFinite(hours) || hours <= 0) return null;
+      const timeStr = cancellationLeadTimeLabel(hours, pick);
+      const line = pick({
+        hant: `若在行程開始前 ${timeStr} 內（含）取消預訂，將收取 ${charge}% 的取消費用。`,
+        hans: `若在行程开始前 ${timeStr} 内（含）取消预订，将收取 ${charge}% 的取消费用。`,
+        en: `We will charge a cancellation fee of ${charge}% if booking is cancelled ${timeStr} or less before event`,
+      });
+      return `<li>${escapeHtmlText(line)}</li>`;
+    }).filter(Boolean);
+
+    if (!rules.length) return '';
+    return `<ul>${rules.join('')}</ul>`;
   }
 
   function prepareActivityDescription(description, sourceHtml) {
@@ -1540,6 +1709,7 @@
     sanitizeVendorHtml, vendorHtmlIsMeaningful,
     plainTextToParagraphHtml, plainTextToStructuredHtml, prepareVendorHtml,
     prepareActivityDescription, alignStringListToSource,
+    buildLocalizedCancellationPolicyHtml, shouldUseStructuredCancellationPolicy,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,
