@@ -19,7 +19,7 @@ alwaysApply: true
 
 ## Forbidden
 
-- `activity.json`, `checkout.json`, `cart.json`, or any v1 `*.json` Bókun route — **except** the narrow cancellation read in `lib/bokunCancellationV1Fallback.js` (`GET /activity.json/{id}` → `cancellationPolicy` only when v2 cannot resolve marketplace supplier policies).
+- `activity.json`, `checkout.json`, `cart.json`, or any v1 `*.json` Bókun route — **except** narrow v1 reads in `lib/bokunCancellationV1Fallback.js` (`cancellationPolicy`), `lib/bokunExtrasV1Fallback.js` (`bookableExtras` prices), and `lib/bokunCustomFieldsV1Fallback.js` (`customFields` ticket HTML) when v2 omits them.
 - Reintroducing `searchActivities` or v1 availability/checkout helpers.
 - Guessing paths or fields — confirm in OpenAPI before coding.
 

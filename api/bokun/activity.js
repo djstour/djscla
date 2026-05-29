@@ -1,6 +1,7 @@
 const { getActivityById, getQuoteCurrency } = require('../../lib/bokun');
 const { enrichActivityCancellationPolicy } = require('../../lib/bokunCancellationPolicies');
 const { enrichActivityBookableExtras } = require('../../lib/bokunExtrasV1Fallback');
+const { enrichActivityTicketInfo } = require('../../lib/bokunCustomFieldsV1Fallback');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
@@ -105,6 +106,15 @@ async function hydrateExtrasIfNeeded(activity, bokunId) {
   };
   await enrichActivityBookableExtras(raw);
   return { ...activity, bookableExtras: raw.bookableExtras };
+}
+
+/** Backfill ticket/voucher HTML from v1 customFields when missing on cache. */
+async function hydrateTicketInfoIfNeeded(activity, bokunId) {
+  if (!activity || String(activity.ticketInfoHtml || '').trim()) return activity;
+  const raw = { id: bokunId, ticketInfoHtml: '' };
+  await enrichActivityTicketInfo(raw);
+  if (!String(raw.ticketInfoHtml || '').trim()) return activity;
+  return { ...activity, ticketInfoHtml: raw.ticketInfoHtml };
 }
 
 /** Backfill cancellation when DB cache predates v1 marketplace policy fallback. */
@@ -301,6 +311,7 @@ module.exports = async function handler(req, res) {
     if (activity) {
       activity = await hydrateCancellationIfNeeded(activity, id);
       activity = await hydrateExtrasIfNeeded(activity, id);
+      activity = await hydrateTicketInfoIfNeeded(activity, id);
       activity = await graftCatalogVendor(activity, id);
     }
 

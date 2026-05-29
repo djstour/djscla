@@ -384,6 +384,7 @@
       const sourceAttentionHtml = String(activity.attentionHtml || '');
       const sourceCancellationPolicyTitle = String(activity.cancellationPolicyTitle || '');
       const sourceCancellationPolicyHtml = String(activity.cancellationPolicyHtml || '');
+      const sourceTicketInfoHtml = String(activity.ticketInfoHtml || '');
       const PaxRef = typeof window !== 'undefined' ? window.AuralisPax : null;
       const sourceDurationText = (PaxRef && PaxRef.resolveActivityDuration)
         ? PaxRef.resolveActivityDuration({
@@ -412,6 +413,8 @@
         || (lang === 'en' ? sourceCancellationPolicyTitle : '');
       const cancellationPolicyHtml = pickFromOverlay(overlay.cancellationPolicyHtml, lang, sourceCancellationPolicyHtml)
         || (lang === 'en' ? sourceCancellationPolicyHtml : '');
+      const ticketInfoHtml = pickFromOverlay(overlay.ticketInfoHtml, lang, sourceTicketInfoHtml)
+        || (lang === 'en' ? sourceTicketInfoHtml : '');
       const durationText = pickFromOverlay(overlay.durationText, lang, sourceDurationText)
         || (lang === 'en' ? sourceDurationText : '');
       const knowBeforeYouGoItems = sourceKnowItems
@@ -594,6 +597,15 @@
         cancellationFreeHours: activity.cancellationFreeHours ?? null,
         cancellationPolicyTitle: cancellationPolicyTitle || null,
         cancellationPolicyHtml,
+        ticketInfoHtml,
+        isCombo: !!activity.isCombo,
+        privateExperience: !!activity.privateExperience,
+        location: activity.location || null,
+        locationLabel: activity.locationLabel || (activity.location && activity.location.name) || null,
+        videos: Array.isArray(activity.videos) ? activity.videos : [],
+        seasonalOpeningHoursLabels: Array.isArray(activity.seasonalOpeningHoursLabels)
+          ? activity.seasonalOpeningHoursLabels
+          : [],
         raw: activity,
       };
     },

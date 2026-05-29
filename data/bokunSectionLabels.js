@@ -15,6 +15,8 @@
       quickFacts: { hant: '快速資訊', hans: '快速资讯', en: 'Quick facts' },
       meetingPoint: { hant: '集合地點', hans: '集合地点', en: 'Meeting point' },
       optionalExtras: { hant: '加購項目', hans: '加购项目', en: 'Extras' },
+      ticketInformation: { hant: '票券資訊', hans: '票券信息', en: 'Voucher / ticket message' },
+      videos: { hant: '影片', hans: '视频', en: 'Videos' },
     },
     quickFacts: {
       experienceType: { hant: '行程類型', hans: '行程类型', en: 'Experience type' },
@@ -26,6 +28,11 @@
       liveTourGuide: { hant: '隨團導遊語言', hans: '随团导游语言', en: 'Live tour guide' },
       freeCancellation: { hant: '免費取消', hans: '免费取消', en: 'Free cancellation' },
       startTimes: { hant: '出發時間', hans: '出发时间', en: 'Starting times' },
+      location: { hant: '地點', hans: '地点', en: 'Location' },
+      dropOff: { hant: '下車服務', hans: '下车服务', en: 'Drop-off' },
+      seasonalOpeningHours: { hant: '季節營業時間', hans: '季节营业时间', en: 'Seasonal opening hours' },
+      privateExperience: { hant: '私人行程', hans: '私人行程', en: 'Private experience' },
+      comboTour: { hant: '組合行程', hans: '组合行程', en: 'Combo tour' },
     },
   };
 

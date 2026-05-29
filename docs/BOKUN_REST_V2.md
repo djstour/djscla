@@ -72,6 +72,8 @@
 | 逐日 slot 價 | availability DTO 無單價 | 由 `experiencePriceRules` + 可用性檢查推算 |
 | 取消政策全文 | v2 rate 只有 `cancellationPolicyId`；vendor 政策列表不含 marketplace 供應商政策 | v1 `activity.json/{id}` **僅取** `cancellationPolicy`（預設開啟）；詳情需 **Admin 詳情同步** 或 `source=bokun` 寫入 `bokun_payload` |
 | 加購價格 | v2 `extras` 元件無 `price` | v1 `bookableExtras` 補價（`lib/bokunExtrasV1Fallback.js`，`BOKUN_EXTRAS_V1_FALLBACK=0` 關閉）；`extraConfigs` 以 `extra.id` 對應 |
+| 票券／Voucher HTML | v2 `customInputFieldValues` 常為空 | v1 `customFields`（`flags: ticket`）→ `ticketInfoHtml`（`lib/bokunCustomFieldsV1Fallback.js`） |
+| Combo / 地點 / 季節營業 / 影片 | v2 `combo`、`location`、`seasonalOpeningHours`、`videos` | 詳情 Quick facts + 票券區 + 影片嵌入；接送站點列表仍待 v2 API |
 
 實作：`lib/bokunPickupPlaces.js`（預留 place group 解析）、`lib/catalogQuality.js`、`lib/v2ExperienceToActivity.js`。
 

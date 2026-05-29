@@ -17,6 +17,16 @@
     return node || { en: parts[parts.length - 1] || path };
   }
 
+  function videoEmbedUrl(sourceUrl) {
+    const u = String(sourceUrl || '').trim();
+    if (!u) return null;
+    const yt = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/i);
+    if (yt) return `https://www.youtube-nocookie.com/embed/${yt[1]}`;
+    const vimeo = u.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+    if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+    return null;
+  }
+
   function getBookableCategories(tour) {
     if (!tour) return [];
     if (Pax.bookablePricingCategories) return Pax.bookablePricingCategories(tour);
@@ -611,9 +621,11 @@
     const excludedHtml = sanitizeVendorHtml(tour.excludedHtml);
     const requirementsHtml = sanitizeVendorHtml(tour.requirementsHtml);
     const attentionHtml = sanitizeVendorHtml(tour.attentionHtml);
+    const ticketInfoHtml = sanitizeVendorHtml(tour.ticketInfoHtml);
     const cancellationPolicyHtml = sanitizeVendorHtml(tour.cancellationPolicyHtml);
     const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
+    const hasTicketInfo = vendorHtmlIsMeaningful(ticketInfoHtml);
     const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml)
       || !!(tour.cancellationPolicyTitle && String(tour.cancellationPolicyTitle).trim());
     const extras = Array.isArray(tour.bookableExtras) ? tour.bookableExtras : [];
@@ -623,6 +635,25 @@
     const showPickupInfo = pickupInfo && pickupInfo.enabled;
     const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
     const pickupAtHostedCheckout = !!(pickupInfo && pickupInfo.selectionAtHostedCheckout);
+    const dropoffEnabled = !!(pickupInfo && pickupInfo.dropoffEnabled);
+    const isComboTour = !!(tour.isCombo || rawActivity.isCombo);
+    const isPrivateTour = !!(tour.privateExperience || rawActivity.privateExperience);
+    const locationLabel = String(
+      tour.locationLabel
+      || (tour.location && tour.location.name)
+      || rawActivity.locationLabel
+      || (rawActivity.location && rawActivity.location.name)
+      || '',
+    ).trim();
+    const seasonalHoursLabels = (
+      tour.seasonalOpeningHoursLabels
+      || rawActivity.seasonalOpeningHoursLabels
+      || []
+    ).filter(Boolean);
+    const detailVideos = (tour.videos || rawActivity.videos || [])
+      .map((v) => ({ ...v, embedUrl: videoEmbedUrl(v.sourceUrl) }))
+      .filter((v) => v.embedUrl);
+    const hasVideos = detailVideos.length > 0;
     const pickupNoMessageHtml = sanitizeVendorHtml(pickupInfo?.noPickupMessage || '');
     const pickupNoMessageHasHtml = vendorHtmlIsMeaningful(pickupNoMessageHtml);
     const paxCap = livePaxMax;
@@ -668,7 +699,7 @@
       const plain = descriptionSanitizedHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       if (plain) heroIntro = plain;
     }
-    const hasHeroHighlights = !!(heroDuration || heroDifficulty);
+    const hasHeroHighlights = !!(heroDuration || heroDifficulty || isComboTour);
     const inclusionLabels = (tour.inclusionsList || [])
       .map((code) => enumLabel('INCLUSION_EXCLUSION', code))
       .filter(Boolean);
@@ -825,13 +856,35 @@
       .filter(Boolean);
     const startTimesText = [...new Set(startTimeLabels)].join(', ');
 
+    const dropOffText = dropoffEnabled
+      ? T({
+          hant: '提供下車服務',
+          hans: '提供下车服务',
+          en: 'Drop-off service available',
+        })
+      : '';
+
     const quickFacts = [
       experienceType && { label: T(bokunSectionLabel('quickFacts.experienceType')), value: experienceType },
+      isComboTour && {
+        label: T(bokunSectionLabel('quickFacts.comboTour')),
+        value: T({ hant: '多段組合行程', hans: '多段组合行程', en: 'Multi-part combo experience' }),
+      },
+      isPrivateTour && {
+        label: T(bokunSectionLabel('quickFacts.privateExperience')),
+        value: T({ hant: '是', hans: '是', en: 'Yes' }),
+      },
       heroDuration && { label: T(bokunSectionLabel('quickFacts.duration')), value: heroDuration },
+      locationLabel && { label: T(bokunSectionLabel('quickFacts.location')), value: locationLabel },
       bookingCutoffText && { label: T(bokunSectionLabel('quickFacts.bookingInAdvance')), value: bookingCutoffText },
       difficultyLabel && { label: T(bokunSectionLabel('quickFacts.physicalDifficulty')), value: difficultyLabel },
       freeCancellationText && { label: T(bokunSectionLabel('quickFacts.freeCancellation')), value: freeCancellationText },
       startTimesText && { label: T(bokunSectionLabel('quickFacts.startTimes')), value: startTimesText },
+      dropOffText && { label: T(bokunSectionLabel('quickFacts.dropOff')), value: dropOffText },
+      seasonalHoursLabels.length > 0 && {
+        label: T(bokunSectionLabel('quickFacts.seasonalOpeningHours')),
+        valueItems: seasonalHoursLabels,
+      },
       knowItems.length > 0 && { label: T(bokunSectionLabel('quickFacts.knowBeforeYouGo')), valueItems: knowItems },
       categoryChips.length > 0 && { label: T(bokunSectionLabel('quickFacts.categories')), valueChips: categoryChips },
       liveGuideNames.length > 0 && { label: T(bokunSectionLabel('quickFacts.liveTourGuide')), value: liveGuideNames.join(', ') },
@@ -845,7 +898,9 @@
       || hasExcluded
       || hasRequirements
       || hasAttention
+      || hasTicketInfo
       || hasCancellationPolicy
+      || hasVideos
       || hasQuickFacts
     );
     const hasItineraryTab = stopsNamed.length > 0;
@@ -1140,6 +1195,12 @@
                     {heroDifficulty}
                   </span>
                 )}
+                {isComboTour && (
+                  <span className="detail-hero-chip detail-hero-chip--combo">
+                    <Icon name="layers" size={14} color="rgba(255,255,255,0.9)" />
+                    {T(bokunSectionLabel('quickFacts.comboTour'))}
+                  </span>
+                )}
               </div>
             )}
             <div className="detail-hero-facts">
@@ -1331,9 +1392,36 @@
                       </SubSection>
                     )}
 
+                    {hasTicketInfo && (
+                      <SubSection title={T(bokunSectionLabel('detail.ticketInformation'))}>
+                        <div className="detail-attention-card detail-attention-card--ticket">
+                          <Icon name="ticket" size={18} color="var(--aurora-deep, #00837A)" />
+                          <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: ticketInfoHtml }} />
+                        </div>
+                      </SubSection>
+                    )}
+
                     {hasRequirements && (
                       <SubSection title={T(bokunSectionLabel('detail.whatToBring'))}>
                         <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: requirementsHtml }} />
+                      </SubSection>
+                    )}
+
+                    {hasVideos && (
+                      <SubSection title={T(bokunSectionLabel('detail.videos'))}>
+                        <div className="detail-video-grid">
+                          {detailVideos.map((video) => (
+                            <div key={video.id || video.sourceUrl} className="detail-video-embed">
+                              <iframe
+                                src={video.embedUrl}
+                                title={tour.title}
+                                loading="lazy"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </SubSection>
                     )}
 
@@ -1451,6 +1539,16 @@
                     aria-labelledby="detail-tab-pickup"
                     className="detail-tab-panel"
                   >
+                    {dropoffEnabled && (
+                      <p className="detail-tab-panel__lead">
+                        {T({
+                          hant: '本行程提供下車服務。',
+                          hans: '本行程提供下车服务。',
+                          en: 'Drop-off service is available for this experience.',
+                        })}
+                      </p>
+                    )}
+
                     {showPickupInfo && pickupAtHostedCheckout && pickupPlaces.length === 0 && (
                       <p className="detail-tab-panel__lead detail-hosted-pickup-note">
                         {T({
