@@ -636,6 +636,7 @@
     const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
     const pickupAtHostedCheckout = !!(pickupInfo && pickupInfo.selectionAtHostedCheckout);
     const dropoffEnabled = !!(pickupInfo && pickupInfo.dropoffEnabled);
+    const rawActivity = tour.raw || {};
     const isComboTour = !!(tour.isCombo || rawActivity.isCombo);
     const isPrivateTour = !!(tour.privateExperience || rawActivity.privateExperience);
     const locationLabel = String(
@@ -681,7 +682,6 @@
     };
     const experienceType = enumLabel('ACTIVITY_TYPE', tour.activityType);
     const difficultyLabel = enumLabel('DIFFICULTY', tour.difficultyLevel);
-    const rawActivity = tour.raw || {};
     const heroDuration = Pax.resolveActivityDuration
       ? Pax.resolveActivityDuration(tour)
       : String(
