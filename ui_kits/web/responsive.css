@@ -4641,6 +4641,40 @@ html[data-site-theme="sun"] .detail-attention-card {
   flex-wrap: wrap;
   gap: 6px;
 }
+
+.detail-optional-extras-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.detail-optional-extras-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font: 500 14px/1.45 var(--font-text);
+  color: var(--fg-1);
+}
+.detail-optional-extras-list__item:last-child {
+  border-bottom: none;
+}
+.detail-optional-extras-list__price {
+  font: 600 13px/1.4 var(--font-text);
+  color: var(--aurora-deep, #00837A);
+}
+.detail-optional-extras-list__info {
+  flex: 1 1 100%;
+  font: 400 13px/1.5 var(--font-text);
+  color: var(--fg-2);
+}
+.detail-optional-extras-list__hint {
+  margin: 0;
+  font: 400 12px/1.5 var(--font-text);
+  color: var(--fg-3);
+}
+
 @media (max-width: 720px) {
   .detail-facts-card { padding: 20px 18px; }
   .detail-facts-grid { grid-template-columns: 1fr; column-gap: 0; row-gap: 18px; }

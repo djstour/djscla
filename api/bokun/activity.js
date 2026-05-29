@@ -1,4 +1,6 @@
 const { getActivityById, getQuoteCurrency } = require('../../lib/bokun');
+const { enrichActivityCancellationPolicy } = require('../../lib/bokunCancellationPolicies');
+const { enrichActivityBookableExtras } = require('../../lib/bokunExtrasV1Fallback');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
@@ -80,6 +82,68 @@ async function fetchFromBokun(id, uiLang) {
   let activity = normalizeActivity(raw);
   activity = await graftCatalogVendor(activity, id);
   return { activity, quoteCurrency, raw };
+}
+
+/** Backfill extra prices when DB cache predates v1 extras fallback. */
+async function hydrateExtrasIfNeeded(activity, bokunId) {
+  if (!activity || !Array.isArray(activity.bookableExtras) || !activity.bookableExtras.length) {
+    return activity;
+  }
+  const needsRefresh = activity.bookableExtras.some((ex) => {
+    if (ex.included) return false;
+    const price = Number(ex.price);
+    const missingPrice = !Number.isFinite(price) || price <= 0;
+    const staleFreeFlag = !!ex.free && Number.isFinite(price) && price > 0;
+    return missingPrice || staleFreeFlag;
+  });
+  if (!needsRefresh) return activity;
+
+  const raw = {
+    id: bokunId,
+    bookableExtras: activity.bookableExtras,
+    rates: activity.rates || [],
+  };
+  await enrichActivityBookableExtras(raw);
+  return { ...activity, bookableExtras: raw.bookableExtras };
+}
+
+/** Backfill cancellation when DB cache predates v1 marketplace policy fallback. */
+async function hydrateCancellationIfNeeded(activity, bokunId) {
+  if (!activity) return activity;
+  if (String(activity.cancellationPolicyHtml || '').trim()) return activity;
+  const policy = activity.cancellationPolicy;
+  const policyId = (policy && policy.id != null)
+    ? policy.id
+    : (Array.isArray(activity.rates) && activity.rates[0] && activity.rates[0].cancellationPolicyId);
+  if (policyId == null) return activity;
+  if (policy && Array.isArray(policy.penaltyRules) && policy.penaltyRules.length) {
+    const patch = normalizeActivity({
+      cancellationPolicy: policy,
+      rates: activity.rates || [{ cancellationPolicyId: policyId }],
+    });
+    return {
+      ...activity,
+      cancellationPolicy: patch.cancellationPolicy,
+      cancellationPolicyTitle: patch.cancellationPolicyTitle,
+      cancellationPolicyHtml: patch.cancellationPolicyHtml,
+      cancellationFreeHours: patch.cancellationFreeHours,
+    };
+  }
+
+  const raw = {
+    id: bokunId,
+    cancellationPolicy: policy || { id: policyId, title: null, penaltyRules: [] },
+    rates: activity.rates || [{ cancellationPolicyId: policyId }],
+  };
+  await enrichActivityCancellationPolicy(raw);
+  const patch = normalizeActivity(raw);
+  return {
+    ...activity,
+    cancellationPolicy: patch.cancellationPolicy,
+    cancellationPolicyTitle: patch.cancellationPolicyTitle,
+    cancellationPolicyHtml: patch.cancellationPolicyHtml,
+    cancellationFreeHours: patch.cancellationFreeHours,
+  };
 }
 
 module.exports = async function handler(req, res) {
@@ -235,6 +299,8 @@ module.exports = async function handler(req, res) {
     }
 
     if (activity) {
+      activity = await hydrateCancellationIfNeeded(activity, id);
+      activity = await hydrateExtrasIfNeeded(activity, id);
       activity = await graftCatalogVendor(activity, id);
     }
 

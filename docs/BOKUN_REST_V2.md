@@ -52,7 +52,7 @@
 
 `GET /restapi/v2.0/experience/{id}/components?componentType=ALL`  
 → `v2ExperienceToActivity`（`type`、`cutoff`、`meetingPoint`、`categories` 等）  
-→ `enrichActivityCancellationPolicy`（`GET /cancellation/policies` 依 rate 的 `cancellationPolicyId` 補全）  
+→ `enrichActivityCancellationPolicy`（先 `GET /cancellation/policies`；marketplace 供應商政策若不在列表，再 **僅** `GET /activity.json/{id}` 讀 `cancellationPolicy` — 見 `lib/bokunCancellationV1Fallback.js`，可用 `BOKUN_CANCELLATION_V1_FALLBACK=0` 關閉）  
 → `normalizeActivity`  
 → `GET /api/bokun/activity`
 
@@ -70,6 +70,8 @@
 | 列表價格 | components 常缺 channel `from` | 詳情同步時保留 search 價，且不以「看似有數字但 &lt;$12」的舊列覆蓋 |
 | 行程站 HTML | `itinerary[]` 常只有標題 | 完整敘述以 `description` HTML 為準；行程安排分頁為路線概覽 |
 | 逐日 slot 價 | availability DTO 無單價 | 由 `experiencePriceRules` + 可用性檢查推算 |
+| 取消政策全文 | v2 rate 只有 `cancellationPolicyId`；vendor 政策列表不含 marketplace 供應商政策 | v1 `activity.json/{id}` **僅取** `cancellationPolicy`（預設開啟）；詳情需 **Admin 詳情同步** 或 `source=bokun` 寫入 `bokun_payload` |
+| 加購價格 | v2 `extras` 元件無 `price` | v1 `bookableExtras` 補價（`lib/bokunExtrasV1Fallback.js`，`BOKUN_EXTRAS_V1_FALLBACK=0` 關閉）；`extraConfigs` 以 `extra.id` 對應 |
 
 實作：`lib/bokunPickupPlaces.js`（預留 place group 解析）、`lib/catalogQuality.js`、`lib/v2ExperienceToActivity.js`。
 

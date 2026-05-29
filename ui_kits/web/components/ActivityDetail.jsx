@@ -9,6 +9,14 @@
   } = window.AuralisUI;
   const Pax = window.AuralisPax || {};
 
+  /** Bókun back-office / widget section titles (see data/bokunSectionLabels.js). */
+  function bokunSectionLabel(path) {
+    const parts = String(path || '').split('.');
+    let node = window.AuralisData && window.AuralisData.BOKUN_SECTION_LABELS;
+    for (let i = 0; i < parts.length && node; i += 1) node = node[parts[i]];
+    return node || { en: parts[parts.length - 1] || path };
+  }
+
   function getBookableCategories(tour) {
     if (!tour) return [];
     if (Pax.bookablePricingCategories) return Pax.bookablePricingCategories(tour);
@@ -606,7 +614,8 @@
     const cancellationPolicyHtml = sanitizeVendorHtml(tour.cancellationPolicyHtml);
     const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
-    const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml);
+    const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml)
+      || !!(tour.cancellationPolicyTitle && String(tour.cancellationPolicyTitle).trim());
     const extras = Array.isArray(tour.bookableExtras) ? tour.bookableExtras : [];
     const hasExtras = extras.length > 0;
     const optionalExtras = extras.filter((ex) => !ex.included && (!ex.selectionType || ex.selectionType === 'OPTIONAL'));
@@ -783,14 +792,49 @@
       });
     }
 
+    const freeCancelHours = Number(tour.cancellationFreeHours ?? rawActivity.cancellationFreeHours);
+    let freeCancellationText = '';
+    if (Number.isFinite(freeCancelHours) && freeCancelHours > 0) {
+      if (freeCancelHours % 24 === 0) {
+        const days = freeCancelHours / 24;
+        freeCancellationText = T({
+          hant: `出發前 ${days} 天內可免費取消`,
+          hans: `出发前 ${days} 天内可免费取消`,
+          en: `Free cancellation up to ${days} day${days === 1 ? '' : 's'} before the experience`,
+        });
+      } else {
+        freeCancellationText = T({
+          hant: `出發前 ${freeCancelHours} 小時內可免費取消`,
+          hans: `出发前 ${freeCancelHours} 小时内可免费取消`,
+          en: `Free cancellation up to ${freeCancelHours} hour${freeCancelHours === 1 ? '' : 's'} before the experience`,
+        });
+      }
+    }
+
+    const startTimeLabels = (tour.startTimes || [])
+      .map((st) => {
+        if (st && st.label) return String(st.label).trim();
+        const h = Number(st?.hour);
+        const m = Number(st?.minute);
+        if (!Number.isFinite(h)) return '';
+        const mm = Number.isFinite(m) ? m : 0;
+        const period = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${String(mm).padStart(2, '0')} ${period}`;
+      })
+      .filter(Boolean);
+    const startTimesText = [...new Set(startTimeLabels)].join(', ');
+
     const quickFacts = [
-      experienceType && { label: T({ hant: '行程類型', hans: '行程类型', en: 'Experience type' }), value: experienceType },
-      heroDuration && { label: T({ hant: '時長', hans: '时长', en: 'Duration' }), value: heroDuration },
-      bookingCutoffText && { label: T({ hant: '預訂提前期', hans: '预订提前期', en: 'Booking in advance' }), value: bookingCutoffText },
-      difficultyLabel && { label: T({ hant: '體能難度', hans: '体能难度', en: 'Physical difficulty level' }), value: difficultyLabel },
-      knowItems.length > 0 && { label: T({ hant: '出發前須知', hans: '出发前须知', en: 'Know before you go' }), valueItems: knowItems },
-      categoryChips.length > 0 && { label: T({ hant: '分類', hans: '分类', en: 'Categories' }), valueChips: categoryChips },
-      liveGuideNames.length > 0 && { label: T({ hant: '隨團導遊語言', hans: '随团导游语言', en: 'Live tour guide' }), value: liveGuideNames.join(', ') },
+      experienceType && { label: T(bokunSectionLabel('quickFacts.experienceType')), value: experienceType },
+      heroDuration && { label: T(bokunSectionLabel('quickFacts.duration')), value: heroDuration },
+      bookingCutoffText && { label: T(bokunSectionLabel('quickFacts.bookingInAdvance')), value: bookingCutoffText },
+      difficultyLabel && { label: T(bokunSectionLabel('quickFacts.physicalDifficulty')), value: difficultyLabel },
+      freeCancellationText && { label: T(bokunSectionLabel('quickFacts.freeCancellation')), value: freeCancellationText },
+      startTimesText && { label: T(bokunSectionLabel('quickFacts.startTimes')), value: startTimesText },
+      knowItems.length > 0 && { label: T(bokunSectionLabel('quickFacts.knowBeforeYouGo')), valueItems: knowItems },
+      categoryChips.length > 0 && { label: T(bokunSectionLabel('quickFacts.categories')), valueChips: categoryChips },
+      liveGuideNames.length > 0 && { label: T(bokunSectionLabel('quickFacts.liveTourGuide')), value: liveGuideNames.join(', ') },
     ].filter(Boolean);
     const hasQuickFacts = quickFacts.length > 0;
 
@@ -822,15 +866,15 @@
     const detailTabs = [
       hasDescriptionTab && {
         id: 'description',
-        label: T({ hant: '行程說明', hans: '行程说明', en: 'Description' }),
+        label: T(bokunSectionLabel('tabs.description')),
       },
       hasItineraryTab && {
         id: 'itinerary',
-        label: T({ hant: '行程安排', hans: '行程安排', en: 'Itinerary' }),
+        label: T(bokunSectionLabel('tabs.itinerary')),
       },
       hasPickupTab && {
         id: 'pickup',
-        label: T({ hant: '接送地點', hans: '接送地点', en: 'Pick-up' }),
+        label: T(bokunSectionLabel('tabs.pickup')),
       },
     ].filter(Boolean);
 
@@ -1253,7 +1297,7 @@
                     )}
 
                     {hasIncluded && (
-                      <SubSection title={T({ hant: '費用包含', hans: '费用包含', en: 'Included' })}>
+                      <SubSection title={T(bokunSectionLabel('detail.included'))}>
                         {inclusionLabels.length > 0 && (
                           <ul className="detail-fact__items detail-enum-list">
                             {inclusionLabels.map((lbl) => (<li key={lbl}>{lbl}</li>))}
@@ -1266,7 +1310,7 @@
                     )}
 
                     {hasExcluded && (
-                      <SubSection title={T({ hant: '費用不含', hans: '费用不含', en: 'Excluded' })}>
+                      <SubSection title={T(bokunSectionLabel('detail.excluded'))}>
                         {exclusionLabels.length > 0 && (
                           <ul className="detail-fact__items detail-enum-list">
                             {exclusionLabels.map((lbl) => (<li key={lbl}>{lbl}</li>))}
@@ -1278,14 +1322,8 @@
                       </SubSection>
                     )}
 
-                    {hasRequirements && (
-                      <SubSection title={T({ hant: '參加條件', hans: '参加条件', en: 'Requirements' })}>
-                        <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: requirementsHtml }} />
-                      </SubSection>
-                    )}
-
                     {hasAttention && (
-                      <SubSection title={T({ hant: '注意事項', hans: '注意事项', en: 'Attention' })}>
+                      <SubSection title={T(bokunSectionLabel('detail.pleaseNote'))}>
                         <div className="detail-attention-card">
                           <Icon name="info" size={18} color="var(--warning, #FFB347)" />
                           <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: attentionHtml }} />
@@ -1293,8 +1331,14 @@
                       </SubSection>
                     )}
 
+                    {hasRequirements && (
+                      <SubSection title={T(bokunSectionLabel('detail.whatToBring'))}>
+                        <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: requirementsHtml }} />
+                      </SubSection>
+                    )}
+
                     {hasCancellationPolicy && (
-                      <SubSection title={T({ hant: '取消政策', hans: '取消政策', en: 'Cancellation policy' })}>
+                      <SubSection title={T(bokunSectionLabel('detail.cancellationPolicy'))}>
                         <div className="detail-attention-card">
                           <Icon name="shield-check" size={18} color="var(--aurora-deep, #00837A)" />
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', minWidth: 0 }}>
@@ -1313,7 +1357,7 @@
                     )}
 
                     {hasQuickFacts && (
-                      <SubSection title={T({ hant: '快速資訊', hans: '快速资讯', en: 'Quick facts' })}>
+                      <SubSection title={T(bokunSectionLabel('detail.quickFacts'))}>
                         <div className="detail-facts-card">
                           <div className="detail-facts-grid">
                             {quickFacts.map((f, i) => {
@@ -1445,7 +1489,7 @@
                     )}
 
                     {tour.meetingPoint && (
-                      <SubSection title={T({ hant: '集合地點', hans: '集合地点', en: 'Meeting point' })}>
+                      <SubSection title={T(bokunSectionLabel('detail.meetingPoint'))}>
                         <div className="detail-meeting">
                           <Icon name="map-pin" size={20} color="var(--coral)" />
                           <div className="detail-meeting__body">
@@ -1850,15 +1894,18 @@
                 {optionalExtras && optionalExtras.length > 0 && (
                   <fieldset className="detail-extras-fieldset">
                     <legend className="detail-book-label">
-                      {T({ hant: '加購項目', hans: '加购项目', en: 'Extras' })}
+                      {T(bokunSectionLabel('detail.optionalExtras'))}
                     </legend>
                     <ul className="detail-extras-checklist">
                       {optionalExtras.map((ex) => {
                         const checked = !!selectedExtras[ex.id];
                         const unit = Number(ex.price) || 0;
+                        const priced = Number.isFinite(unit) && unit > 0;
                         let priceLabel;
-                        if (ex.free) {
+                        if (ex.free && !priced) {
                           priceLabel = T({ hant: '免費', hans: '免费', en: 'Free' });
+                        } else if (!priced) {
+                          priceLabel = '';
                         } else if (ex.pricedPerPerson) {
                           const parts = bookableCategories
                             .filter((cat) => (Number(paxCounts[String(cat.id)]) || 0) > 0)
