@@ -342,7 +342,8 @@
           setPaxCounts(Pax.initPaxCounts(cats, initialGuestCounts));
         } else {
           const next = {};
-          cats.forEach((c) => { next[String(c.id)] = c.defaultCategory ? 1 : 0; });
+          const defaultAdult = (Pax.DEFAULT_ADULT_PAX != null) ? Pax.DEFAULT_ADULT_PAX : 2;
+          cats.forEach((c) => { next[String(c.id)] = c.defaultCategory ? defaultAdult : 0; });
           setPaxCounts(next);
         }
       } else {
@@ -858,7 +859,7 @@
         startTimeLabel: startTimeRow ? (startTimeRow.label || startTimeRow.startTime || null) : null,
         guests: Pax.paxCountsToLegacyGuests
           ? { ...Pax.paxCountsToLegacyGuests(bookableCategories, paxCounts), paxCounts: { ...paxCounts } }
-          : { adults: 1, children: 0 },
+          : { adults: (Pax.DEFAULT_ADULT_PAX != null) ? Pax.DEFAULT_ADULT_PAX : 2, children: 0 },
         pickupPlaceId: selectedPickupId ? Number(selectedPickupId) : null,
         pickupTitle: pickupRow ? pickupRow.title : null,
         extras: selectedExtrasRows,
@@ -948,7 +949,7 @@
           startTimeId: selectedStartTime || null,
           guests: Pax.paxCountsToLegacyGuests
             ? Pax.paxCountsToLegacyGuests(bookableCategories, paxCounts)
-            : { adults: 1, children: 0 },
+            : { adults: (Pax.DEFAULT_ADULT_PAX != null) ? Pax.DEFAULT_ADULT_PAX : 2, children: 0 },
         }));
 
         const res = await fetch('/api/inquiries', {
