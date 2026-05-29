@@ -703,13 +703,23 @@
     return Number.isFinite(age) && age >= 0 && age < PRICE_DISPLAY_TTL_MS;
   }
 
-  /** 僅顯示管理員核准或 v2 即時報價（見 lib/catalogPriceVerification.js，不用 v1）。 */
+  /** 通過 v2 自動稽核的 catalog 牌價可顯示（見 lib/catalogPriceVerification.js）。 */
   function isDisplayableCatalogPrice(activity) {
     if (!activity || pricingLooksMislabeled(activity)) return false;
     const pd = activity.priceDisplay;
-    if (!isPriceDisplayFresh(pd) || !pd.trusted) return false;
-    const src = String(pd.source || '');
-    return src === 'admin' || src === 'v2_availability';
+    if (isPriceDisplayFresh(pd)) {
+      if (pd.trusted === true) return true;
+      const blocked = ['no_catalog_price', 'mislabeled_currency', 'commission_like_amount', 'implausible_catalog'];
+      if (blocked.includes(String(pd.reason || ''))) return false;
+    }
+    if (!hasUsablePrice(activity)) return false;
+    const amounts = collectCatalogDisplayAmounts(activity);
+    if (!amounts.length) return false;
+    return Math.max(...amounts) >= MIN_PLAUSIBLE_DISPLAY_PRICE;
+  }
+
+  function hasUsablePrice(activity) {
+    return collectCatalogDisplayAmounts(activity).length > 0;
   }
 
   function tourHasTrustedDisplayPrice(tour) {

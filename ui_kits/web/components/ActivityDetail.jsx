@@ -1830,9 +1830,9 @@
                 <p className="detail-book-trust" style={{ display: 'flex' }}>
                   <Icon name="sparkles" size={14} color="var(--aurora-deep)" />
                   {T({
-                    hant: '牌價須經 Bókun 查詢確認；請選日期與人數後查看',
-                    hans: '牌价须经 Bókun 查询确认；请选日期与人数后查看',
-                    en: 'Fare is confirmed via Bókun after you choose a date and travelers.',
+                    hant: '牌價將於選定日期與人數後，依 Bókun 即時查詢更新',
+                    hans: '牌价将于选定日期与人数后，依 Bókun 即时查询更新',
+                    en: 'Price updates from Bókun after you choose a date and travelers.',
                   })}
                 </p>
               )}

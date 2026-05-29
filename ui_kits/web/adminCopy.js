@@ -63,9 +63,9 @@
     overviewSub: { hant: '上次行程同步：', hans: '上次行程同步：', en: 'Last activity sync:' },
     catalogSyncTitle: { hant: '目錄同步', hans: '目录同步', en: 'Catalog sync' },
     catalogSyncDesc: {
-      hant: '從 Bókun 合約通道拉取最新資料至 Supabase。通常需 30–90 秒；執行中請勿關閉此分頁。',
-      hans: '从 Bókun 合约通道拉取最新数据至 Supabase。通常需 30–90 秒；执行中请勿关闭此标签页。',
-      en: 'Pull the latest Bókun contract channel into Supabase. Typical runtime 30–90s; do not close this tab while running.',
+      hant: '從 Bókun 合約通道拉取最新資料至 Supabase。單次最長約 300 秒；詳情較慢，建議批次上限 25、多跑幾次，或勾選「僅詳情同步」。',
+      hans: '从 Bókun 合约通道拉取最新数据至 Supabase。单次最长约 300 秒；详情较慢，建议批次上限 25、多跑几次，或勾选「仅详情同步」。',
+      en: 'Pull Bókun contract catalog into Supabase (~300s max). Use detail batch 25 and rerun, or detail-only sync.',
     },
     optDeactivateMissing: {
       hant: '下架通道中已不存在的產品',
@@ -73,8 +73,9 @@
       en: 'Deactivate products no longer in channel',
     },
     optForceDetail: { hant: '強制重新抓取詳情（較慢）', hans: '强制重新抓取详情（较慢）', en: 'Force detail re-fetch (slow)' },
+    optDetailOnly: { hant: '僅詳情同步（略過通道列表）', hans: '仅详情同步（略过通道列表）', en: 'Detail sync only (skip channel list)' },
     optSyncImages: { hant: '鏡像圖片至 Supabase Storage', hans: '镜像图片至 Supabase Storage', en: 'Mirror images to Supabase Storage' },
-    optDetailCap: { hant: '詳情批次上限', hans: '详情批次上限', en: 'Detail batch cap' },
+    optDetailCap: { hant: '詳情批次上限（建議 25，最高 50）', hans: '详情批次上限（建议 25，最高 50）', en: 'Detail batch cap (25 recommended, max 50)' },
     runCatalogSync: { hant: '執行目錄同步', hans: '执行目录同步', en: 'Run catalog sync' },
     syncing: { hant: '同步中…', hans: '同步中…', en: 'Syncing…' },
     refreshStats: { hant: '重新整理統計', hans: '刷新统计', en: 'Refresh stats' },
@@ -232,9 +233,9 @@
       en: 'Activities to review',
     },
     healthUntrustedPriceHint: {
-      hant: '依 REST v2 規範，components 牌價預設不作前台售價。請在 Bókun 後台／Hosted 結帳對照後，勾選產品並按「核准前台牌價」（僅限已確認與後台一致者，如 825419）。',
-      hans: '依 REST v2 规范，components 牌价默认不作前台售价。请在 Bókun 后台／Hosted 结账对照后，勾选产品并按「核准前台牌价」。',
-      en: 'Per REST v2, component list prices are not shown by default. Compare in Bókun / Hosted checkout, then approve display for matching products only.',
+      hant: '下列產品 v2 catalog 牌價未通過自動稽核（過低、疑似佣金或誤標幣別），前台不顯示牌價。通過稽核的產品無需人工處理。重新執行詳情同步可更新 priceDisplay。',
+      hans: '下列产品 v2 catalog 牌价未通过自动稽核（过低、疑似佣金或误标币种），前台不显示牌价。通过稽核的产品无需人工处理。',
+      en: 'These products failed automated v2 catalog price checks (too low, commission-like, or mislabeled). Trusted products need no manual action.',
     },
     healthVerifyPricesBtn: { hant: '重新稽核（v2）', hans: '重新稽核（v2）', en: 'Re-audit (v2)' },
     healthTrustPricesBtn: { hant: '核准前台牌價', hans: '核准前台牌价', en: 'Approve display price' },
@@ -247,9 +248,14 @@
       en: 'Cached display price is below USD {min}. Verify pricing in Bókun, then run a detail sync from Activities or resync-activity-detail.',
     },
     healthMissingV2Hint: {
-      hant: '缺少 v2 詳情欄位（取消政策、集合點等）。請對下列 ID 執行詳情同步。',
-      hans: '缺少 v2 详情字段（取消政策、集合点等）。请对下列 ID 执行详情同步。',
-      en: 'Missing v2 detail fields (cancellation, meeting point, etc.). Run detail sync for these IDs.',
+      hant: '尚未完成詳情同步，或快取缺少 v2 詳情欄位。通道同步每次最多處理「詳情批次上限」筆；請多跑幾次並勾選強制詳情，或提高批次上限（建議 80–120）。',
+      hans: '尚未完成详情同步，或缓存缺少 v2 详情字段。通道同步每次最多处理「详情批次上限」笔；请多跑几次并勾选强制详情，或提高批次上限（建议 80–120）。',
+      en: 'Detail sync not done yet, or cache lacks v2 detail fields. Each catalog run only processes up to “detail batch limit” — rerun with force detail and/or raise the limit (try 80–120).',
+    },
+    syncDetailPendingHint: {
+      hant: '尚有 {pending} 筆待詳情同步（本輪已處理 {queued} / 共需 {total}）',
+      hans: '尚有 {pending} 笔待详情同步（本轮已处理 {queued} / 共需 {total}）',
+      en: '{pending} still need detail sync ({queued} processed this run of {total})',
     },
     healthPickupHostedNote: {
       hant: '「僅 Hosted 結帳選接送點」為 Bókun v2 常態（共 {n} 筆），通常無需修復。',
@@ -298,6 +304,11 @@
     },
     syncComponentsFailed: { hant: '元件抓取失敗', hans: '元件抓取失败', en: 'Component fetch failed' },
     syncChipImages: { hant: '{n} 張圖已鏡像', hans: '{n} 张图已镜像', en: '{n} images mirrored' },
+    syncChipDetailTruncated: {
+      hant: '詳情因時間上限提前結束，請再跑一次',
+      hans: '详情因时间上限提前结束，请再跑一次',
+      en: 'Detail sync stopped early (time limit) — run again',
+    },
     syncChipDetailErr: { hant: '{n} 筆詳情錯誤', hans: '{n} 笔详情错误', en: '{n} detail error(s)' },
     syncChipPriceWarn: {
       hant: '{n} 筆價格異常',

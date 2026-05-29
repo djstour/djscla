@@ -507,6 +507,9 @@
     if ((counts.imageSynced || 0) > 0) {
       summaryChips.push({ text: t('syncChipImages', { n: formatNumber(counts.imageSynced) }), tone: 'accent' });
     }
+    if (counts.detailTruncated) {
+      summaryChips.push({ text: t('syncChipDetailTruncated'), tone: 'warn' });
+    }
     if (counts.detailErrors > 0) {
       summaryChips.push({
         text: t('syncChipDetailErr', { n: formatNumber(counts.detailErrors) }),
@@ -587,15 +590,24 @@
       });
     }
 
-    if (options.forceDetail || counts.detailSynced > 0 || counts.detailPending > 0) {
+    if (options.forceDetail || counts.detailSynced > 0 || (counts.detailPending || 0) > 0) {
       const detailLabel = counts.detailErrors > 0
         ? t('syncDetailSyncedErr', { n: counts.detailErrors })
         : t('syncDetailSynced');
+      const detailTotal = counts.detailNeedingTotal ?? counts.detailPending ?? 0;
+      const detailQueued = counts.detailQueued ?? counts.detailSynced ?? 0;
       statGroups[1].stats.push({
         label: detailLabel,
-        value: `${formatNumber(counts.detailSynced)} / ${formatNumber(counts.detailPending)}`,
+        value: `${formatNumber(counts.detailSynced)} / ${formatNumber(detailTotal)}`,
         tone: counts.detailErrors > 0 ? 'warn' : 'neutral',
         raw: true,
+        hint: (counts.detailPending || 0) > 0
+          ? t('syncDetailPendingHint', {
+            pending: counts.detailPending,
+            queued: detailQueued,
+            total: detailTotal,
+          })
+          : null,
       });
       if ((counts.detailPriceWarnings || 0) > 0) {
         statGroups[1].stats.push({
@@ -726,8 +738,9 @@
     const [syncOpts, setSyncOpts] = useState({
       deactivateMissing: true,
       forceDetail: false,
+      detailOnly: false,
       syncImages: false,
-      maxDetailPerRun: 40,
+      maxDetailPerRun: 25,
     });
 
     useEffect(() => {
@@ -818,6 +831,15 @@
             <label>
               <input
                 type="checkbox"
+                checked={syncOpts.detailOnly}
+                onChange={(e) => setSyncOpts((o) => ({ ...o, detailOnly: e.target.checked }))}
+                disabled={syncing}
+              />
+              {t('optDetailOnly')}
+            </label>
+            <label>
+              <input
+                type="checkbox"
                 checked={syncOpts.syncImages}
                 onChange={(e) => setSyncOpts((o) => ({ ...o, syncImages: e.target.checked }))}
                 disabled={syncing}
@@ -829,11 +851,11 @@
               <input
                 type="number"
                 min={1}
-                max={120}
+                max={50}
                 value={syncOpts.maxDetailPerRun}
                 onChange={(e) => setSyncOpts((o) => ({
                   ...o,
-                  maxDetailPerRun: Math.min(120, Math.max(1, Number(e.target.value) || 40)),
+                  maxDetailPerRun: Math.min(50, Math.max(1, Number(e.target.value) || 25)),
                 }))}
                 disabled={syncing}
               />
@@ -2569,7 +2591,7 @@
         {untrustedRows.length > 0 ? (
           <div className="admin-health-issues__block">
             <p className="admin-health-issues__hint">{t('healthUntrustedPriceHint')}</p>
-            <p style={{ marginBottom: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <p style={{ marginBottom: 8 }}>
               <button
                 type="button"
                 className="admin-btn admin-btn--ghost admin-btn--sm"
@@ -2577,22 +2599,6 @@
                 onClick={() => postPriceAction('/api/admin/prices/verify', untrustedRows.map((r) => r.id))}
               >
                 {verifyBusy ? '…' : t('healthVerifyPricesBtn')}
-              </button>
-              <button
-                type="button"
-                className="admin-btn admin-btn--primary admin-btn--sm"
-                disabled={verifyBusy}
-                onClick={() => postPriceAction('/api/admin/prices/trust', untrustedRows.map((r) => r.id), { trusted: true })}
-              >
-                {verifyBusy ? '…' : t('healthTrustPricesBtn')}
-              </button>
-              <button
-                type="button"
-                className="admin-btn admin-btn--ghost admin-btn--sm"
-                disabled={verifyBusy}
-                onClick={() => postPriceAction('/api/admin/prices/trust', untrustedRows.map((r) => r.id), { trusted: false })}
-              >
-                {t('healthRevokePricesBtn')}
               </button>
             </p>
             {issueTable(untrustedRows, { showMaxUsd: true, showRefUsd: true, showReason: true })}
