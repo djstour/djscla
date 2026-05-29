@@ -226,6 +226,31 @@
     healthHealthy: { hant: '正常', hans: '正常', en: 'healthy' },
     healthDegraded: { hant: '降級', hans: '降级', en: 'degraded' },
     healthUnhealthy: { hant: '異常', hans: '异常', en: 'unhealthy' },
+    healthCatalogIssuesTitle: {
+      hant: '需處理的行程',
+      hans: '需处理的行程',
+      en: 'Activities to review',
+    },
+    healthImplausiblePriceHint: {
+      hant: '快取展示價低於 USD {min}。請在 Bókun 核對定價後，於 Activities 觸發詳情同步，或執行 resync-activity-detail。',
+      hans: '缓存展示价低于 USD {min}。请在 Bókun 核对定价后，于 Activities 触发详情同步，或执行 resync-activity-detail。',
+      en: 'Cached display price is below USD {min}. Verify pricing in Bókun, then run a detail sync from Activities or resync-activity-detail.',
+    },
+    healthMissingV2Hint: {
+      hant: '缺少 v2 詳情欄位（取消政策、集合點等）。請對下列 ID 執行詳情同步。',
+      hans: '缺少 v2 详情字段（取消政策、集合点等）。请对下列 ID 执行详情同步。',
+      en: 'Missing v2 detail fields (cancellation, meeting point, etc.). Run detail sync for these IDs.',
+    },
+    healthPickupHostedNote: {
+      hant: '「僅 Hosted 結帳選接送點」為 Bókun v2 常態（共 {n} 筆），通常無需修復。',
+      hans: '「仅 Hosted 结账选接送点」为 Bókun v2 常态（共 {n} 笔），通常无需修复。',
+      en: '"Hosted pick-up only" is expected for Bókun v2 ({n} activities) — usually no fix needed.',
+    },
+    healthColActivityId: { hant: 'Bókun ID', hans: 'Bókun ID', en: 'Bókun ID' },
+    healthColTitle: { hant: '標題', hans: '标题', en: 'Title' },
+    healthColMaxUsd: { hant: '最高 USD', hans: '最高 USD', en: 'Max USD' },
+    healthViewTour: { hant: '前台', hans: '前台', en: 'View' },
+    healthCopyId: { hant: '複製 ID', hans: '复制 ID', en: 'Copy ID' },
 
     langHant: { hant: '繁中', hans: '繁中', en: 'Traditional Chinese' },
     langHans: { hant: '簡中', hans: '简中', en: 'Simplified Chinese' },

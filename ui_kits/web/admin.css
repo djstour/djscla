@@ -1184,6 +1184,40 @@
   font-variant-numeric: tabular-nums;
 }
 
+.admin-health-issues {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.admin-health-issues__block + .admin-health-issues__block {
+  margin-top: 16px;
+}
+
+.admin-health-issues__hint,
+.admin-health-issues__note {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+
+.admin-health-issues__note {
+  margin-top: 12px;
+  color: var(--fg-3);
+}
+
+.admin-health-issues__table {
+  margin-top: 4px;
+}
+
+.admin-health-issues__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .admin-shell {
     grid-template-columns: 1fr;

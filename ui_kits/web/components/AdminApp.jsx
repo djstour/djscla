@@ -2469,6 +2469,79 @@
   }
 
   // ---------------- Health page ----------------
+  function CatalogQualityIssues({ check, t }) {
+    if (!check || check.id !== 'catalog-quality') return null;
+    const priceRows = (check.issues && check.issues.priceImplausible) || [];
+    const missingRows = (check.issues && check.issues.missingV2Detail) || [];
+    const pickupHosted = Number(check.pickupHostedOnly) || 0;
+    if (!priceRows.length && !missingRows.length && !pickupHosted) return null;
+
+    const minUsd = check.minPlausibleUsd != null ? check.minPlausibleUsd : 12;
+
+    function copyId(id) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(String(id)).catch(() => {});
+      }
+    }
+
+    function issueTable(rows, showMaxUsd) {
+      if (!rows.length) return null;
+      return (
+        <div className="admin-table-wrap admin-health-issues__table">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>{t('healthColActivityId')}</th>
+                <th>{t('healthColTitle')}</th>
+                {showMaxUsd ? <th>{t('healthColMaxUsd')}</th> : null}
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td><code>{row.id}</code></td>
+                  <td>{row.title || '—'}</td>
+                  {showMaxUsd ? (
+                    <td>{Number.isFinite(Number(row.maxDisplayUsd)) ? `$${row.maxDisplayUsd}` : '—'}</td>
+                  ) : null}
+                  <td className="admin-health-issues__actions">
+                    <a href={`/tours/${row.id}`} target="_blank" rel="noopener noreferrer" className="admin-btn admin-btn--ghost admin-btn--sm">
+                      {t('healthViewTour')}
+                    </a>
+                    <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => copyId(row.id)}>
+                      {t('healthCopyId')}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    return (
+      <div className="admin-health-issues">
+        {priceRows.length > 0 ? (
+          <div className="admin-health-issues__block">
+            <p className="admin-health-issues__hint">{t('healthImplausiblePriceHint', { min: minUsd })}</p>
+            {issueTable(priceRows, true)}
+          </div>
+        ) : null}
+        {missingRows.length > 0 ? (
+          <div className="admin-health-issues__block">
+            <p className="admin-health-issues__hint">{t('healthMissingV2Hint')}</p>
+            {issueTable(missingRows, false)}
+          </div>
+        ) : null}
+        {pickupHosted > 0 ? (
+          <p className="admin-health-issues__note">{t('healthPickupHostedNote', { n: pickupHosted })}</p>
+        ) : null}
+      </div>
+    );
+  }
+
   function HealthPage({ token, overview, t }) {
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -2538,6 +2611,7 @@
                   {c.latencyMs > 0 ? <span className="admin-health-check__latency">{c.latencyMs} ms</span> : null}
                 </div>
                 <p>{c.message}</p>
+                {c.id === 'catalog-quality' ? <CatalogQualityIssues check={c} t={t} /> : null}
               </div>
             ))}
           </div>
