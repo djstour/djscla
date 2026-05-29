@@ -39,6 +39,9 @@ const { syncCatalog } = require('../lib/catalogSync');
     console.log(`[sync-catalog-details] Done in ${result.timings.totalMs}ms`);
     console.log(`  Channel list : upserted=${c.upserted} unchanged=${c.unchanged} deactivated=${c.deactivated}`);
     console.log(`  Detail sync  : synced=${c.detailSynced} errors=${c.detailErrors} pending=${c.detailPending}`);
+    if (c.detailPriceWarnings || c.detailPickupHosted) {
+      console.log(`  Detail audit : priceWarnings=${c.detailPriceWarnings || 0} pickupHosted=${c.detailPickupHosted || 0}`);
+    }
     console.log(JSON.stringify(result, null, 2));
   } catch (err) {
     console.error('[sync-catalog-details] FAILED:', err.message);

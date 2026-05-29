@@ -2,6 +2,10 @@ const { getActivityById, getQuoteCurrency } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
+const {
+  hasPlausiblePrice,
+  isDbDetailCacheUsable,
+} = require('../../lib/catalogQuality');
 
 const DEFAULT_FRESHNESS_MS = 6 * 60 * 60 * 1000;
 const FRESHNESS_MS = Number.isFinite(Number(process.env.CATALOG_DETAIL_TTL_MS))
@@ -53,14 +57,6 @@ function hasUsablePricing(pricing) {
     && pricing.some((row) => Number.isFinite(Number(row && row.amount)) && Number(row.amount) > 0);
 }
 
-function hasUsablePrice(activity) {
-  if (!activity) return false;
-  if (hasUsablePricing(activity.pricing)) return true;
-  const next = activity.nextDefaultPrice;
-  if (next && Number.isFinite(Number(next.amount)) && Number(next.amount) > 0) return true;
-  return false;
-}
-
 async function fetchFromBokun(id, uiLang) {
   const raw = unwrapActivity(await getActivityById(id, { uiLang }));
   const quoteCurrency = getQuoteCurrency();
@@ -98,7 +94,7 @@ module.exports = async function handler(req, res) {
         cached
         && cached.activity
         && isFresh(cached.lastSyncedAt)
-        && hasBookingFields(cached.activity)
+        && isDbDetailCacheUsable(cached.activity)
       ) {
         activity = cached.activity;
         usedSource = 'db';
@@ -124,10 +120,10 @@ module.exports = async function handler(req, res) {
     // If the live response lacks a
     // usable price, graft it from the DB-cached pricing[] / nextDefaultPrice
     // so the booking sidebar shows a real number instead of "Price loading".
-    if (activity && !hasUsablePrice(activity)) {
+    if (activity && !hasPlausiblePrice(activity)) {
       try {
         const cached = await fetchActivityFromDb(id);
-        if (cached && cached.activity && hasUsablePrice(cached.activity)) {
+        if (cached && cached.activity && hasPlausiblePrice(cached.activity)) {
           activity = {
             ...activity,
             pricing: hasUsablePricing(cached.activity.pricing) ? cached.activity.pricing : activity.pricing,

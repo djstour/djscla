@@ -255,6 +255,26 @@
     syncChipDeactivated: { hant: '{n} 筆已下架', hans: '{n} 笔已下架', en: '{n} deactivated' },
     syncChipImages: { hant: '{n} 張圖已鏡像', hans: '{n} 张图已镜像', en: '{n} images mirrored' },
     syncChipDetailErr: { hant: '{n} 筆詳情錯誤', hans: '{n} 笔详情错误', en: '{n} detail error(s)' },
+    syncChipPriceWarn: {
+      hant: '{n} 筆價格異常',
+      hans: '{n} 笔价格异常',
+      en: '{n} implausible price(s)',
+    },
+    syncChipPickupHosted: {
+      hant: '{n} 筆接送僅結帳選點',
+      hans: '{n} 笔接送仅结账选点',
+      en: '{n} pick-up at hosted checkout',
+    },
+    syncDetailPriceWarnings: {
+      hant: '詳情價格警示',
+      hans: '详情价格警示',
+      en: 'Detail price warnings',
+    },
+    syncDetailPickupHosted: {
+      hant: '接送（結帳選點）',
+      hans: '接送（结账选点）',
+      en: 'Pick-up (hosted checkout)',
+    },
     syncChipVendorLinks: {
       hant: '供應商關聯：+{add} / −{rem}',
       hans: '供应商关联：+{add} / −{rem}',

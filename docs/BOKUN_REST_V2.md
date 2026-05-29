@@ -58,6 +58,29 @@
 
 快取在 Supabase 的 `bokun_payload` 需 **Admin 詳情同步** 或 `source=bokun` 才會帶齊新欄位。
 
+`lib/catalogQuality.js` 會拒絕舊快取（價格 &lt; `CATALOG_MIN_PLAUSIBLE_USD` 預設 12、缺少 v2 形狀欄位），`GET /api/bokun/activity?source=db` 會自動改打 live Bókun。
+
+---
+
+## 已知缺口（v2 components）
+
+| 能力 | v2 現況 | 本站策略 |
+|------|---------|----------|
+| 接送站點列表 | `meetingType.pickupPlaceGroupIds` 有，**無**各站名稱 | `pickupInfo.selectionAtHostedCheckout`；詳情「接送」分頁說明；結帳在 **Hosted shop** 選點（`pickupPlaceId`） |
+| 列表價格 | components 常缺 channel `from` | 詳情同步時保留 search 價，且不以「看似有數字但 &lt;$12」的舊列覆蓋 |
+| 行程站 HTML | `itinerary[]` 常只有標題 | 完整敘述以 `description` HTML 為準；行程安排分頁為路線概覽 |
+| 逐日 slot 價 | availability DTO 無單價 | 由 `experiencePriceRules` + 可用性檢查推算 |
+
+實作：`lib/bokunPickupPlaces.js`（預留 place group 解析）、`lib/catalogQuality.js`、`lib/v2ExperienceToActivity.js`。
+
+---
+
+## 預訂與接送（Hosted）
+
+1. 站內選日期、人數、加購 → `lib/bokunCheckoutUrl.js` 開 `BOKUN_SHOP_URL`。
+2. 若 `pickupInfo.selectionAtHostedCheckout === true`，站內**不**顯示上車下拉（與 Bókun widget 一致）；使用者在 Hosted 結帳頁選 `pickupPlaceId`。
+3. 若日後 Bókun 提供 v2「依 place group 列出站點」端點，可改為 `fetchPickupPlacesForExperience` 填滿 `pickupInfo.places` 並恢復站內下拉。
+
 ---
 
 ## 可用性

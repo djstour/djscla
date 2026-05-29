@@ -612,6 +612,7 @@
     const pickupInfo = tour.pickupInfo || null;
     const showPickupInfo = pickupInfo && pickupInfo.enabled;
     const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
+    const pickupAtHostedCheckout = !!(pickupInfo && pickupInfo.selectionAtHostedCheckout);
     const pickupNoMessageHtml = sanitizeVendorHtml(pickupInfo?.noPickupMessage || '');
     const pickupNoMessageHasHtml = vendorHtmlIsMeaningful(pickupNoMessageHtml);
     const paxCap = livePaxMax;
@@ -712,7 +713,12 @@
       if (lbl && !categoryChips.includes(lbl)) categoryChips.push(lbl);
     });
     (tour.categoryLabels || []).forEach((lbl) => {
-      if (lbl && !categoryChips.includes(lbl)) categoryChips.push(lbl);
+      if (!lbl) return;
+      const isEnumCode = /^[A-Z][A-Z0-9_]*$/.test(String(lbl).trim());
+      const translated = isEnumCode
+        ? (enumLabel('ACTIVITY_CATEGORY', lbl) || enumLabel('ACTIVITY_ATTRIBUTE', lbl) || lbl)
+        : lbl;
+      if (translated && !categoryChips.includes(translated)) categoryChips.push(translated);
     });
 
     // "Know before you go" — Bókun auto-prefixes "Minimum age of participants is: N"
@@ -779,8 +785,17 @@
       || hasQuickFacts
     );
     const hasItineraryTab = stopsNamed.length > 0;
+    const itineraryTitleOnly = hasItineraryTab && stopsNamed.every((s) => {
+      const desc = s.description && String(s.description).trim();
+      const excerpt = s.excerpt && String(s.excerpt).trim();
+      return !excerpt && !desc;
+    });
     const hasPickupTab = !!(
-      (showPickupInfo && (pickupPlaces.length > 0 || pickupInfo.noPickupMessage))
+      (showPickupInfo && (
+        pickupPlaces.length > 0
+        || pickupInfo.noPickupMessage
+        || pickupAtHostedCheckout
+      ))
       || tour.meetingPoint
     );
 
@@ -1287,6 +1302,15 @@
                     aria-labelledby="detail-tab-itinerary"
                     className="detail-tab-panel"
                   >
+                    {itineraryTitleOnly && (
+                      <p className="detail-tab-panel__lead">
+                        {T({
+                          hant: '以下為停靠站點概覽；完整行程敘述請見「行程說明」。',
+                          hans: '以下为停靠站点概览；完整行程叙述请见「行程说明」。',
+                          en: 'Stops below are a route overview. Full narrative is in the Description tab.',
+                        })}
+                      </p>
+                    )}
                     <ItineraryMap stops={stopsNamed} />
                     <ol className="detail-stops-list">
                       {stopsNamed.map((stop, i) => {
@@ -1330,6 +1354,16 @@
                     aria-labelledby="detail-tab-pickup"
                     className="detail-tab-panel"
                   >
+                    {showPickupInfo && pickupAtHostedCheckout && pickupPlaces.length === 0 && (
+                      <p className="detail-tab-panel__lead detail-hosted-pickup-note">
+                        {T({
+                          hant: '本行程提供接送服務。上車地點將在 Bókun 結帳頁面選擇（與官方預訂小工具相同）。',
+                          hans: '本行程提供接送服务。上车地点将在 Bókun 结账页面选择（与官方预订小工具相同）。',
+                          en: 'Pick-up is available for this experience. You will choose your pick-up stop on the Bókun checkout page, same as the official booking widget.',
+                        })}
+                      </p>
+                    )}
+
                     {showPickupInfo && pickupPlaces.length > 0 && (
                       <>
                         <p className="detail-tab-panel__lead">
@@ -1720,6 +1754,16 @@
                     ) : null}
                   </div>
                 ) : null}
+
+                {pickupInfo && pickupInfo.enabled && pickupInfo.selectionAtHostedCheckout && pickupPlaces.length === 0 && (
+                  <p className="detail-book-hosted-pickup" style={{ font: '500 13px/1.45 var(--font-text)', color: 'var(--fg-2)', margin: 0 }}>
+                    {T({
+                      hant: '上車地點將在結帳時選擇。',
+                      hans: '上车地点将在结账时选择。',
+                      en: 'Pick-up location is selected at checkout.',
+                    })}
+                  </p>
+                )}
 
                 {pickupInfo && pickupInfo.enabled && pickupPlaces.length > 0 && (
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

@@ -507,6 +507,18 @@
         tone: 'warn',
       });
     }
+    if ((counts.detailPriceWarnings || 0) > 0) {
+      summaryChips.push({
+        text: t('syncChipPriceWarn', { n: formatNumber(counts.detailPriceWarnings) }),
+        tone: 'warn',
+      });
+    }
+    if ((counts.detailPickupHosted || 0) > 0) {
+      summaryChips.push({
+        text: t('syncChipPickupHosted', { n: formatNumber(counts.detailPickupHosted) }),
+        tone: 'neutral',
+      });
+    }
     if (linkAdded > 0 || linkRemoved > 0) {
       summaryChips.push({
         text: t('syncChipVendorLinks', { add: formatNumber(linkAdded), rem: formatNumber(linkRemoved) }),
@@ -574,6 +586,20 @@
         tone: counts.detailErrors > 0 ? 'warn' : 'neutral',
         raw: true,
       });
+      if ((counts.detailPriceWarnings || 0) > 0) {
+        statGroups[1].stats.push({
+          label: t('syncDetailPriceWarnings'),
+          value: counts.detailPriceWarnings,
+          tone: 'warn',
+        });
+      }
+      if ((counts.detailPickupHosted || 0) > 0) {
+        statGroups[1].stats.push({
+          label: t('syncDetailPickupHosted'),
+          value: counts.detailPickupHosted,
+          tone: 'neutral',
+        });
+      }
     }
 
     return (
