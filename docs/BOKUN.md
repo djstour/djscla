@@ -1,17 +1,19 @@
 # Bókun API integration
 
+> **開發請依 [BOKUN_REST_V2.md](./BOKUN_REST_V2.md)**（官方 [REST v2](https://api-docs.bokun.dev/rest-v2) + v1 訂位流程分工）。本文件為環境變數與除錯速查。
+
 ## Architecture
 
 ```
 Browser  →  GET /api/catalog/activities?lang=hant&all=true
-              ↓ (Vercel serverless — paginates Bókun search when all=true)
-           Bókun POST /activity.json/search
+              ↓ (Vercel — REST v2 marketplace contracts + experience/components)
+           GET /restapi/v2.0/marketplace/contracts/supplier → contract products
               ↓
            normalizeActivity → bokunAdapter.toViewModel → TourCard
 
 Browser  →  GET /api/bokun/activity?id=…&lang=hant  (prefetched on card hover; CDN cache 5m)
               ↓
-           Bókun GET /activity.json/{id}
+           GET /restapi/v2.0/experience/{id}/components?componentType=ALL
               ↓
            ActivityDetail (full description, photos, stops, pricing)
 
@@ -28,7 +30,9 @@ Access key + secret never reach the browser.
 | `BOKUN_SECRET_KEY` | Yes | Same key pair |
 | `BOKUN_API_HOST` | No | `https://api.bokun.io` (production). Use `https://api.bokuntest.com` only with sandbox keys. |
 | `BOKUN_LANG` | No | `EN` — product copy from Bókun; TC/SC from `bokunTranslations.js` |
-| `BOKUN_CURRENCY` | No | `USD` (default) — passed to `activity.json/search?currency=`. The proxy rewrites display currency to match this env. |
+| `BOKUN_CURRENCY` | No | `USD` (default) — display currency for catalog/detail. |
+| `BOKUN_V2_CONTRACT_STATUS` | No | `ACCEPTED` — marketplace contracts used for catalog discovery. |
+| `BOKUN_V2_EXTRA_EXPERIENCE_IDS` | No | Comma-separated experience IDs not listed on contracts. |
 
 Set these in https://vercel.com/djstours-projects/djscla/settings/environment-variables then redeploy.
 

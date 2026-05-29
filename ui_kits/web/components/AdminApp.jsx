@@ -19,6 +19,16 @@
     return window.AuralisUI || null;
   }
 
+  function getAdminCopy() {
+    return window.AuralisAdminCopy || null;
+  }
+
+  function createAdminT(lang) {
+    const AC = getAdminCopy();
+    if (AC && AC.createT) return AC.createT(lang);
+    return (key) => key;
+  }
+
   function readLang() {
     const UI = getAuralisUI();
     const langs = UI && UI.LANGS ? UI.LANGS : [
@@ -61,9 +71,18 @@
     });
     const [fxRates, setFxRates] = useState({ USD: 1 });
 
+    const t = useMemo(() => createAdminT(lang), [lang]);
+
     useEffect(() => {
       if (UI && UI.applyHtmlLang) UI.applyHtmlLang(lang);
       try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch { /* noop */ }
+      const AC = getAdminCopy();
+      if (typeof document !== 'undefined' && AC && AC.pick) {
+        document.title = AC.pick(lang, 'brandTitle') || document.title;
+        if (document.body) {
+          document.body.dataset.screenLabel = AC.pick(lang, 'brandTitle') || '';
+        }
+      }
     }, [lang, UI]);
 
     useEffect(() => {
@@ -112,6 +131,7 @@
 
     return {
       lang,
+      t,
       displayCurrency,
       siteThemeId,
       fxRates,
@@ -189,15 +209,6 @@
     return `${m}m ${s}s`;
   }
 
-  const CATALOG_SYNC_STEPS = [
-    'Connecting to Bókun contract channel…',
-    'Fetching product list from channel…',
-    'Comparing source hashes…',
-    'Upserting activities into Supabase…',
-    'Updating vendor ↔ activity links…',
-    'Syncing activity details (if enabled)…',
-  ];
-
   const TRANSLATION_BATCH_STEPS = [
     'Scanning translation queue in Supabase…',
     'Loading activity payloads from catalog…',
@@ -216,11 +227,13 @@
     'Saving to Supabase…',
   ];
 
-  function timeAgo(iso) {
+  function timeAgo(iso, lang) {
+    const AC = getAdminCopy();
+    if (AC && AC.timeAgo) return AC.timeAgo(iso, lang || 'hant');
     if (!iso) return '';
-    const t = new Date(iso).getTime();
-    if (Number.isNaN(t)) return '';
-    const diff = Date.now() - t;
+    const ts = new Date(iso).getTime();
+    if (Number.isNaN(ts)) return '';
+    const diff = Date.now() - ts;
     if (diff < 0) return '';
     const m = Math.floor(diff / 60000);
     if (m < 1) return 'just now';
@@ -245,7 +258,7 @@
   }
 
   // ---------------- Login ----------------
-  function LoginScreen({ onLoggedIn, prefToolbar }) {
+  function LoginScreen({ onLoggedIn, prefToolbar, t }) {
     const [password, setPassword] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -264,11 +277,11 @@
         onLoggedIn(password);
       } catch (err) {
         if (err.code === 'ADMIN_NOT_CONFIGURED') {
-          setError('Admin disabled — set ADMIN_PASSWORD in environment first.');
+          setError(t('loginDisabled'));
         } else if (err.status === 401) {
-          setError('Incorrect password.');
+          setError(t('loginIncorrect'));
         } else {
-          setError(err.message || 'Login failed.');
+          setError(err.message || t('loginFailed'));
         }
       } finally {
         setSubmitting(false);
@@ -281,13 +294,13 @@
           <div className="admin-login__prefs">{prefToolbar}</div>
         ) : null}
         <form className="admin-login__card" onSubmit={onSubmit}>
-          <h1 className="admin-login__title">DJS Tour · Admin</h1>
-          <p className="admin-login__sub">Catalog control room — sync, detail refresh, activate/deactivate.</p>
+          <h1 className="admin-login__title">{t('brandTitle')}</h1>
+          <p className="admin-login__sub">{t('loginSub')}</p>
 
           {error ? <div className="admin-login__error">{error}</div> : null}
 
           <div className="admin-login__field">
-            <label htmlFor="admin-password">Password</label>
+            <label htmlFor="admin-password">{t('password')}</label>
             <input
               id="admin-password"
               type="password"
@@ -300,7 +313,7 @@
           </div>
 
           <button type="submit" className="admin-btn" disabled={submitting || !password}>
-            {submitting ? 'Signing in…' : 'Sign in'}
+            {submitting ? t('signingIn') : t('signIn')}
           </button>
         </form>
       </div>
@@ -308,22 +321,22 @@
   }
 
   // ---------------- Sidebar ----------------
-  function Sidebar({ tab, setTab, counts, onLogout, prefToolbar }) {
+  function Sidebar({ tab, setTab, counts, onLogout, prefToolbar, t }) {
     const items = [
-      { id: 'overview', label: 'Overview' },
-      { id: 'vendors', label: 'Vendors', badge: counts.vendors },
-      { id: 'activities', label: 'Activities', badge: counts.activities },
-      { id: 'content', label: 'Content' },
-      { id: 'marketing', label: 'Marketing', badge: counts.collections },
-      { id: 'inquiries', label: 'Inquiries', badge: counts.inquiries },
-      { id: 'translations', label: 'Translations', badge: counts.translationPending },
-      { id: 'health', label: 'Health' },
+      { id: 'overview', label: t('navOverview') },
+      { id: 'vendors', label: t('navVendors'), badge: counts.vendors },
+      { id: 'activities', label: t('navActivities'), badge: counts.activities },
+      { id: 'content', label: t('navContent') },
+      { id: 'marketing', label: t('navMarketing'), badge: counts.collections },
+      { id: 'inquiries', label: t('navInquiries'), badge: counts.inquiries },
+      { id: 'translations', label: t('navTranslations'), badge: counts.translationPending },
+      { id: 'health', label: t('navHealth') },
     ];
     return (
       <aside className="admin-sidebar">
         <div className="admin-brand">
           <span className="admin-brand__dot" />
-          <span>DJS Tour · Admin</span>
+          <span>{t('brandShort')}</span>
         </div>
         {items.map((it) => (
           <button
@@ -340,8 +353,8 @@
           <div className="admin-sidebar__prefs">{prefToolbar}</div>
         ) : null}
         <div className="admin-sidebar__footer">
-          Phase 5 · ops<br />
-          <button onClick={onLogout}>Sign out</button>
+          {t('phaseFooter')}<br />
+          <button type="button" onClick={onLogout}>{t('signOut')}</button>
         </div>
       </aside>
     );
@@ -391,14 +404,18 @@
     );
   }
 
-  function CatalogSyncRunning({ elapsedSec, stepIndex }) {
-    const step = CATALOG_SYNC_STEPS[stepIndex % CATALOG_SYNC_STEPS.length];
+  function CatalogSyncRunning({ elapsedSec, stepIndex, t, lang }) {
+    const AC = getAdminCopy();
+    const steps = AC && AC.catalogSteps ? AC.catalogSteps(lang || 'hant') : [];
+    const step = steps.length
+      ? steps[stepIndex % steps.length]
+      : t('catalogStep0');
     return (
       <AdminJobRunning
-        title="Catalog sync in progress"
+        title={t('catalogSyncProgress')}
         step={step}
         elapsedSec={elapsedSec}
-        hint={`Elapsed ${elapsedSec}s · typical run 30–90s · keep this tab open`}
+        hint={t('catalogSyncHint', { s: elapsedSec })}
       />
     );
   }
@@ -410,12 +427,13 @@
     queueDepth,
     progressPct,
     estimatedSec,
+    t,
   }) {
     const step = TRANSLATION_BATCH_STEPS[stepIndex % TRANSLATION_BATCH_STEPS.length];
     const estMin = Math.max(1, Math.ceil(estimatedSec / 60));
     return (
       <AdminJobRunning
-        title="Translation batch in progress"
+        title={t('translationBatchProgress')}
         step={step}
         elapsedSec={elapsedSec}
         progressPct={progressPct}
@@ -431,7 +449,7 @@
     );
   }
 
-  function CatalogSyncResult({ result, options }) {
+  function CatalogSyncResult({ result, options, t }) {
     const counts = result.counts || {};
     const timings = result.timings || {};
     const totalMs = timings.totalMs || 1;
@@ -445,66 +463,66 @@
 
     const summaryChips = [];
     if (counts.upserted > 0) {
-      summaryChips.push({ text: `${formatNumber(counts.upserted)} upserted`, tone: 'accent' });
+      summaryChips.push({ text: t('syncChipUpserted', { n: formatNumber(counts.upserted) }), tone: 'accent' });
     }
     if (counts.unchanged > 0) {
-      summaryChips.push({ text: `${formatNumber(counts.unchanged)} unchanged`, tone: 'muted' });
+      summaryChips.push({ text: t('syncChipUnchanged', { n: formatNumber(counts.unchanged) }), tone: 'muted' });
     }
     if (counts.deactivated > 0) {
-      summaryChips.push({ text: `${formatNumber(counts.deactivated)} deactivated`, tone: 'warn' });
+      summaryChips.push({ text: t('syncChipDeactivated', { n: formatNumber(counts.deactivated) }), tone: 'warn' });
     }
     if ((counts.imageSynced || 0) > 0) {
-      summaryChips.push({ text: `${formatNumber(counts.imageSynced)} images mirrored`, tone: 'accent' });
+      summaryChips.push({ text: t('syncChipImages', { n: formatNumber(counts.imageSynced) }), tone: 'accent' });
     }
     if (counts.detailErrors > 0) {
       summaryChips.push({
-        text: `${formatNumber(counts.detailErrors)} detail error${counts.detailErrors === 1 ? '' : 's'}`,
+        text: t('syncChipDetailErr', { n: formatNumber(counts.detailErrors) }),
         tone: 'warn',
       });
     }
     if (linkAdded > 0 || linkRemoved > 0) {
       summaryChips.push({
-        text: `Vendor links: +${formatNumber(linkAdded)} added, −${formatNumber(linkRemoved)} removed`,
+        text: t('syncChipVendorLinks', { add: formatNumber(linkAdded), rem: formatNumber(linkRemoved) }),
         tone: 'neutral',
       });
     }
     if (!summaryChips.length) {
-      summaryChips.push({ text: 'Catalog already up to date', tone: 'muted' });
+      summaryChips.push({ text: t('syncChipUpToDate'), tone: 'muted' });
     }
 
     const statGroups = [
       {
         id: 'channel',
-        title: 'Channel (source)',
+        title: t('syncGroupChannel'),
         stats: [
-          { label: 'Unique in channel', value: counts.uniqueInChannel, tone: 'neutral' },
-          { label: 'Contract products', value: counts.contractTotal, tone: 'neutral' },
-          { label: 'Vendors', value: counts.vendors, tone: 'neutral' },
+          { label: t('syncUniqueChannel'), value: counts.uniqueInChannel, tone: 'neutral' },
+          { label: t('syncContractProducts'), value: counts.contractTotal, tone: 'neutral' },
+          { label: t('navVendors'), value: counts.vendors, tone: 'neutral' },
         ],
       },
       {
         id: 'writes',
-        title: 'Writes',
+        title: t('syncGroupWrites'),
         stats: [
-          { label: 'Upserted', value: counts.upserted, tone: counts.upserted > 0 ? 'accent' : 'muted' },
-          { label: 'Unchanged', value: counts.unchanged, tone: 'muted' },
+          { label: t('syncUpserted'), value: counts.upserted, tone: counts.upserted > 0 ? 'accent' : 'muted' },
+          { label: t('syncUnchanged'), value: counts.unchanged, tone: 'muted' },
         ],
       },
       {
         id: 'maintenance',
-        title: 'Maintenance',
+        title: t('syncGroupMaintenance'),
         stats: [
           {
-            label: 'Deactivated',
+            label: t('syncDeactivated'),
             value: counts.deactivated,
             tone: counts.deactivated > 0 ? 'warn' : 'muted',
           },
           {
-            label: 'Vendor links',
+            label: t('syncVendorLinks'),
             value: linkTotal,
             tone: 'neutral',
             hint: linkAdded || linkRemoved
-              ? `+${formatNumber(linkAdded)} new · −${formatNumber(linkRemoved)} removed`
+              ? t('syncLinkHint', { add: formatNumber(linkAdded), rem: formatNumber(linkRemoved) })
               : null,
           },
         ],
@@ -513,7 +531,7 @@
 
     if (options.syncImages || (counts.imageSynced != null && counts.imageSynced > 0)) {
       statGroups[1].stats.push({
-        label: 'Images mirrored',
+        label: t('syncImagesMirrored'),
         value: counts.imageSynced || 0,
         tone: counts.imageSynced > 0 ? 'accent' : 'muted',
       });
@@ -521,8 +539,8 @@
 
     if (options.forceDetail || counts.detailSynced > 0 || counts.detailPending > 0) {
       const detailLabel = counts.detailErrors > 0
-        ? `Detail synced (${counts.detailErrors} err.)`
-        : 'Detail synced';
+        ? t('syncDetailSyncedErr', { n: counts.detailErrors })
+        : t('syncDetailSynced');
       statGroups[1].stats.push({
         label: detailLabel,
         value: `${formatNumber(counts.detailSynced)} / ${formatNumber(counts.detailPending)}`,
@@ -536,17 +554,18 @@
         <div className="admin-sync-result__header">
           <span className="admin-sync-result__icon" aria-hidden="true">✓</span>
           <div>
-            <strong>Sync complete</strong>
+            <strong>{t('syncComplete')}</strong>
             <span className="admin-sync-result__meta">
-              {formatNumber(counts.vendors)} vendor{counts.vendors === 1 ? '' : 's'}
-              {' · '}
-              finished in {formatDurationMs(timings.totalMs)}
+              {t('syncVendorsFinished', {
+                n: formatNumber(counts.vendors),
+                dur: formatDurationMs(timings.totalMs),
+              })}
             </span>
           </div>
         </div>
 
         <div className="admin-sync-summary" role="status">
-          <div className="admin-sync-summary__label">This sync run</div>
+          <div className="admin-sync-summary__label">{t('syncThisRun')}</div>
           <div className="admin-sync-summary__chips">
             {summaryChips.map((chip) => (
               <span
@@ -581,7 +600,7 @@
         {timings.fetchMs != null ? (
           <div className="admin-sync-result__timing">
             <div className="admin-sync-timing-row">
-              <span>Bókun fetch</span>
+              <span>{t('syncTimingFetch')}</span>
               <span>{formatDurationMs(timings.fetchMs)}</span>
             </div>
             <div className="admin-sync-timing-bar" aria-hidden="true">
@@ -589,7 +608,7 @@
               <span className="admin-sync-timing-bar__write" style={{ width: `${writePct}%` }} />
             </div>
             <div className="admin-sync-timing-row">
-              <span>Process &amp; persist</span>
+              <span>{t('syncTimingWrite')}</span>
               <span>{formatDurationMs(timings.writeMs)}</span>
             </div>
           </div>
@@ -598,7 +617,7 @@
     );
   }
 
-  function CatalogCountExplainer({ activities, totals, vendors }) {
+  function CatalogCountExplainer({ activities, totals, vendors, t }) {
     const activeVendors = (vendors || []).filter((v) => v.isActive);
     const contract = totals?.contractTotal || 0;
     const unique = totals?.uniqueTotal || 0;
@@ -607,42 +626,31 @@
     const total = activities?.total || 0;
 
     return (
-      <aside className="admin-callout admin-callout--info" aria-label="Catalog count guide">
-        <strong>How the numbers relate</strong>
+      <aside className="admin-callout admin-callout--info" aria-label={t('explainerTitle')}>
+        <strong>{t('explainerTitle')}</strong>
         <p>
-          <span className="admin-callout__num">{formatNumber(contract)}</span>
-          {' '}
-          <em>contract products</em>
-          {' '}
-          = Bókun search rows summed per vendor (same trip can appear under multiple suppliers).
-          {' '}
-          <span className="admin-callout__num">{formatNumber(unique)}</span>
-          {' '}
-          <em>unique</em>
-          {' '}
-          = deduped trips across the channel.
-          {' '}
-          <span className="admin-callout__num">{formatNumber(active)}</span>
-          {' '}
-          <em>active on site</em>
-          {' '}
-          = what Tours, translations, and sync scripts use (
-          {formatNumber(inactive)} deactivated of {formatNumber(total)} in DB).
+          {t('explainerBody', {
+            contract: formatNumber(contract),
+            unique: formatNumber(unique),
+            active: formatNumber(active),
+            inactive: formatNumber(inactive),
+            total: formatNumber(total),
+          })}
         </p>
         <p className="admin-callout__foot">
-          Sidebar uses <strong>{formatNumber(activeVendors.length)}</strong> active vendor
-          {activeVendors.length === 1 ? '' : 's'}
-          {(vendors || []).length > activeVendors.length
-            ? ` (${formatNumber(vendors.length - activeVendors.length)} inactive hidden from totals)`
-            : ''}
-          .
+          {t('explainerFoot', {
+            active: formatNumber(activeVendors.length),
+            hidden: (vendors || []).length > activeVendors.length
+              ? t('explainerHidden', { n: formatNumber(vendors.length - activeVendors.length) })
+              : '',
+          })}
         </p>
       </aside>
     );
   }
 
   // ---------------- Overview ----------------
-  function OverviewPage({ overview, token, onRefresh, lang }) {
+  function OverviewPage({ overview, token, onRefresh, lang, t }) {
     const [syncing, setSyncing] = useState(false);
     const [syncError, setSyncError] = useState('');
     const [syncResult, setSyncResult] = useState(null);
@@ -681,30 +689,27 @@
         setSyncResult(res);
         onRefresh();
       } catch (err) {
-        setSyncError(err.message || 'Sync failed');
+        setSyncError(err.message || t('syncFailed'));
       } finally {
         setSyncing(false);
       }
     };
 
-    if (!overview) return <div className="admin-empty">Loading…</div>;
+    if (!overview) return <div className="admin-empty">{t('loading')}</div>;
 
     const { activities, vendors, totals, lastSyncedAt, inquiries } = overview;
 
     return (
       <div>
-        <h1 className="admin-page-title">Overview</h1>
+        <h1 className="admin-page-title">{t('overviewTitle')}</h1>
         <p className="admin-page-sub">
-          Last activity sync: <strong>{formatDateTime(lastSyncedAt, lang)}</strong>
-          {lastSyncedAt ? <span> · {timeAgo(lastSyncedAt)}</span> : null}
+          {t('overviewSub')}<strong>{formatDateTime(lastSyncedAt, lang)}</strong>
+          {lastSyncedAt ? <span> · {timeAgo(lastSyncedAt, lang)}</span> : null}
         </p>
 
         <section className={`admin-sync-panel${syncing ? ' admin-sync-panel--busy' : ''}`}>
-          <h2>Catalog sync</h2>
-          <p>
-            Pull the latest Bókun contract channel into Supabase. Typical runtime 30–90s;
-            do not close this tab while running.
-          </p>
+          <h2>{t('catalogSyncTitle')}</h2>
+          <p>{t('catalogSyncDesc')}</p>
           <div className="admin-sync-options">
             <label>
               <input
@@ -713,7 +718,7 @@
                 onChange={(e) => setSyncOpts((o) => ({ ...o, deactivateMissing: e.target.checked }))}
                 disabled={syncing}
               />
-              Deactivate products no longer in channel
+              {t('optDeactivateMissing')}
             </label>
             <label>
               <input
@@ -722,7 +727,7 @@
                 onChange={(e) => setSyncOpts((o) => ({ ...o, forceDetail: e.target.checked }))}
                 disabled={syncing}
               />
-              Force detail re-fetch (slow)
+              {t('optForceDetail')}
             </label>
             <label>
               <input
@@ -731,10 +736,10 @@
                 onChange={(e) => setSyncOpts((o) => ({ ...o, syncImages: e.target.checked }))}
                 disabled={syncing}
               />
-              Mirror images to Supabase Storage
+              {t('optSyncImages')}
             </label>
             <label>
-              Detail batch cap
+              {t('optDetailCap')}
               <input
                 type="number"
                 min={1}
@@ -758,10 +763,10 @@
               {syncing ? (
                 <>
                   <span className="admin-sync-spinner" aria-hidden="true" />
-                  Syncing… {syncElapsed}s
+                  {t('syncing')} {syncElapsed}s
                 </>
               ) : (
-                'Run catalog sync'
+                t('runCatalogSync')
               )}
             </button>
             <button
@@ -770,81 +775,76 @@
               onClick={onRefresh}
               disabled={syncing}
             >
-              Refresh stats
+              {t('refreshStats')}
             </button>
           </div>
           {syncing ? (
-            <CatalogSyncRunning elapsedSec={syncElapsed} stepIndex={syncStep} />
+            <CatalogSyncRunning elapsedSec={syncElapsed} stepIndex={syncStep} t={t} lang={lang} />
           ) : null}
           {syncError ? (
             <div className="admin-result admin-result--error">{syncError}</div>
           ) : null}
           {syncResult && syncResult.counts && !syncing ? (
-            <CatalogSyncResult result={syncResult} options={syncOpts} />
+            <CatalogSyncResult result={syncResult} options={syncOpts} t={t} />
           ) : null}
         </section>
 
-        <CatalogCountExplainer activities={activities} totals={totals} vendors={vendors} />
+        <CatalogCountExplainer activities={activities} totals={totals} vendors={vendors} t={t} />
 
         <div className="admin-grid admin-grid--metrics">
           <div className="admin-card admin-card--primary">
-            <div className="admin-card__label">Active on site</div>
+            <div className="admin-card__label">{t('metricActiveSite')}</div>
             <div className="admin-card__value">{formatNumber(activities.active)}</div>
-            <div className="admin-card__hint">
-              Shown on djstour.com · translation sync uses this count
-            </div>
+            <div className="admin-card__hint">{t('metricActiveHint')}</div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Bókun contract rows</div>
+            <div className="admin-card__label">{t('metricContractRows')}</div>
             <div className="admin-card__value">{formatNumber(totals.contractTotal)}</div>
             <div className="admin-card__hint">
-              Matches Create booking total · {formatNumber(vendors.filter((v) => v.isActive).length)} active vendors
+              {t('metricContractHint', { n: formatNumber(vendors.filter((v) => v.isActive).length) })}
             </div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Unique trips (channel)</div>
+            <div className="admin-card__label">{t('metricUniqueTrips')}</div>
             <div className="admin-card__value">{formatNumber(totals.uniqueTotal)}</div>
-            <div className="admin-card__hint">Deduped across all vendors</div>
+            <div className="admin-card__hint">{t('metricUniqueHint')}</div>
           </div>
           <div className="admin-card admin-card--warn">
-            <div className="admin-card__label">Deactivated</div>
+            <div className="admin-card__label">{t('metricDeactivated')}</div>
             <div className="admin-card__value">{formatNumber(activities.inactive)}</div>
             <div className="admin-card__hint">
-              No longer in channel · {formatNumber(activities.total)} rows in DB
+              {t('metricDeactivatedHint', { n: formatNumber(activities.total) })}
             </div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Inquiries</div>
+            <div className="admin-card__label">{t('metricInquiries')}</div>
             <div className="admin-card__value">{formatNumber(inquiries.last7d)}</div>
-            <div className="admin-card__hint">{formatNumber(inquiries.total)} all-time · last 7d</div>
+            <div className="admin-card__hint">{t('metricInquiriesHint', { total: formatNumber(inquiries.total) })}</div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Abandoned checkouts</div>
+            <div className="admin-card__label">{t('metricAbandoned')}</div>
             <div className="admin-card__value">{formatNumber(inquiries.abandoned)}</div>
-            <div className="admin-card__hint">Hosted Bókun · open follow-up · &gt;1h</div>
+            <div className="admin-card__hint">{t('metricAbandonedHint')}</div>
           </div>
         </div>
 
-        <h2 className="admin-section-title">Vendor breakdown</h2>
-        <p className="admin-section-sub">
-          Contract column = Bókun search rows per supplier. Unique = deduped trips for that supplier.
-          Footer sums should match the cards above.
-        </p>
+        <h2 className="admin-section-title">{t('vendorBreakdown')}</h2>
+        <p className="admin-section-sub">{t('vendorBreakdownSub')}</p>
         <div className="admin-table-wrap">
           <table className="admin-table admin-table--numeric">
             <thead>
               <tr>
-                <th>Vendor</th>
-                <th>Bókun ID</th>
-                <th title="Search rows in Bókun for this supplier">Contract rows</th>
-                <th title="Unique activity IDs for this supplier">Unique trips</th>
-                <th>Last sync</th>
-                <th>Status</th>
+                <th>{t('thVendor')}</th>
+                <th>{t('thBokunId')}</th>
+                <th>{t('thContractRows')}</th>
+                <th>{t('thUniqueTrips')}</th>
+                <th>{t('thLastSync')}</th>
+                <th>{t('thStatus')}</th>
               </tr>
             </thead>
             <tbody>
               {vendors.length === 0 ? (
-                <tr><td colSpan="6" className="admin-empty">No vendors yet — run /api/catalog/sync first.</td></tr>
+                <tr><td colSpan="6" className="admin-empty">{t('noVendorsSync')}</td></tr>
               ) : vendors.map((v) => (
                 <tr key={v.id} className={v.isActive ? '' : 'admin-table-row--muted'}>
                   <td><strong>{v.name}</strong></td>
@@ -854,8 +854,8 @@
                   <td>{formatDateTime(v.lastSyncedAt, lang)}</td>
                   <td>
                     {v.isActive
-                      ? <span className="admin-badge admin-badge--ok">active</span>
-                      : <span className="admin-badge admin-badge--off">inactive</span>}
+                      ? <span className="admin-badge admin-badge--ok">{t('statusActive')}</span>
+                      : <span className="admin-badge admin-badge--off">{t('statusInactive')}</span>}
                   </td>
                 </tr>
               ))}
@@ -863,7 +863,7 @@
             {vendors.length > 0 ? (
               <tfoot>
                 <tr>
-                  <td colSpan="2"><strong>Total (listed vendors)</strong></td>
+                  <td colSpan="2"><strong>{t('totalListed')}</strong></td>
                   <td><strong>{formatNumber(totals.contractTotal)}</strong></td>
                   <td><strong>{formatNumber(totals.uniqueTotal)}</strong></td>
                   <td colSpan="2" />
@@ -877,39 +877,39 @@
   }
 
   // ---------------- Vendors page ----------------
-  function VendorsPage({ overview }) {
-    if (!overview) return <div className="admin-empty">Loading…</div>;
+  function VendorsPage({ overview, lang, t }) {
+    if (!overview) return <div className="admin-empty">{t('loading')}</div>;
     const { vendors } = overview;
     return (
       <div>
-        <h1 className="admin-page-title">Vendors</h1>
-        <p className="admin-page-sub">Snapshot from the last catalog sync (read-only).</p>
+        <h1 className="admin-page-title">{t('vendorsTitle')}</h1>
+        <p className="admin-page-sub">{t('vendorsSub')}</p>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Vendor</th>
-                <th>Bókun ID</th>
-                <th>Contracts</th>
-                <th>Unique products</th>
-                <th>Last sync</th>
-                <th>Status</th>
+                <th>{t('thVendor')}</th>
+                <th>{t('thBokunId')}</th>
+                <th>{t('thContracts')}</th>
+                <th>{t('thUniqueProducts')}</th>
+                <th>{t('thLastSync')}</th>
+                <th>{t('thStatus')}</th>
               </tr>
             </thead>
             <tbody>
               {vendors.length === 0 ? (
-                <tr><td colSpan="6" className="admin-empty">No vendors yet.</td></tr>
+                <tr><td colSpan="6" className="admin-empty">{t('noVendors')}</td></tr>
               ) : vendors.map((v) => (
                 <tr key={v.id}>
                   <td><strong>{v.name}</strong></td>
                   <td>#{v.bokunVendorId}</td>
                   <td>{formatNumber(v.contractProductCount)}</td>
                   <td>{formatNumber(v.uniqueProductCount)}</td>
-                  <td>{formatDateTime(v.lastSyncedAt)} <small style={{ color: 'var(--fg-3)' }}>{timeAgo(v.lastSyncedAt)}</small></td>
+                  <td>{formatDateTime(v.lastSyncedAt, lang)} <small style={{ color: 'var(--fg-3)' }}>{timeAgo(v.lastSyncedAt, lang)}</small></td>
                   <td>
                     {v.isActive
-                      ? <span className="admin-badge admin-badge--ok">active</span>
-                      : <span className="admin-badge admin-badge--off">inactive</span>}
+                      ? <span className="admin-badge admin-badge--ok">{t('statusActive')}</span>
+                      : <span className="admin-badge admin-badge--off">{t('statusInactive')}</span>}
                   </td>
                 </tr>
               ))}
@@ -1067,7 +1067,7 @@
   }
 
   // ---------------- Content page ----------------
-  function ContentPage({ token, vendors, reloadKey, onRefresh }) {
+  function ContentPage({ token, vendors, reloadKey, onRefresh, t }) {
     const [vendorId, setVendorId] = useState('');
     const [vendorForm, setVendorForm] = useState(null);
     const [vendorMsg, setVendorMsg] = useState('');
@@ -1110,10 +1110,10 @@
             tags: vendorForm.tags,
           },
         });
-        setVendorMsg('Vendor profile saved.');
+        setVendorMsg(t('vendorSaved'));
         onRefresh();
       } catch (err) {
-        setVendorMsg(err.message || 'Save failed');
+        setVendorMsg(err.message || t('saveFailed'));
       } finally {
         setVendorSaving(false);
       }
@@ -1137,31 +1137,31 @@
 
     return (
       <div>
-        <h1 className="admin-page-title">Content</h1>
-        <p className="admin-page-sub">Owned copy, vendor profiles, and homepage featured rail.</p>
+        <h1 className="admin-page-title">{t('contentTitle')}</h1>
+        <p className="admin-page-sub">{t('contentSub')}</p>
 
         <section className="admin-sync-panel">
-          <h2>Homepage featured</h2>
-          <p>Shown on djstour.com when at least one activity is marked featured. Falls back to first six tours otherwise.</p>
+          <h2>{t('featuredSection')}</h2>
+          <p>{t('featuredDesc')}</p>
           <div className="admin-sync-actions" style={{ marginBottom: 12 }}>
             <input
               type="text"
-              placeholder="Bókun activity ID to feature…"
+              placeholder={t('featuredIdPlaceholder')}
               value={addFeaturedId}
               onChange={(e) => setAddFeaturedId(e.target.value)}
               style={{ minWidth: 220 }}
             />
-            <button type="button" className="admin-btn admin-btn--ghost" onClick={addFeatured}>Add featured</button>
-            {featuredLoading ? <span style={{ fontSize: 12 }}>Loading…</span> : null}
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={addFeatured}>{t('addFeatured')}</button>
+            {featuredLoading ? <span style={{ fontSize: 12 }}>{t('loading')}</span> : null}
           </div>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
-                <tr><th>Title</th><th>ID</th><th>Rank</th><th>Actions</th></tr>
+                <tr><th>{t('thTitle')}</th><th>ID</th><th>{t('thRank')}</th><th>{t('thActions')}</th></tr>
               </thead>
               <tbody>
                 {featured.rows.length === 0 ? (
-                  <tr><td colSpan="4" className="admin-empty">No featured activities yet.</td></tr>
+                  <tr><td colSpan="4" className="admin-empty">{t('noFeatured')}</td></tr>
                 ) : featured.rows.map((row) => (
                   <tr key={row.id}>
                     <td><strong>{row.title}</strong></td>
@@ -1169,7 +1169,7 @@
                     <td>{row.featuredRank ?? '—'}</td>
                     <td>
                       <div className="admin-actions">
-                        <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setContentEditId(row.bokunActivityId)}>Edit</button>
+                        <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setContentEditId(row.bokunActivityId)}>{t('edit')}</button>
                         <button
                           type="button"
                           className="admin-btn admin-btn--danger admin-btn--sm"
@@ -1182,7 +1182,7 @@
                             onRefresh();
                           }}
                         >
-                          Remove
+                          {t('remove')}
                         </button>
                       </div>
                     </td>
@@ -1194,12 +1194,12 @@
         </section>
 
         <section className="admin-sync-panel">
-          <h2>Vendor profile</h2>
+          <h2>{t('vendorProfile')}</h2>
           <div className="admin-form-grid" style={{ marginBottom: 12 }}>
             <label className="admin-field admin-field--wide">
-              <span>Vendor</span>
+              <span>{t('thVendor')}</span>
               <select value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
-                <option value="">Select vendor…</option>
+                <option value="">{t('selectVendor')}</option>
                 {(vendors || []).map((v) => (
                   <option key={v.id} value={v.bokunVendorId}>{v.name} (#{v.bokunVendorId})</option>
                 ))}
@@ -1239,7 +1239,7 @@
           ) : null}
           <div className="admin-sync-actions" style={{ marginTop: 12 }}>
             <button type="button" className="admin-btn" onClick={saveVendor} disabled={!vendorForm || vendorSaving}>
-              {vendorSaving ? 'Saving…' : 'Save vendor'}
+              {vendorSaving ? t('saving') : t('saveVendor')}
             </button>
             {vendorMsg ? <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{vendorMsg}</span> : null}
           </div>
@@ -1258,7 +1258,7 @@
   }
 
   // ---------------- Activities page ----------------
-  function ActivitiesPage({ token, vendors, reloadKey, formatDisplayPrice }) {
+  function ActivitiesPage({ token, vendors, reloadKey, formatDisplayPrice, lang, t }) {
     const [page, setPage] = useState(1);
     const [pageSize] = useState(50);
     const [statusFilter, setStatusFilter] = useState('all');
@@ -1301,7 +1301,7 @@
         })
         .catch((err) => {
           if (!alive) return;
-          setError(err.message || 'Failed to load activities');
+          setError(err.message || t('loadActivitiesFailed'));
         })
         .finally(() => { if (alive) setLoading(false); });
       return () => { alive = false; };
@@ -1324,7 +1324,7 @@
             : `${id} is now ${isActive ? 'active' : 'inactive'}`,
         );
       } catch (err) {
-        setActionMsg(err.message || 'Action failed');
+        setActionMsg(err.message || t('actionFailed'));
       } finally {
         setRowBusy(null);
       }
@@ -1334,9 +1334,9 @@
 
     return (
       <div>
-        <h1 className="admin-page-title">Activities</h1>
+        <h1 className="admin-page-title">{t('activitiesTitle')}</h1>
         <p className="admin-page-sub">
-          {formatNumber(data.total)} matching rows.
+          {t('activitiesSub')} {t('activitiesMatching', { n: formatNumber(data.total) })}
           {actionMsg ? <span style={{ marginLeft: 12, color: 'var(--fg-3)' }}>{actionMsg}</span> : null}
         </p>
 
@@ -1344,24 +1344,24 @@
           <div className="admin-table-toolbar">
             <input
               type="search"
-              placeholder="Search by English title…"
+              placeholder={t('searchPlaceholder')}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">{t('filterAllStatuses')}</option>
+              <option value="active">{t('filterActiveOnly')}</option>
+              <option value="inactive">{t('filterInactiveOnly')}</option>
             </select>
             <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value)}>
-              <option value="">All vendors</option>
+              <option value="">{t('filterAllVendors')}</option>
               {(vendors || []).map((v) => (
                 <option key={v.id} value={v.bokunVendorId}>
                   {v.name} (#{v.bokunVendorId})
                 </option>
               ))}
             </select>
-            {loading ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>Loading…</span> : null}
+            {loading ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{t('loading')}</span> : null}
           </div>
 
           {error ? (
@@ -1370,18 +1370,18 @@
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Title</th>
-                  <th>Bókun ID</th>
-                  <th>Vendor</th>
-                  <th>Price from</th>
-                  <th>Last sync</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t('thTitle')}</th>
+                  <th>{t('thBokunId')}</th>
+                  <th>{t('thVendor')}</th>
+                  <th>{t('thPriceFrom')}</th>
+                  <th>{t('thLastSync')}</th>
+                  <th>{t('thStatus')}</th>
+                  <th>{t('thActions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.rows.length === 0 ? (
-                  <tr><td colSpan="7" className="admin-empty">No activities match.</td></tr>
+                  <tr><td colSpan="7" className="admin-empty">{t('noActivitiesMatch')}</td></tr>
                 ) : data.rows.map((row) => (
                   <tr key={row.id}>
                     <td>
@@ -1392,13 +1392,13 @@
                     <td>{row.vendor ? row.vendor.name : '—'}</td>
                     <td>{formatDisplayPrice ? formatDisplayPrice(row.priceFrom) : formatPrice(row.priceFrom, row.currency)}</td>
                     <td>
-                      {formatDateTime(row.lastSyncedAt)}
-                      <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{timeAgo(row.lastSyncedAt)}</div>
+                      {formatDateTime(row.lastSyncedAt, lang)}
+                      <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{timeAgo(row.lastSyncedAt, lang)}</div>
                     </td>
                     <td>
                       {row.isActive
-                        ? <span className="admin-badge admin-badge--ok">active</span>
-                        : <span className="admin-badge admin-badge--off">inactive</span>}
+                        ? <span className="admin-badge admin-badge--ok">{t('statusActive')}</span>
+                        : <span className="admin-badge admin-badge--off">{t('statusInactive')}</span>}
                     </td>
                     <td>
                       <div className="admin-actions">
@@ -1407,7 +1407,7 @@
                           className="admin-btn admin-btn--ghost admin-btn--sm"
                           onClick={() => setContentEditId(row.bokunActivityId)}
                         >
-                          Content
+                          {t('contentBtn')}
                         </button>
                         <button
                           type="button"
@@ -1415,7 +1415,7 @@
                           disabled={rowBusy === row.bokunActivityId}
                           onClick={() => runRowAction(row, 'resync-detail')}
                         >
-                          {rowBusy === row.bokunActivityId ? '…' : 'Re-sync detail'}
+                          {rowBusy === row.bokunActivityId ? '…' : t('resyncDetail')}
                         </button>
                         {row.isActive ? (
                           <button
@@ -1424,7 +1424,7 @@
                             disabled={rowBusy === row.bokunActivityId}
                             onClick={() => runRowAction(row, 'set-active', false)}
                           >
-                            Deactivate
+                            {t('deactivate')}
                           </button>
                         ) : (
                           <button
@@ -1433,7 +1433,7 @@
                             disabled={rowBusy === row.bokunActivityId}
                             onClick={() => runRowAction(row, 'set-active', true)}
                           >
-                            Activate
+                            {t('activate')}
                           </button>
                         )}
                         <a
@@ -1443,7 +1443,7 @@
                           rel="noreferrer"
                           style={{ textDecoration: 'none' }}
                         >
-                          View site
+                          {t('viewSite')}
                         </a>
                       </div>
                     </td>
@@ -1454,10 +1454,10 @@
           )}
 
           <div className="admin-pagination">
-            <span>Page {page} / {totalPages}</span>
+            <span>{t('pageOf', { page, total: totalPages })}</span>
             <span style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</button>
+              <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>{t('pagePrev')}</button>
+              <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>{t('pageNext')}</button>
             </span>
           </div>
         </div>
@@ -1493,7 +1493,7 @@
   };
 
   // ---------------- Marketing page ----------------
-  function MarketingPage({ token, reloadKey }) {
+  function MarketingPage({ token, reloadKey, t }) {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -1506,7 +1506,7 @@
       setError('');
       adminFetch('/api/admin/collections', token)
         .then((res) => setRows(res.rows || []))
-        .catch((err) => setError(err.message || 'Failed to load collections'))
+        .catch((err) => setError(err.message || t('loadCollectionsFailed')))
         .finally(() => setLoading(false));
     }, [token]);
 
@@ -1539,30 +1539,30 @@
         } else {
           await adminFetch('/api/admin/collections', token, { method: 'POST', body });
         }
-        setMsg('Collection saved.');
+        setMsg(t('collectionSaved'));
         setEditing(null);
         load();
       } catch (err) {
-        setError(err.message || 'Save failed');
+        setError(err.message || t('saveFailed'));
       } finally {
         setSaving(false);
       }
     };
 
     const remove = async (row) => {
-      if (!window.confirm(`Delete collection "${row.slug}"?`)) return;
+      if (!window.confirm(t('deleteCollectionConfirm', { slug: row.slug }))) return;
       try {
         await adminFetch(`/api/admin/collections?id=${row.id}`, token, { method: 'DELETE' });
         load();
       } catch (err) {
-        setError(err.message || 'Delete failed');
+        setError(err.message || t('deleteFailed'));
       }
     };
 
     return (
       <div>
-        <h1 className="admin-page-title">Marketing</h1>
-        <p className="admin-page-sub">Homepage collection rails below the featured section. Filter by chip, route, or manual activity IDs.</p>
+        <h1 className="admin-page-title">{t('marketingTitle')}</h1>
+        <p className="admin-page-sub">{t('marketingSub')}</p>
 
         <div className="admin-sync-actions" style={{ marginBottom: 16 }}>
           <button
@@ -1575,9 +1575,9 @@
               overlines: { hant: '季節精選', hans: '季节精选', en: 'Season picks' },
             })}
           >
-            New collection
+            {t('newCollection')}
           </button>
-          {loading ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>Loading…</span> : null}
+          {loading ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{t('loading')}</span> : null}
           {msg ? <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{msg}</span> : null}
         </div>
 
@@ -1586,25 +1586,25 @@
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
-              <tr><th>Order</th><th>Slug</th><th>Title (EN)</th><th>Filter</th><th>Active</th><th>Actions</th></tr>
+              <tr><th>{t('thOrder')}</th><th>{t('thSlug')}</th><th>{t('thTitle')} (EN)</th><th>{t('thFilter')}</th><th>{t('thStatus')}</th><th>{t('thActions')}</th></tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan="6" className="admin-empty">No collections yet — add one to show homepage rails.</td></tr>
+                <tr><td colSpan="6" className="admin-empty">{t('noCollections')}</td></tr>
               ) : rows.map((row) => (
                 <tr key={row.id}>
                   <td>{row.sortOrder}</td>
                   <td><code>{row.slug}</code></td>
                   <td>{row.titles.en || row.titles.hant || '—'}</td>
                   <td>{row.filterType}{row.filterValue ? ` · ${row.filterValue}` : ''}</td>
-                  <td>{row.isActive ? <span className="admin-badge admin-badge--ok">on</span> : <span className="admin-badge admin-badge--off">off</span>}</td>
+                  <td>{row.isActive ? <span className="admin-badge admin-badge--ok">{t('badgeOn')}</span> : <span className="admin-badge admin-badge--off">{t('badgeOffShort')}</span>}</td>
                   <td>
                     <div className="admin-actions">
                       <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setEditing({
                         ...row,
                         activityIdsText: (row.activityIds || []).join(', '),
-                      })}>Edit</button>
-                      <button type="button" className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => remove(row)}>Delete</button>
+                      })}>{t('edit')}</button>
+                      <button type="button" className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => remove(row)}>{t('delete')}</button>
                     </div>
                   </td>
                 </tr>
@@ -1617,8 +1617,8 @@
           <div className="admin-modal-backdrop" onClick={() => setEditing(null)} role="presentation">
             <div className="admin-modal admin-modal--wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
               <div className="admin-modal__header">
-                <h2>{editing.id ? `Edit · ${editing.slug}` : 'New collection'}</h2>
-                <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setEditing(null)}>Close</button>
+                <h2>{editing.id ? `${t('edit')} · ${editing.slug}` : t('newCollection')}</h2>
+                <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setEditing(null)}>{t('close')}</button>
               </div>
               <div className="admin-modal__body">
                 <div className="admin-form-grid">
@@ -1703,8 +1703,8 @@
                 </div>
               </div>
               <div className="admin-modal__footer">
-                <button type="button" className="admin-btn admin-btn--ghost" onClick={() => setEditing(null)} disabled={saving}>Cancel</button>
-                <button type="button" className="admin-btn" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+                <button type="button" className="admin-btn admin-btn--ghost" onClick={() => setEditing(null)} disabled={saving}>{t('cancel')}</button>
+                <button type="button" className="admin-btn" onClick={save} disabled={saving}>{saving ? t('saving') : t('save')}</button>
               </div>
             </div>
           </div>
@@ -1714,7 +1714,7 @@
   }
 
   // ---------------- Inquiries page ----------------
-  function InquiriesPage({ token }) {
+  function InquiriesPage({ token, lang, t }) {
     const [page, setPage] = useState(1);
     const [pageSize] = useState(50);
     const [statusFilter, setStatusFilter] = useState('');
@@ -1756,7 +1756,7 @@
         })
         .catch((err) => {
           if (!alive) return;
-          setError(err.message || 'Failed to load inquiries');
+          setError(err.message || t('loadInquiriesFailed'));
         })
         .finally(() => { if (alive) setLoading(false); });
       return () => { alive = false; };
@@ -1791,7 +1791,7 @@
           body: { followUpStatus: followDraft, adminNotes: notesDraft },
         });
         setDetail(res.inquiry);
-        setSaveMsg('Saved.');
+        setSaveMsg(t('savedOk'));
         const listRes = await loadList();
         setData({
           rows: listRes.rows || [],
@@ -1799,7 +1799,7 @@
           statusCounts: listRes.statusCounts || data.statusCounts,
         });
       } catch (err) {
-        setSaveMsg(err.message || 'Save failed');
+        setSaveMsg(err.message || t('saveFailed'));
       } finally {
         setSaving(false);
       }
@@ -1824,28 +1824,28 @@
 
     return (
       <div>
-        <h1 className="admin-page-title">Inquiries</h1>
+        <h1 className="admin-page-title">{t('inquiriesTitle')}</h1>
         <p className="admin-page-sub">
-          {formatNumber(data.total)} matching · concierge leads + hosted-checkout redirects.
+          {t('inquiriesMatching', { n: formatNumber(data.total) })}
         </p>
 
         <div className="admin-table-wrap">
           <div className="admin-table-toolbar">
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} disabled={abandonedOnly}>
-              <option value="">All statuses</option>
+              <option value="">{t('filterAllStatuses')}</option>
               <option value="new">new (concierge lead)</option>
               <option value="redirected_to_bokun">redirected_to_bokun</option>
             </select>
             <label style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <input type="checkbox" checked={abandonedOnly} onChange={(e) => setAbandonedOnly(e.target.checked)} />
-              Abandoned carts only
+              {t('abandonedCartsOnly')}
             </label>
             {data.statusCounts ? (
               <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>
                 {Object.entries(data.statusCounts).map(([k, v]) => `${k}:${v}`).join(' · ')}
               </span>
             ) : null}
-            {loading ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>Loading…</span> : null}
+            {loading ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{t('loading')}</span> : null}
           </div>
 
           {error ? (
@@ -1854,17 +1854,17 @@
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Created</th>
-                  <th>Status</th>
-                  <th>Follow-up</th>
-                  <th>Contact</th>
-                  <th>Items</th>
-                  <th>Hosted URL</th>
+                  <th>{t('thCreated')}</th>
+                  <th>{t('thStatus')}</th>
+                  <th>{t('saveFollowUp')}</th>
+                  <th>{t('thContact')}</th>
+                  <th>{t('thItems')}</th>
+                  <th>{t('thHostedUrl')}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.rows.length === 0 ? (
-                  <tr><td colSpan="6" className="admin-empty">No inquiries yet.</td></tr>
+                  <tr><td colSpan="6" className="admin-empty">{t('noInquiries')}</td></tr>
                 ) : data.rows.map((row) => (
                   <React.Fragment key={row.id}>
                     <tr
@@ -1873,8 +1873,8 @@
                       onClick={() => setOpenId(openId === row.id ? null : row.id)}
                     >
                       <td>
-                        {formatDateTime(row.createdAt)}
-                        <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{timeAgo(row.createdAt)}</div>
+                        {formatDateTime(row.createdAt, lang)}
+                        <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{timeAgo(row.createdAt, lang)}</div>
                       </td>
                       <td><span className={statusBadge(row.status)}>{row.status}</span></td>
                       <td><span className={followBadge(row.followUpStatus)}>{row.followUpStatus}</span></td>
@@ -1914,7 +1914,7 @@
                               </label>
                               <div className="admin-sync-actions">
                                 <button type="button" className="admin-btn admin-btn--sm" onClick={saveFollowUp} disabled={saving}>
-                                  {saving ? 'Saving…' : 'Save follow-up'}
+                                  {saving ? t('saving') : t('saveFollowUp')}
                                 </button>
                                 {saveMsg ? <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{saveMsg}</span> : null}
                               </div>
@@ -1936,10 +1936,10 @@
           )}
 
           <div className="admin-pagination">
-            <span>Page {page} / {totalPages}</span>
+            <span>{t('pageOf', { page, total: totalPages })}</span>
             <span style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</button>
+              <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>{t('pagePrev')}</button>
+              <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>{t('pageNext')}</button>
             </span>
           </div>
         </div>
@@ -1948,7 +1948,7 @@
   }
 
   // ---------------- Translations page ----------------
-  function TranslationsPage({ token, reloadKey }) {
+  function TranslationsPage({ token, reloadKey, t }) {
     const [queue, setQueue] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -2000,7 +2000,7 @@
       setError('');
       adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50', token)
         .then((res) => setQueue(res))
-        .catch((err) => setError(err.message || 'Failed to load queue'))
+        .catch((err) => setError(err.message || t('loadQueueFailed')))
         .finally(() => setLoading(false));
     }, [token]);
 
@@ -2018,7 +2018,7 @@
         setRunResult(res);
         loadQueue();
       } catch (err) {
-        setError(err.message || 'Batch failed');
+        setError(err.message || t('batchFailed'));
       } finally {
         setRunning(false);
       }
@@ -2045,43 +2045,43 @@
 
     return (
       <div>
-        <h1 className="admin-page-title">Translations</h1>
+        <h1 className="admin-page-title">{t('translationsTitle')}</h1>
         <p className="admin-page-sub">
-          OpenAI background sync for hant/hans overlays. Scanned {formatNumber(queue?.activeActivities)} active activities
+          {t('translationsSub', { n: formatNumber(queue?.activeActivities) })}
           {queue?.scannedAt ? ` · ${formatDateTime(queue.scannedAt)}` : ''}.
         </p>
 
         <div className="admin-grid" style={{ marginBottom: 20 }}>
           <div className="admin-card">
-            <div className="admin-card__label">Field coverage</div>
+            <div className="admin-card__label">{t('fieldCoverage')}</div>
             <div className="admin-card__value">{cov ? `${cov.percentComplete}%` : '—'}</div>
             <div className="admin-card__hint">
               {cov ? `${formatNumber(cov.translatedFields)} / ${formatNumber(cov.requiredFields)} fields` : '—'}
             </div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Queue depth</div>
+            <div className="admin-card__label">{t('queueDepthLabel')}</div>
             <div className="admin-card__value">{formatNumber(stats?.queueDepth)}</div>
-            <div className="admin-card__hint">activities need translation work</div>
+            <div className="admin-card__hint">{t('queueDepthHint')}</div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Fully translated</div>
+            <div className="admin-card__label">{t('fullyTranslated')}</div>
             <div className="admin-card__value">{formatNumber(stats?.complete)}</div>
             <div className="admin-card__hint">{formatNumber(stats?.partial)} partial · {formatNumber(stats?.pending)} empty</div>
           </div>
           <div className="admin-card">
-            <div className="admin-card__label">Cron estimate</div>
+            <div className="admin-card__label">{t('cronEstimate')}</div>
             <div className="admin-card__value">{queue?.cron?.estimatedRunsToClear ?? '—'}</div>
             <div className="admin-card__hint">runs @ {queue?.cron?.maxActivitiesPerRun || 12}/batch · {queue?.cron?.schedule || 'every 6h'}</div>
           </div>
         </div>
 
         <section className={`admin-sync-panel${running ? ' admin-sync-panel--busy' : ''}`}>
-          <h2>Run translation batch</h2>
-          <p>Same worker as Vercel cron — translates up to N activities per run (title, summary, description, stops).</p>
+          <h2>{t('runTranslationBatch')}</h2>
+          <p>{t('runTranslationBatchDesc')}</p>
           <div className="admin-sync-actions">
             <label style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              Batch size
+              {t('batchSize')}
               <input
                 type="number"
                 min={1}
@@ -2101,14 +2101,14 @@
               {running ? (
                 <>
                   <span className="admin-sync-spinner" aria-hidden="true" />
-                  Translating… {batchElapsed}s
+                  {t('translating')} {batchElapsed}s
                 </>
               ) : (
-                'Run batch now'
+                t('runBatchNow')
               )}
             </button>
             <button type="button" className="admin-btn admin-btn--ghost" onClick={loadQueue} disabled={running || loading || !!rowBusy}>
-              Refresh queue
+              {t('refreshQueue')}
             </button>
           </div>
           {running ? (
@@ -2119,6 +2119,7 @@
               queueDepth={queueDepth}
               progressPct={batchProgressPct}
               estimatedSec={batchEstimateSec}
+              t={t}
             />
           ) : null}
           {rowBusy && !running ? (
@@ -2168,23 +2169,23 @@
 
         {error ? <div className="admin-result admin-result--error">{error}</div> : null}
 
-        <h2 style={{ fontSize: 16, margin: '8px 0 12px' }}>Pending queue</h2>
+        <h2 style={{ fontSize: 16, margin: '8px 0 12px' }}>{t('pendingQueue')}</h2>
         <div className="admin-table-wrap">
-          {loading ? <div className="admin-empty">Scanning catalog…</div> : (
+          {loading ? <div className="admin-empty">{t('scanningCatalog')}</div> : (
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Activity</th>
+                  <th>{t('navActivities')}</th>
                   <th>ID</th>
-                  <th>Coverage</th>
-                  <th>Missing</th>
-                  <th>Stale</th>
-                  <th>Actions</th>
+                  <th>{t('thCoverage')}</th>
+                  <th>{t('thMissing')}</th>
+                  <th>{t('thStale')}</th>
+                  <th>{t('thActions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {!queue?.pending?.length ? (
-                  <tr><td colSpan="6" className="admin-empty">Queue empty — all scanned activities are up to date.</td></tr>
+                  <tr><td colSpan="6" className="admin-empty">{t('queueEmpty')}</td></tr>
                 ) : queue.pending.map((row) => (
                   <tr key={row.bokunActivityId}>
                     <td><strong>{row.title}</strong></td>
@@ -2199,7 +2200,7 @@
                         disabled={rowBusy === row.bokunActivityId || running}
                         onClick={() => syncOne(row.bokunActivityId)}
                       >
-                        {rowBusy === row.bokunActivityId ? `… ${rowElapsed}s` : 'Translate'}
+                        {rowBusy === row.bokunActivityId ? `… ${rowElapsed}s` : t('translateBtn')}
                       </button>
                     </td>
                   </tr>
@@ -2213,7 +2214,7 @@
   }
 
   // ---------------- Health page ----------------
-  function HealthPage({ token, overview }) {
+  function HealthPage({ token, overview, t }) {
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -2223,7 +2224,7 @@
       setError('');
       adminFetch('/api/admin/health', token)
         .then((res) => setReport(res))
-        .catch((err) => setError(err.message || 'Health check failed'))
+        .catch((err) => setError(err.message || t('healthCheckFailed')))
         .finally(() => setLoading(false));
     }, [token]);
 
@@ -2233,8 +2234,8 @@
 
     function flagBadge(b) {
       return b
-        ? <span className="admin-badge admin-badge--ok">set</span>
-        : <span className="admin-badge admin-badge--err">missing</span>;
+        ? <span className="admin-badge admin-badge--ok">{t('envSet')}</span>
+        : <span className="admin-badge admin-badge--err">{t('envMissing')}</span>;
     }
 
     function checkStatusClass(status) {
@@ -2247,15 +2248,15 @@
 
     return (
       <div>
-        <h1 className="admin-page-title">Health</h1>
-        <p className="admin-page-sub">Live probes + environment flags for this deployment.</p>
+        <h1 className="admin-page-title">{t('healthTitle')}</h1>
+        <p className="admin-page-sub">{t('healthSub')}</p>
 
         <div className="admin-sync-actions" style={{ marginBottom: 16 }}>
           <button type="button" className="admin-btn admin-btn--ghost" onClick={loadHealth} disabled={loading}>
-            {loading ? 'Checking…' : 'Re-run checks'}
+            {loading ? t('checking') : t('rerunChecks')}
           </button>
           {report?.generatedAt ? (
-            <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>Last run {formatDateTime(report.generatedAt)}</span>
+            <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{t('lastRun')} {formatDateTime(report.generatedAt)}</span>
           ) : null}
         </div>
 
@@ -2263,7 +2264,7 @@
 
         {report ? (
           <div className={`admin-health-banner admin-health-banner--${overall}`}>
-            <strong>Overall: {overall}</strong>
+            <strong>{t('healthOverall')}: {overall === 'healthy' ? t('healthHealthy') : overall === 'degraded' ? t('healthDegraded') : overall === 'unhealthy' ? t('healthUnhealthy') : overall}</strong>
             {report.translation ? (
               <span style={{ marginLeft: 12, fontWeight: 400 }}>
                 Translation queue {formatNumber(report.translation.queueDepth)} · {report.translation.percentComplete}% field coverage
@@ -2287,16 +2288,16 @@
           </div>
         ) : null}
 
-        <h2 style={{ fontSize: 16, margin: '24px 0 12px' }}>Environment variables</h2>
-        <p className="admin-page-sub" style={{ marginTop: 0 }}>Presence only — values are never returned.</p>
+        <h2 style={{ fontSize: 16, margin: '24px 0 12px' }}>{t('envVarsTitle')}</h2>
+        <p className="admin-page-sub" style={{ marginTop: 0 }}>{t('envVarsSub')}</p>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <tbody>
               <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>Bókun API</th></tr>
               <tr><td>BOKUN_ACCESS_KEY</td><td>{flagBadge(env.bokun?.accessKey)}</td></tr>
               <tr><td>BOKUN_SECRET_KEY</td><td>{flagBadge(env.bokun?.secretKey)}</td></tr>
-              <tr><td>BOKUN_API_HOST</td><td>{env.bokun?.apiHost || <span className="admin-badge admin-badge--off">default</span>}</td></tr>
-              <tr><td>BOKUN_SHOP_URL</td><td>{env.bokun?.shopUrl || <span className="admin-badge admin-badge--err">missing</span>}</td></tr>
+              <tr><td>BOKUN_API_HOST</td><td>{env.bokun?.apiHost || <span className="admin-badge admin-badge--off">{t('badgeDefault')}</span>}</td></tr>
+              <tr><td>BOKUN_SHOP_URL</td><td>{env.bokun?.shopUrl || <span className="admin-badge admin-badge--err">{t('envMissing')}</span>}</td></tr>
 
               <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>Supabase</th></tr>
               <tr><td>SUPABASE_URL</td><td>{flagBadge(env.supabase?.url)}</td></tr>
@@ -2326,6 +2327,7 @@
   function AdminShell({ token, onLogout, prefs }) {
     const {
       lang,
+      t,
       prefToolbar,
       formatDisplayPrice,
     } = prefs || {};
@@ -2338,10 +2340,10 @@
       adminFetch('/api/admin/overview', token)
         .then((res) => { setOverview(res); setOverviewError(''); })
         .catch((err) => {
-          setOverviewError(err.message || 'Failed to load overview');
+          setOverviewError(err.message || (t ? t('loadOverviewFailed') : 'Failed to load overview'));
           if (err.status === 401) onLogout();
         });
-    }, [token, onLogout]);
+    }, [token, onLogout, t]);
 
     useEffect(() => { loadOverview(); }, [loadOverview]);
 
@@ -2360,7 +2362,7 @@
 
     return (
       <div className="admin-shell">
-        <Sidebar tab={tab} setTab={setTab} counts={counts} onLogout={onLogout} prefToolbar={prefToolbar} />
+        <Sidebar tab={tab} setTab={setTab} counts={counts} onLogout={onLogout} prefToolbar={prefToolbar} t={t} />
         <main className="admin-main">
           {prefToolbar ? (
             <div className="admin-topbar admin-topbar--mobile-only">{prefToolbar}</div>
@@ -2372,15 +2374,17 @@
           ) : null}
 
           {tab === 'overview' && (
-            <OverviewPage overview={overview} token={token} onRefresh={refreshAll} />
+            <OverviewPage overview={overview} token={token} onRefresh={refreshAll} lang={lang} t={t} />
           )}
-          {tab === 'vendors' && <VendorsPage overview={overview} />}
+          {tab === 'vendors' && <VendorsPage overview={overview} lang={lang} t={t} />}
           {tab === 'activities' && (
             <ActivitiesPage
               token={token}
               vendors={overview?.vendors || []}
               reloadKey={reloadKey}
               formatDisplayPrice={formatDisplayPrice}
+              lang={lang}
+              t={t}
             />
           )}
           {tab === 'content' && (
@@ -2389,16 +2393,17 @@
               vendors={overview?.vendors}
               reloadKey={reloadKey}
               onRefresh={refreshAll}
+              t={t}
             />
           )}
           {tab === 'marketing' && (
-            <MarketingPage token={token} reloadKey={reloadKey} />
+            <MarketingPage token={token} reloadKey={reloadKey} t={t} />
           )}
-          {tab === 'inquiries' && <InquiriesPage token={token} />}
+          {tab === 'inquiries' && <InquiriesPage token={token} lang={lang} t={t} />}
           {tab === 'translations' && (
-            <TranslationsPage token={token} reloadKey={reloadKey} />
+            <TranslationsPage token={token} reloadKey={reloadKey} t={t} />
           )}
-          {tab === 'health' && <HealthPage token={token} overview={overview} />}
+          {tab === 'health' && <HealthPage token={token} overview={overview} t={t} />}
         </main>
       </div>
     );
@@ -2412,7 +2417,7 @@
     const onLogout = () => { writeToken(''); setToken(''); };
 
     if (!token) {
-      return <LoginScreen onLoggedIn={onLoggedIn} prefToolbar={prefs.prefToolbar} />;
+      return <LoginScreen onLoggedIn={onLoggedIn} prefToolbar={prefs.prefToolbar} t={prefs.t} />;
     }
     return <AdminShell token={token} onLogout={onLogout} prefs={prefs} />;
   }

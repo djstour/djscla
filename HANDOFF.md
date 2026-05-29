@@ -31,6 +31,10 @@ DJS Tour · 獨角獸旅遊（djstour.com）是為華語旅人打造的冰島 OT
 
 - **ChipIds 快取自動化** — 目錄變更時自動更新分類快取，避免手動 `npm run enrich:chips`。方案與檢查清單見 [`docs/CHIP_IDS_AUTOMATION.md`](docs/CHIP_IDS_AUTOMATION.md)。
 
+## Bókun API 開發規範
+
+所有 Bókun 串接以 **[`docs/BOKUN_REST_V2.md`](docs/BOKUN_REST_V2.md)** 為準：**僅 REST v2**（`/restapi/v2.0/*`），**已移除 v1 `*.json` API**。目錄來自 Marketplace 合約 + `experience/components`；結帳為 Hosted shop（`BOKUN_SHOP_URL`）。
+
 ## 部署
 
 正式站與建議流程見 **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)**（Vercel `main` → Production、env、Cron、檢查清單）。Vercel 專案細節：[`docs/VERCEL.md`](docs/VERCEL.md)。

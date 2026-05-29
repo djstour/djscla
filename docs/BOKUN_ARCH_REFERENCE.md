@@ -2,6 +2,8 @@
 
 This document distills the Bókun docs into an implementation guide for this project.
 
+> **開發規範（必讀）：** **[BOKUN_REST_V2.md](./BOKUN_REST_V2.md)** — 本站僅 REST v2；v1 已移除。本文件專注結帳架構與上線路徑。
+
 ## Official docs to prioritize
 
 - Config & Auth:
@@ -43,13 +45,13 @@ Cons:
 - Less control over final payment UX
 - Checkout answers/payment completion happen on Bókun page
 
-### B) Full API checkout (more control)
+### B) Full API checkout (more control — future)
 
-Flow:
-1. Build cart (`POST /cart.json/{cartUUID}/activity`) or direct booking request
+Flow (legacy v1 reference only; not implemented on this site):
+1. Build cart / booking request via Bókun booking API
 2. Fetch checkout options/questions
-3. Submit checkout (`POST /checkout.json/submit`)
-4. Handle payment/confirmation response (optionally reserve-then-confirm)
+3. Submit checkout
+4. Handle payment/confirmation response
 
 Pros:
 - Full programmatic control

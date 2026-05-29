@@ -1,4 +1,4 @@
-const { getActivityById, getQuoteCurrency, applyQuoteCurrency, bokunRequest } = require('../../lib/bokun');
+const { getActivityById, getQuoteCurrency, applyQuoteCurrency } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
@@ -61,27 +61,9 @@ function hasUsablePrice(activity) {
   return false;
 }
 
-async function fetchPickupPlaces(id) {
-  try {
-    const r = await bokunRequest({ method: 'GET', path: `/activity.json/${id}/pickup-places` });
-    if (r && Array.isArray(r.pickupPlaces)) return r.pickupPlaces;
-    if (Array.isArray(r)) return r;
-    return [];
-  } catch (err) {
-    console.warn(`[Auralis] pickup-places fetch failed for ${id}:`, err.message);
-    return [];
-  }
-}
-
 async function fetchFromBokun(id, uiLang) {
-  const [rawPayload, pickupPlaces] = await Promise.all([
-    getActivityById(id, { uiLang }),
-    fetchPickupPlaces(id),
-  ]);
+  const rawPayload = await getActivityById(id, { uiLang });
   const raw = unwrapActivity(rawPayload);
-  if (raw && typeof raw === 'object' && pickupPlaces.length) {
-    raw.pickupPlaces = pickupPlaces;
-  }
   const quoteCurrency = getQuoteCurrency();
   const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
   return { activity, quoteCurrency, raw };
@@ -122,28 +104,6 @@ module.exports = async function handler(req, res) {
         activity = cached.activity;
         usedSource = 'db';
         lastSyncedAt = cached.lastSyncedAt;
-        // Pickup-places aren't part of the search.json firehose that catalog
-        // sync uses, so hydrate them on demand here. Cheap (~150ms) and stable.
-        const needsPickup = activity.pickupInfo
-          && activity.pickupInfo.enabled
-          && (!Array.isArray(activity.pickupInfo.places) || activity.pickupInfo.places.length === 0);
-        if (needsPickup) {
-          const places = await fetchPickupPlaces(id);
-          if (places.length) {
-            const next = places.map((p) => ({
-              id: p.id,
-              title: (p.title || '').trim(),
-              type: p.type || 'OTHER',
-              askForRoomNumber: !!p.askForRoomNumber,
-              address: p.location?.address || p.address || '',
-              city: p.location?.city || '',
-            })).filter((p) => p.id != null && p.title);
-            activity = {
-              ...activity,
-              pickupInfo: { ...activity.pickupInfo, places: next },
-            };
-          }
-        }
       }
     } catch (dbErr) {
       console.warn('[Auralis] activity DB read failed, falling back to Bókun:', dbErr.message);
@@ -161,8 +121,8 @@ module.exports = async function handler(req, res) {
       usedSource = 'bokun';
     }
 
-    // /activity.json/{id} doesn't include the "from" price (Bókun only ships
-    // it via the search.json catalog firehose). If the live response lacks a
+    // v2 components may lack list pricing — graft from DB cache when needed.
+    // If the live response lacks a
     // usable price, graft it from the DB-cached pricing[] / nextDefaultPrice
     // so the booking sidebar shows a real number instead of "Price loading".
     if (activity && !hasUsablePrice(activity)) {
@@ -179,26 +139,6 @@ module.exports = async function handler(req, res) {
       } catch (priceErr) {
         console.warn('[Auralis] price hydration failed:', priceErr.message);
       }
-    }
-
-    if (req.query.debug === 'pickup') {
-      const candidates = [
-        `/activity.json/${id}/pickup-places`,
-        `/activity.json/${id}/pickupPlaces`,
-        `/pickup-place.json/activity/${id}`,
-        `/pickup-place.json/activity-id/${id}`,
-        `/booking-channel.json/activity/${id}/pickup-places`,
-      ];
-      const results = {};
-      for (const p of candidates) {
-        try {
-          const r = await bokunRequest({ method: 'GET', path: p });
-          results[p] = { ok: true, shape: Array.isArray(r) ? `array(${r.length})` : (r && typeof r === 'object' ? Object.keys(r).slice(0, 12) : typeof r), sample: Array.isArray(r) ? r.slice(0, 2) : r };
-        } catch (e) {
-          results[p] = { ok: false, error: e.message, status: e.status };
-        }
-      }
-      return res.status(200).json({ debug: 'pickup endpoint scan', results });
     }
 
     if (req.query.debug === 'extras' && rawUpstream) {
