@@ -1,0 +1,30 @@
+---
+description: Bókun integration must follow official REST v2 only (no v1 *.json APIs)
+alwaysApply: true
+---
+
+# Bókun REST v2 — mandatory
+
+**Authority:** [api-docs.bokun.dev/rest-v2](https://api-docs.bokun.dev/rest-v2) · [rest-v2.yaml](https://api-docs.bokun.dev/rest-v2.yaml)  
+**Project map:** `docs/BOKUN_REST_V2.md`
+
+## Required
+
+- All Bókun HTTP paths: **`/restapi/v2.0/...`** only, via `lib/bokunClient.js` → `lib/bokunV2.js`.
+- New endpoints: add to `lib/bokunV2.js`, export through `lib/bokun.js` if needed; map DTOs in `lib/v2ExperienceToActivity.js` or `lib/mapV2Availability.js`.
+- Catalog discovery: `lib/bokunV2Catalog.js` (marketplace contracts + `experience/{id}/components`), not search.
+- Checkout / payment: **Hosted shop** (`lib/bokunCheckoutUrl.js`, `BOKUN_SHOP_URL`) — no REST cart/checkout APIs.
+- Catalog reads for the site: **`CATALOG_SOURCE=db`** after sync; `?source=bokun` only for admin sync or debugging.
+- v2 rules: UTC ms timestamps; date-only `yyyy-MM-dd`; money as **strings**; tolerant JSON parsing.
+
+## Forbidden
+
+- `activity.json`, `checkout.json`, `cart.json`, or any v1 `*.json` Bókun route.
+- Reintroducing `searchActivities` or v1 availability/checkout helpers.
+- Guessing paths or fields — confirm in OpenAPI before coding.
+
+## Before merging Bókun changes
+
+1. Grep for `activity.json`, `checkout.json`, `/restapi/v1`.
+2. Confirm the endpoint exists in rest-v2.yaml.
+3. Update `docs/BOKUN_REST_V2.md` if the project mapping changes.

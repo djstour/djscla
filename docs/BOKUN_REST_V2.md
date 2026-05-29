@@ -1,9 +1,20 @@
 # Bókun REST API v2 — 本站唯一整合規範
 
-> **權威來源：** [api-docs.bokun.dev/rest-v2](https://api-docs.bokun.dev/rest-v2) · [rest-v2.yaml](https://api-docs.bokun.dev/rest-v2.yaml)  
-> **程式入口：** `lib/bokunClient.js`（簽名）· `lib/bokunV2.js`（端點）· `lib/bokun.js`（對外 facade）· `lib/bokunV2Catalog.js`（目錄）
+> **權威來源（開發必讀）：** [api-docs.bokun.dev/rest-v2](https://api-docs.bokun.dev/rest-v2) · [rest-v2.yaml](https://api-docs.bokun.dev/rest-v2.yaml)  
+> **程式入口：** `lib/bokunClient.js`（簽名）· `lib/bokunV2.js`（端點）· `lib/bokun.js`（對外 facade）· `lib/bokunV2Catalog.js`（目錄）  
+> **Agent 規則：** `.cursor/rules/bokun-rest-v2.mdc`（`alwaysApply`）
 
-**REST API v1（`*.json` 路徑）已自程式庫移除。** 不得再新增 `activity.json`、`checkout.json`、`cart.json` 呼叫。
+## 開發政策（強制）
+
+自本文件生效起，**所有** Bókun 相關功能（新端點、修 bug、重構、文件範例）必須：
+
+1. **先查** [REST v2 OpenAPI](https://api-docs.bokun.dev/rest-v2) — 路徑、query、request/response schema 以官方為準，不得臆測 v1 行為。
+2. **只實作** `/restapi/v2.0/*`；HTTP 一律經 `bokunRequest()`，新路由寫在 `lib/bokunV2.js`。
+3. **禁止** 恢復或新增 `activity.json`、`checkout.json`、`cart.json` 或任何 v1 `*.json` 呼叫。
+4. **結帳** 僅 Hosted shop（`BOKUN_SHOP_URL`），不用 REST cart/checkout submit。
+5. **合併前** `rg 'activity\.json|checkout\.json|/restapi/v1'` 應無執行路徑命中（文件說明 v1 已淘汰除外）。
+
+**REST API v1 已自程式庫移除。** 若官方 v2 尚無對應能力，在 PR／issue 註明缺口，勿悄悄加回 v1。
 
 ---
 
