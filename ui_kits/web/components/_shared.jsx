@@ -756,52 +756,95 @@
     return html;
   }
 
-  /** Chinese head phrase likely starting each English <li> (for merged overlay strings). */
-  function chineseAnchorForEnglishListItem(englishText) {
+  /**
+   * English list-item phrase → likely start of that item in merged Chinese overlay.
+   * Longer keys are tried first (see chineseAnchorsForEnglishListItem).
+   */
+  const LIST_ITEM_ANCHOR_PHRASES = [
+    ['if no aurora is seen', '如果沒有看到極光'],
+    ['when no northern lights are seen', '當行程'],
+    ['heavily dependent on weather conditions', '由於極光'],
+    ['northern lights tour is heavily', '由於極光'],
+    ['complementary retry valid for', '當行程'],
+    ['english speaking tour guide', '英語'],
+    ['pick-up & drop off from', '從雷克雅維克'],
+    ['pick up and drop off from', '從雷克雅維克'],
+    ['guided visit to south shore', '南岸'],
+    ['south shore highlights', '南岸'],
+    ['free wifi on board', '車上'],
+    ['northern lights photos', '極光照片'],
+    ['icelandic hot cocoa', '冰島'],
+    ['two separate tours', '兩個獨立'],
+    ['shoe spike grips', '鞋釘'],
+    ['very sturdy footwear', '堅固的鞋子'],
+    ['warm outdoor layers', '溫暖的戶外'],
+    ['weatherproof top layer', '防風防水'],
+    ['food and beverage', '食品和飲料'],
+    ['food and drink', '食品'],
+    ['on board your bus', '車上'],
+    ['complementary retry', '當行程'],
+    ['no aurora is seen', '如果沒有看到極光'],
+    ['english speaking', '英語'],
+    ['south shore', '南岸'],
+    ['sturdy footwear', '堅固的鞋子'],
+    ['spike grips', '抓地器'],
+    ['hiking boots', '健行靴'],
+    ['shoe spike', '鞋釘'],
+    ['shoe grips', '鞋釘'],
+    ['warm outdoor', '溫暖的戶外'],
+    ['weatherproof', '防風防水'],
+    ['guided visit', '導覽'],
+    ['free wifi', '車上'],
+    ['hot cocoa', '熱可可'],
+    ['pick-up', '接送'],
+    ['drop-off', '下車'],
+    ['drop off', '下車'],
+    ['headwear', '頭飾'],
+    ['not included', '不包含'],
+    ['gloves', '手套'],
+    ['scarves', '圍巾'],
+    ['scarf', '圍巾'],
+    ['camera', '相機'],
+    ['hiking', '健行'],
+    ['icelandic', '冰島'],
+    ['reykjav', '雷克雅維克'],
+  ];
+
+  function findChineseAnchorPosition(cleaned, anchor, fromIndex) {
+    const hay = String(cleaned || '');
+    const needle = String(anchor || '');
+    if (!needle) return -1;
+    const start = Math.max(0, Number(fromIndex) || 0);
+    let pos = hay.indexOf(needle, start);
+    if (pos >= 0) return pos;
+    if (/[a-z]/i.test(needle)) {
+      pos = hay.toLowerCase().indexOf(needle.toLowerCase(), start);
+      if (pos >= 0) return pos;
+    }
+    return -1;
+  }
+
+  function chineseAnchorsForEnglishListItem(englishText) {
     const en = String(englishText || '').trim();
     const lower = en.toLowerCase();
-    const phraseMap = [
-      ['shoe spike grips', '鞋釘'],
-      ['shoe spike', '鞋釘'],
-      ['shoe grips', '鞋釘'],
-      ['spike grips', '抓地器'],
-      ['hiking boots', '健行靴'],
-      ['very sturdy footwear', '堅固的鞋子'],
-      ['sturdy footwear', '堅固的鞋子'],
-      ['hiking', '健行'],
-      ['warm outdoor layers', '溫暖的戶外'],
-      ['warm outdoor', '溫暖的戶外'],
-      ['weatherproof top layer', '防風防水'],
-      ['weatherproof', '防風防水'],
-      ['northern lights photos', '極光照片'],
-      ['northern lights', '極光'],
-      ['hot cocoa', '熱可可'],
-      ['free wifi', 'wifi'],
-      ['english speaking', '英語'],
-      ['guided visit', '導覽'],
-      ['pick-up', '接送'],
-      ['drop off', '下車'],
-      ['drop-off', '下車'],
-      ['headwear', '頭飾'],
-      ['gloves', '手套'],
-      ['scarves', '圍巾'],
-      ['scarf', '圍巾'],
-      ['camera', '相機'],
-      ['complementary retry', '免費重試'],
-      ['icelandic', '冰島'],
-    ];
-    for (let i = 0; i < phraseMap.length; i += 1) {
-      const [key, zh] = phraseMap[i];
-      if (lower.includes(key)) return zh;
+    const anchors = [];
+    const sorted = LIST_ITEM_ANCHOR_PHRASES.slice().sort((a, b) => b[0].length - a[0].length);
+    for (let i = 0; i < sorted.length; i += 1) {
+      const [key, zh] = sorted[i];
+      if (lower.includes(key) && !anchors.includes(zh)) anchors.push(zh);
     }
     const paren = en.match(/\(([^)]+)\)/);
     if (paren) {
       const p = paren[1].toLowerCase();
-      if (/oct/.test(p) && /apr/.test(p)) return '（十月到四月）';
-      if (/oct/.test(p) && /mar/.test(p)) return '（十月';
-      if (/apr/.test(p)) return '（四月';
+      if (/oct/.test(p) && /apr/.test(p) && !anchors.includes('（十月到四月）')) {
+        anchors.push('（十月到四月）');
+      } else if (/oct/.test(p) && /mar/.test(p) && !anchors.includes('（十月')) {
+        anchors.push('（十月');
+      } else if (/apr/.test(p) && !anchors.includes('（四月')) {
+        anchors.push('（四月');
+      }
     }
-    return '';
+    return anchors;
   }
 
   function alignPlainPartsToListItems(text, sourceItems) {
@@ -812,11 +855,15 @@
 
     const starts = [0];
     for (let i = 1; i < sources.length; i += 1) {
-      const anchor = chineseAnchorForEnglishListItem(sources[i]);
+      const anchors = chineseAnchorsForEnglishListItem(sources[i]);
       let pos = -1;
-      if (anchor) {
-        pos = cleaned.indexOf(anchor, starts[i - 1] + 1);
-        if (pos < 0) pos = cleaned.indexOf(anchor, starts[i - 1]);
+      for (let a = 0; a < anchors.length; a += 1) {
+        const anchor = anchors[a];
+        pos = findChineseAnchorPosition(cleaned, anchor, starts[i - 1] + 1);
+        if (pos <= starts[i - 1]) {
+          pos = findChineseAnchorPosition(cleaned, anchor, starts[i - 1]);
+        }
+        if (pos > starts[i - 1]) break;
       }
       if (pos <= starts[i - 1]) {
         const rest = cleaned.slice(starts[i - 1]);
@@ -870,7 +917,7 @@
       return Array.isArray(items) ? items.map((s) => String(s || '').trim()).filter(Boolean) : [];
     }
     const input = Array.isArray(items) ? items.join(' ') : String(items || '');
-    return alignPlainPartsToSource(input, source);
+    return alignPlainPartsToSource(input, source, { listItems: true });
   }
 
   function splitBySourceParagraphWeights(text, sourceParagraphs) {
