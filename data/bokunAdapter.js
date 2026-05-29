@@ -703,19 +703,14 @@
     return Number.isFinite(age) && age >= 0 && age < PRICE_DISPLAY_TTL_MS;
   }
 
-  /** 通過 v2 自動稽核的 catalog 牌價可顯示（見 lib/catalogPriceVerification.js）。 */
+  /** Match lib/catalogPriceVerification.js — only fresh trusted v2 audits display. */
   function isDisplayableCatalogPrice(activity) {
     if (!activity || pricingLooksMislabeled(activity)) return false;
     const pd = activity.priceDisplay;
     if (isPriceDisplayFresh(pd)) {
-      if (pd.trusted === true) return true;
-      const blocked = ['no_catalog_price', 'mislabeled_currency', 'commission_like_amount', 'implausible_catalog'];
-      if (blocked.includes(String(pd.reason || ''))) return false;
+      return pd.trusted === true;
     }
-    if (!hasUsablePrice(activity)) return false;
-    const amounts = collectCatalogDisplayAmounts(activity);
-    if (!amounts.length) return false;
-    return Math.max(...amounts) >= MIN_PLAUSIBLE_DISPLAY_PRICE;
+    return false;
   }
 
   function hasUsablePrice(activity) {

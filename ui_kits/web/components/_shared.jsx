@@ -225,9 +225,8 @@
 
   function amountToUsd(amount, currency, rates) {
     const code = (currency || FX_BASE).toUpperCase();
-    if (code === FX_BASE && looksLikeMislabeledIskAsUsd(amount, rates)) {
-      return convertToUsd(amount, 'ISK', rates);
-    }
+    // ISK mislabel repair runs at catalog sync (server). Re-applying here breaks
+    // legitimate live USD fares (e.g. $3,744 adult) by treating them as ISK.
     if (code === FX_BASE) return Number(amount) || 0;
     return convertToUsd(amount, code, rates);
   }

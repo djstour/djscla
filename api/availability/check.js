@@ -1,6 +1,5 @@
 const { getActivityById, getActivityAvailabilities, getQuoteCurrency } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
-const { isDisplayableCatalogPrice } = require('../../lib/catalogPriceVerification');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -36,11 +35,14 @@ function matchAvailability(availabilities, date, startTimeId) {
   return dated.find((row) => String(row.startTimeId) === wanted || String(row.id) === wanted) || null;
 }
 
-function extractCategoryUnitPrices(activity, availability, currency, { allowCatalogFallback = false } = {}) {
+function extractCategoryUnitPrices(activity, availability, currency) {
   const categories = Array.isArray(activity.pricingCategories) ? activity.pricingCategories : [];
   const rates = Array.isArray(availability?.pricesByRate) ? availability.pricesByRate : [];
   const defaultRateId = availability?.defaultRateId;
-  const priceRow = rates.find((row) => String(row.activityRateId) === String(defaultRateId)) || rates[0] || null;
+  const priceRow = rates.find((row) => String(row.activityRateId) === String(defaultRateId))
+    || rates.find((row) => (row.pricePerCategoryUnit || []).length > 0)
+    || rates[0]
+    || null;
   const perCategory = priceRow && Array.isArray(priceRow.pricePerCategoryUnit)
     ? priceRow.pricePerCategoryUnit
     : [];
@@ -51,14 +53,6 @@ function extractCategoryUnitPrices(activity, availability, currency, { allowCata
       currency: entry.amount?.currency || currency,
     });
   });
-  if (allowCatalogFallback) {
-    (activity.pricing || []).forEach((row) => {
-      const key = String(row.pricingCategoryId);
-      if (!unitById.has(key) && Number(row.amount) > 0) {
-        unitById.set(key, { unitAmount: Number(row.amount), currency: row.currency || currency });
-      }
-    });
-  }
 
   return categories.map((cat) => {
     const hit = unitById.get(String(cat.id));
@@ -71,31 +65,17 @@ function extractCategoryUnitPrices(activity, availability, currency, { allowCata
   }).filter((row) => row.unitAmount != null && row.unitAmount > 0);
 }
 
-function computeLineItems(activity, availability, pax, { allowCatalogFallback = false } = {}) {
+function computeLineItems(activity, availability, pax) {
   const rates = Array.isArray(availability?.pricesByRate) ? availability.pricesByRate : [];
   const defaultRateId = availability?.defaultRateId;
-  const priceRow = rates.find((row) => String(row.activityRateId) === String(defaultRateId)) || rates[0] || null;
+  const priceRow = rates.find((row) => String(row.activityRateId) === String(defaultRateId))
+    || rates.find((row) => (row.pricePerCategoryUnit || []).length > 0)
+    || rates[0]
+    || null;
   const currency = getQuoteCurrency();
 
   if (!priceRow) {
-    if (!allowCatalogFallback) {
-      return { currency, lineItems: [], priceUnverified: true };
-    }
-    const fallback = Array.isArray(activity.pricing) ? activity.pricing : [];
-    const lines = pax.map((row) => {
-      const price = fallback.find((p) => String(p.pricingCategoryId) === String(row.pricingCategoryId));
-      const unitAmount = Number(price?.amount || 0);
-      const quantity = Number(row.quantity) || 0;
-      return {
-        pricingCategoryId: row.pricingCategoryId,
-        label: price?.label || `Category ${row.pricingCategoryId}`,
-        quantity,
-        unitAmount,
-        total: unitAmount * quantity,
-        currency,
-      };
-    });
-    return { currency, lineItems: lines };
+    return { currency, lineItems: [], priceUnverified: true };
   }
 
   const unitMap = new Map();
@@ -170,6 +150,11 @@ module.exports = async function handler(req, res) {
 
     const rawActivity = activityPayload?.activity || activityPayload;
     const activity = normalizeActivity(rawActivity);
+    // v2 components catalog rows (~$30 commission-like) must never leak into live pricing.
+    activity.pricing = [];
+    activity.nextDefaultPrice = null;
+    activity.fromPrice = null;
+
     const availabilities = Array.isArray(availabilityPayload) ? availabilityPayload : availabilityPayload?.availabilities || [];
     const availability = matchAvailability(availabilities, date, startTimeId);
 
@@ -190,14 +175,13 @@ module.exports = async function handler(req, res) {
     const minRequired = Number(availability.minParticipantsToBookNow || availability.minParticipants || 1);
     const capacityOk = availability.unlimitedAvailability || capacity == null || requested <= capacity;
     const minOk = requested >= minRequired;
-    const allowCatalogFallback = isDisplayableCatalogPrice(activity);
-    const pricing = computeLineItems(activity, availability, pax, { allowCatalogFallback });
+    // Live fares from v1 availabilities → pricesByRate only (see bokunAvailabilityV1Fallback.js).
+    const pricing = computeLineItems(activity, availability, pax);
     const total = pricing.lineItems.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
     const categoryUnitPrices = extractCategoryUnitPrices(
       activity,
       availability,
       pricing.currency,
-      { allowCatalogFallback },
     );
 
     return res.status(200).json({

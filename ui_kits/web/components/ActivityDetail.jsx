@@ -85,10 +85,40 @@
     return null;
   }
 
-  function normalizeUnitUsd(amount, currency) {
+  /** After date check, show live v1 availability unit price for the default (Adult) category. */
+  function resolveBookPanelHeadlineUsd(tour, availabilityData, unitPriceMap, categories) {
+    const catalog = resolvePriceUsd(tour);
+    if (catalog != null) return catalog;
+    const cats = categories || [];
+    const defaultCat = cats.find((c) => c.defaultCategory)
+      || cats.find((c) => c.ticketCategory === 'ADULT')
+      || cats[0];
+    if (defaultCat && unitPriceMap && unitPriceMap.has(String(defaultCat.id))) {
+      const adultPrice = unitPriceMap.get(String(defaultCat.id));
+      if (Number.isFinite(adultPrice) && adultPrice > 0) return adultPrice;
+    }
+    const rows = availabilityData?.categoryUnitPrices || [];
+    if (defaultCat) {
+      const adultRow = rows.find((r) => String(r.pricingCategoryId) === String(defaultCat.id));
+      const adultFromApi = adultRow && Number(adultRow.unitAmount);
+      if (Number.isFinite(adultFromApi) && adultFromApi > 0) return adultFromApi;
+    }
+    const fromApi = rows.map((r) => Number(r.unitAmount)).filter((n) => Number.isFinite(n) && n > 0);
+    if (fromApi.length) return Math.max(...fromApi);
+    if (unitPriceMap && unitPriceMap.size) {
+      const vals = [...unitPriceMap.values()].filter((n) => Number.isFinite(n) && n > 0);
+      if (vals.length) return Math.max(...vals);
+    }
+    return null;
+  }
+
+  /** Live availability/check amounts are already quote USD from the API. */
+  function quoteUsdAmount(amount, currency) {
+    const code = (currency || 'USD').toUpperCase();
+    if (code === 'USD') return Number(amount) || 0;
     const UI = window.AuralisUI || {};
     const fxRates = (window.AuralisData && window.AuralisData._fxRates) || { USD: 1 };
-    if (UI.amountToUsd) return UI.amountToUsd(amount, currency || 'USD', fxRates);
+    if (UI.amountToUsd) return UI.amountToUsd(amount, currency, fxRates);
     return Number(amount) || 0;
   }
 
@@ -490,17 +520,18 @@
     ]);
 
     const liveCapacityKnown = useMemo(() => {
+      const known = (n) => n != null && n !== '' && Number.isFinite(Number(n));
       if (!selectedDate) return false;
       const fromCheck = availabilityState.data?.availability?.capacityRemaining;
-      if (Number.isFinite(Number(fromCheck))) return true;
+      if (known(fromCheck)) return true;
       if (selectedStartTime && dayAvailableTimes.length) {
         const slot = dayAvailableTimes.find((t) => String(t.id) === String(selectedStartTime));
-        if (slot && Number.isFinite(Number(slot.capacityRemaining))) return true;
+        if (slot && known(slot.capacityRemaining)) return true;
       }
-      if (dayAvailableTimes.length === 1 && Number.isFinite(Number(dayAvailableTimes[0].capacityRemaining))) {
+      if (dayAvailableTimes.length === 1 && known(dayAvailableTimes[0].capacityRemaining)) {
         return true;
       }
-      if (selectedDayInfo && Number.isFinite(Number(selectedDayInfo.capacityRemaining))) return true;
+      if (selectedDayInfo && known(selectedDayInfo.capacityRemaining)) return true;
       return false;
     }, [
       selectedDate,
@@ -515,11 +546,25 @@
       const cats = getBookableCategories(tour);
       if (!cats.length) return undefined;
       setPaxCounts((prev) => {
+        if (livePaxMax <= 0) return prev;
         if (!Pax.paxCountsTotal(prev) || Pax.paxCountsTotal(prev) <= livePaxMax) return prev;
         return Pax.clampPaxCounts(prev, cats, livePaxMax);
       });
       return undefined;
     }, [livePaxMax, tour && tour.id, selectedDate, selectedStartTime]);
+
+    useEffect(() => {
+      if (!tour || !selectedDate) return undefined;
+      const cats = getBookableCategories(tour);
+      if (!cats.length) return undefined;
+      const total = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
+      if (total > 0) return undefined;
+      if (Pax.initPaxCounts) {
+        setPaxCounts(Pax.initPaxCounts(cats, initialGuestCounts));
+      }
+      return undefined;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tour && tour.id, selectedDate, livePaxMax, liveCapacityKnown]);
 
     // Auto-trigger the availability check whenever the booking inputs change.
     // Debounced 400ms so quickly toggling adults / extras doesn't spam Bókun.
@@ -595,7 +640,7 @@
       if (row && row.pricingCategoryId != null && Number(row.unitAmount) > 0) {
         unitPriceByCategoryId.set(
           String(row.pricingCategoryId),
-          normalizeUnitUsd(row.unitAmount, row.currency),
+          quoteUsdAmount(row.unitAmount, row.currency),
         );
       }
     });
@@ -1681,7 +1726,12 @@
             lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
-            priceUsd={resolvePriceUsd(tour)}
+            priceUsd={resolveBookPanelHeadlineUsd(
+              tour,
+              availabilityState.data,
+              unitPriceByCategoryId,
+              bookableCategories,
+            )}
             loading={loading}
             hasMultiPrice={hasMultiPrice}
             inTrip={inTrip}
@@ -2079,7 +2129,11 @@
                         if (ex.free && !priced) {
                           priceLabel = T({ hant: '免費', hans: '免费', en: 'Free' });
                         } else if (!priced) {
-                          priceLabel = '';
+                          priceLabel = T({
+                            hant: '結帳時顯示價格',
+                            hans: '结账时显示价格',
+                            en: 'Priced at checkout',
+                          });
                         } else if (ex.pricedPerPerson) {
                           const parts = bookableCategories
                             .filter((cat) => (Number(paxCounts[String(cat.id)]) || 0) > 0)

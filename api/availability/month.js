@@ -93,7 +93,8 @@ module.exports = async function handler(req, res) {
       };
       cur.slots += 1;
       const soldOut = !!(row.soldOut || row.unavailable);
-      const capacity = Number.isFinite(Number(row.availabilityCount)) ? Number(row.availabilityCount) : null;
+      const capacityRaw = row.availabilityCount ?? row.remainingPax;
+      const capacity = Number.isFinite(Number(capacityRaw)) ? Number(capacityRaw) : null;
       cur.times.push({
         startTimeId: row.startTimeId != null ? Number(row.startTimeId) : null,
         startTime: row.startTime || null,

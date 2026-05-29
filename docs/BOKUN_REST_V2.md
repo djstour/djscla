@@ -69,7 +69,7 @@
 | 接送站點列表 | `meetingType.pickupPlaceGroupIds` 有，**無**各站名稱 | `pickupInfo.selectionAtHostedCheckout`；詳情「接送」分頁說明；結帳在 **Hosted shop** 選點（`pickupPlaceId`） |
 | 列表價格 | components 的 `experiencePriceRules` 有時與 Hosted 結帳價不一致 | **`lib/catalogPriceVerification.js`**：同步時自動稽核 v2 catalog（≥`CATALOG_MIN_PLAUSIBLE_USD`、非 ISK 誤標、非佣金比例）；**通過即顯示**，異常則隱藏。無需逐筆人工核准。結帳仍以 Hosted 為準；若 v2 可用性日後提供單價可接 `v2_availability` |
 | 行程站 HTML | `itinerary[]` 常只有標題 | 完整敘述以 `description` HTML 為準；行程安排分頁為路線概覽 |
-| 逐日 slot 價 | availability DTO 無單價 | 由 `experiencePriceRules` + 可用性檢查推算 |
+| 逐日 slot 價 | v2 availability DTO 無單價 | v1 `activity.json/{id}/availabilities` 補 `pricesByRate`（`lib/bokunAvailabilityV1Fallback.js`，`BOKUN_AVAILABILITY_V1_FALLBACK=0` 關閉）；**不用** v2 components 牌價作 fallback |
 | 取消政策全文 | v2 rate 只有 `cancellationPolicyId`；vendor 政策列表不含 marketplace 供應商政策 | v1 `activity.json/{id}` **僅取** `cancellationPolicy`（預設開啟）；詳情需 **Admin 詳情同步** 或 `source=bokun` 寫入 `bokun_payload` |
 | 加購價格 | v2 `extras` 元件無 `price` | v1 `bookableExtras` 補價（`lib/bokunExtrasV1Fallback.js`，`BOKUN_EXTRAS_V1_FALLBACK=0` 關閉）；`extraConfigs` 以 `extra.id` 對應 |
 | 票券／Voucher HTML | v2 `customInputFieldValues` 常為空 | v1 `customFields`（`flags: ticket`）→ `ticketInfoHtml`（`lib/bokunCustomFieldsV1Fallback.js`） |
