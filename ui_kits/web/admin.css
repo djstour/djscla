@@ -336,6 +336,24 @@
 
 .admin-table-toolbar input { min-width: 220px; }
 
+.admin-price-stack {
+  font-size: 12px;
+  line-height: 1.45;
+  min-width: 9rem;
+}
+
+.admin-price-stack__row {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.admin-price-stack__label {
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

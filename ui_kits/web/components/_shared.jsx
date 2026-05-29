@@ -202,6 +202,36 @@
     return amount * rate;
   }
 
+  /** Rates are target units per 1 USD (Frankfurter). */
+  function convertToUsd(amount, fromCurrency, rates) {
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return 0;
+    const from = (fromCurrency || FX_BASE).toUpperCase();
+    if (from === FX_BASE) return n;
+    const rate = rates && rates[from];
+    if (!rate || !Number.isFinite(rate) || rate <= 0) return n;
+    return n / rate;
+  }
+
+  /** Legacy DB rows stored ISK amounts with currency=USD. */
+  function looksLikeMislabeledIskAsUsd(amountUsd, rates) {
+    const n = Number(amountUsd);
+    if (!Number.isFinite(n) || n < 2000) return false;
+    const rate = rates && rates.ISK;
+    if (!rate || !Number.isFinite(rate) || rate <= 0) return n >= 5000;
+    const asUsd = n / rate;
+    return asUsd >= 25 && asUsd <= 2500;
+  }
+
+  function amountToUsd(amount, currency, rates) {
+    const code = (currency || FX_BASE).toUpperCase();
+    if (code === FX_BASE && looksLikeMislabeledIskAsUsd(amount, rates)) {
+      return convertToUsd(amount, 'ISK', rates);
+    }
+    if (code === FX_BASE) return Number(amount) || 0;
+    return convertToUsd(amount, code, rates);
+  }
+
   function roundForCurrency(amount, code) {
     const c = (code || FX_BASE).toUpperCase();
     return currencyDisplaysAsInteger(c) ? Math.round(amount) : Math.round(amount * 100) / 100;
@@ -1206,7 +1236,8 @@
   window.AuralisUI = {
     Icon, formatPrice, singleCurrency, formatTotalAmount,
     CURRENCIES, DISPLAY_CURRENCIES, currencyLabel, FX_BASE, defaultCurrencyForLang,
-    convertFromUsd, formatDisplayPrice, formatDisplayPriceCompact, formatTotalDisplay, tripTotalUsd,
+    convertFromUsd, convertToUsd, amountToUsd, looksLikeMislabeledIskAsUsd,
+    formatDisplayPrice, formatDisplayPriceCompact, formatTotalDisplay, tripTotalUsd,
     fakePhoto, PhotoSparkles, proxyImageUrl, prefetchProxiedImage,
     isMobileViewport, useMobileViewport, imageProfileForViewport, useResponsiveImageProfile,
     aboveFoldImagePriorityCount, prefersReducedData,

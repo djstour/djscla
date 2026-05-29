@@ -1,4 +1,4 @@
-const { getActivityById, getQuoteCurrency, applyQuoteCurrency } = require('../../lib/bokun');
+const { getActivityById, getQuoteCurrency } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
@@ -62,10 +62,9 @@ function hasUsablePrice(activity) {
 }
 
 async function fetchFromBokun(id, uiLang) {
-  const rawPayload = await getActivityById(id, { uiLang });
-  const raw = unwrapActivity(rawPayload);
+  const raw = unwrapActivity(await getActivityById(id, { uiLang }));
   const quoteCurrency = getQuoteCurrency();
-  const [activity] = applyQuoteCurrency([normalizeActivity(raw)], quoteCurrency);
+  const activity = normalizeActivity(raw);
   return { activity, quoteCurrency, raw };
 }
 

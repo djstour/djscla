@@ -1284,6 +1284,51 @@
     );
   }
 
+  function ContractPricingCell({ info, loading, formatPrice, t }) {
+    if (loading) {
+      return <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{t('pricingLoading')}</span>;
+    }
+    if (!info) {
+      return <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>—</span>;
+    }
+    if (!info.available) {
+      const msg = info.reason === 'NO_CONTRACT' ? t('pricingNoContract') : t('pricingUnavailable');
+      return (
+        <div className="admin-price-stack">
+          {info.listPrice ? (
+            <div className="admin-price-stack__row">
+              <span className="admin-price-stack__label">{t('pricingListLabel')}</span>
+              <span>{formatPrice(info.listPrice.amount, info.listPrice.currency)}</span>
+            </div>
+          ) : null}
+          <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>{msg}</span>
+        </div>
+      );
+    }
+    return (
+      <div className="admin-price-stack">
+        {info.listPrice ? (
+          <div className="admin-price-stack__row">
+            <span className="admin-price-stack__label">{t('pricingListLabel')}</span>
+            <span>{formatPrice(info.listPrice.amount, info.listPrice.currency)}</span>
+          </div>
+        ) : null}
+        {info.commissionPct != null ? (
+          <div className="admin-price-stack__row">
+            <span className="admin-price-stack__label">{t('pricingCommissionLabel')}</span>
+            <span>{info.commissionPct}%</span>
+          </div>
+        ) : null}
+        {info.estimatedCost ? (
+          <div className="admin-price-stack__row">
+            <span className="admin-price-stack__label">{t('pricingCostLabel')}</span>
+            <span>{formatPrice(info.estimatedCost.amount, info.estimatedCost.currency)}</span>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   // ---------------- Activities page ----------------
   function ActivitiesPage({ token, vendors, reloadKey, formatDisplayPrice, lang, t }) {
     const [page, setPage] = useState(1);
@@ -1298,6 +1343,8 @@
     const [rowBusy, setRowBusy] = useState(null);
     const [actionMsg, setActionMsg] = useState('');
     const [contentEditId, setContentEditId] = useState(null);
+    const [contractById, setContractById] = useState({});
+    const [contractPricingLoading, setContractPricingLoading] = useState(false);
 
     useEffect(() => {
       const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -1334,6 +1381,32 @@
       return () => { alive = false; };
     }, [fetchList, reloadKey]);
 
+    useEffect(() => {
+      const rows = data.rows || [];
+      if (!rows.length || !token) {
+        setContractById({});
+        return undefined;
+      }
+      let alive = true;
+      setContractPricingLoading(true);
+      adminFetch('/api/admin/activities/contract-pricing', token, {
+        method: 'POST',
+        body: { bokunActivityIds: rows.map((r) => r.bokunActivityId) },
+      })
+        .then((res) => {
+          if (!alive) return;
+          setContractById(res.byId || {});
+        })
+        .catch(() => {
+          if (!alive) return;
+          setContractById({});
+        })
+        .finally(() => {
+          if (alive) setContractPricingLoading(false);
+        });
+      return () => { alive = false; };
+    }, [data.rows, token, reloadKey]);
+
     const runRowAction = async (row, action, isActive) => {
       const id = row.bokunActivityId;
       setRowBusy(id);
@@ -1364,6 +1437,9 @@
         <h1 className="admin-page-title">{t('activitiesTitle')}</h1>
         <p className="admin-page-sub">
           {t('activitiesSub')} {t('activitiesMatching', { n: formatNumber(data.total) })}
+          <span style={{ display: 'block', marginTop: 4, fontSize: 12, color: 'var(--fg-3)' }}>
+            {t('pricingHint')}
+          </span>
           {actionMsg ? <span style={{ marginLeft: 12, color: 'var(--fg-3)' }}>{actionMsg}</span> : null}
         </p>
 
@@ -1400,7 +1476,7 @@
                   <th>{t('thTitle')}</th>
                   <th>{t('thBokunId')}</th>
                   <th>{t('thVendor')}</th>
-                  <th>{t('thPriceFrom')}</th>
+                  <th>{t('thContractPricing')}</th>
                   <th>{t('thLastSync')}</th>
                   <th>{t('thStatus')}</th>
                   <th>{t('thActions')}</th>
@@ -1417,7 +1493,14 @@
                     </td>
                     <td>{row.bokunActivityId}</td>
                     <td>{row.vendor ? row.vendor.name : '—'}</td>
-                    <td>{formatDisplayPrice ? formatDisplayPrice(row.priceFrom) : formatPrice(row.priceFrom, row.currency)}</td>
+                    <td>
+                      <ContractPricingCell
+                        info={contractById[String(row.bokunActivityId)]}
+                        loading={contractPricingLoading}
+                        formatPrice={formatPrice}
+                        t={t}
+                      />
+                    </td>
                     <td>
                       {formatDateTime(row.lastSyncedAt, lang)}
                       <div style={{ fontSize: 11, color: 'var(--fg-3)' }}>{timeAgo(row.lastSyncedAt, lang)}</div>

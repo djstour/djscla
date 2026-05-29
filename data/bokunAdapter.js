@@ -440,9 +440,18 @@
         || activity.nextDefaultPrice?.currency
         || activity.fromPrice?.currency
         || activity.defaultPrice?.currency
+        || activity.sourceCurrency
         || activity.currency
         || activity.defaultCurrency
         || 'USD';
+
+      const fxRates = A._fxRates || { USD: 1 };
+      const UI = typeof window !== 'undefined' ? window.AuralisUI : null;
+      const toUsd = (amount, currency) => (
+        UI && UI.amountToUsd
+          ? UI.amountToUsd(amount, currency, fxRates)
+          : Number(amount) || 0
+      );
 
       const pricingById = new Map(
         (activity.pricing || []).map((row) => [String(row.pricingCategoryId), row]),
@@ -450,21 +459,28 @@
       const priceTable = (activity.pricingCategories || []).length
         ? (activity.pricingCategories || []).map((catRaw) => {
           const row = pricingById.get(String(catRaw.id));
+          const rowCur = row?.currency || resolvedPriceCurrency;
+          const nativeAmount = row && Number(row.amount) > 0 ? row.amount : null;
           return {
             categoryId: catRaw.id,
             label: catRaw.fullTitle || catRaw.title || (lang === 'en' ? 'Traveler' : ''),
-            amount: row && Number(row.amount) > 0 ? row.amount : null,
-            currency: row?.currency || resolvedPriceCurrency,
+            amount: nativeAmount != null ? toUsd(nativeAmount, rowCur) : null,
+            currency: 'USD',
+            sourceAmount: nativeAmount,
+            sourceCurrency: rowCur,
           };
         })
         : (activity.pricing || [])
           .map((row) => {
             const catRaw = (activity.pricingCategories || []).find((c) => c.id === row.pricingCategoryId);
+            const rowCur = row.currency || resolvedPriceCurrency;
             return {
               categoryId: row.pricingCategoryId,
               label: catRaw?.fullTitle || catRaw?.title || (lang === 'en' ? 'Traveler' : ''),
-              amount: row.amount,
-              currency: row.currency,
+              amount: toUsd(row.amount, rowCur),
+              currency: 'USD',
+              sourceAmount: row.amount,
+              sourceCurrency: rowCur,
             };
           })
           .filter((row) => row.label);
@@ -501,9 +517,10 @@
         mode,
         rating: activity.averageRating,
         reviews: activity.reviewCount,
-        priceUsd: resolvedPriceAmount,
-        price: resolvedPriceAmount,
-        priceCurrency: resolvedPriceCurrency,
+        priceUsd: toUsd(resolvedPriceAmount, resolvedPriceCurrency),
+        price: toUsd(resolvedPriceAmount, resolvedPriceCurrency),
+        priceCurrency: 'USD',
+        sourcePriceCurrency: resolvedPriceCurrency,
         priceTable,
         pricingCategories: activity.pricingCategories || [],
         badge: null,
@@ -729,6 +746,16 @@
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [lang]);
 
+      useEffect(() => {
+        const refreshPrices = () => {
+          setState((s) => (s.raw.length
+            ? { ...s, activities: BokunAdapter.toViewModels(s.raw, lang) }
+            : s));
+        };
+        window.addEventListener('auralis-fx-ready', refreshPrices);
+        return () => window.removeEventListener('auralis-fx-ready', refreshPrices);
+      }, [lang]);
+
       const catalogTotal = state.meta && state.meta.total > 0 ? state.meta.total : state.raw.length;
       const hasMore = false;
 
@@ -818,6 +845,18 @@
         const tour = mergePreviewPriceFallback(BokunAdapter.toViewModel(state.raw, lang), previewVm);
         setState((s) => ({ ...s, tour }));
       }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
+
+      useEffect(() => {
+        const refresh = () => {
+          setState((s) => {
+            if (!s.raw) return s;
+            const tour = mergePreviewPriceFallback(BokunAdapter.toViewModel(s.raw, lang), previewVm);
+            return { ...s, tour };
+          });
+        };
+        window.addEventListener('auralis-fx-ready', refresh);
+        return () => window.removeEventListener('auralis-fx-ready', refresh);
+      }, [lang, previewVm]);
 
       return state;
     };

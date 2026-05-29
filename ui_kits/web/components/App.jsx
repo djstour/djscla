@@ -95,7 +95,10 @@
         .then((r) => r.json())
         .then((data) => {
           if (data.rates) {
-            setFxRates({ USD: 1, ...data.rates });
+            const merged = { USD: 1, ...data.rates };
+            setFxRates(merged);
+            if (window.AuralisData) window.AuralisData._fxRates = merged;
+            window.dispatchEvent(new Event('auralis-fx-ready'));
           }
         })
         .catch((err) => console.warn('[Auralis] FX rates unavailable:', err.message));
