@@ -1012,6 +1012,37 @@
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [form, setForm] = useState(null);
+    const [supplierLinks, setSupplierLinks] = useState([]);
+    const [supplierLinksLoading, setSupplierLinksLoading] = useState(false);
+
+    function extractLinksFromHtml(html, sourceLabel) {
+      const out = [];
+      const seen = new Set();
+      const raw = String(html || '');
+      if (!raw) return out;
+
+      const anchorRe = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
+      let m;
+      while ((m = anchorRe.exec(raw))) {
+        const href = (m[1] || m[2] || m[3] || '').trim();
+        if (!href || !/^https?:\/\//i.test(href)) continue;
+        const label = String(m[4] || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (seen.has(href)) continue;
+        seen.add(href);
+        out.push({ href, label, source: sourceLabel });
+      }
+
+      const urlRe = /(https?:\/\/[^\s<>"'()]+[^\s<>"'().,;:!?])/g;
+      const urls = raw.match(urlRe) || [];
+      for (const hrefRaw of urls) {
+        const href = String(hrefRaw || '').trim();
+        if (!href || seen.has(href)) continue;
+        seen.add(href);
+        out.push({ href, label: '', source: sourceLabel });
+      }
+
+      return out;
+    }
 
     useEffect(() => {
       if (!bokunActivityId) return undefined;
@@ -1024,6 +1055,38 @@
         .finally(() => { if (alive) setLoading(false); });
       return () => { alive = false; };
     }, [token, bokunActivityId]);
+
+    useEffect(() => {
+      if (!bokunActivityId) return undefined;
+      let alive = true;
+      setSupplierLinks([]);
+      setSupplierLinksLoading(true);
+
+      // Pull the full activity payload so we can surface vendor-provided
+      // reference links (e.g. "Tour description") that we no longer render
+      // on the public detail page.
+      fetch(`/api/bokun/activity?id=${encodeURIComponent(bokunActivityId)}&lang=en&source=db`)
+        .then((r) => r.ok ? r.json() : Promise.reject(new Error(`Load activity failed (${r.status})`)))
+        .then((data) => {
+          if (!alive) return;
+          const a = (data && data.activity) || {};
+          const links = [
+            ...extractLinksFromHtml(a.ticketInfoHtml, 'Voucher / ticket message'),
+            ...extractLinksFromHtml(a.description, 'Description'),
+          ];
+          // Prefer "Tour description" / "description" anchors first.
+          links.sort((x, y) => {
+            const ax = /tour description|description/i.test(x.label) ? 0 : 1;
+            const ay = /tour description|description/i.test(y.label) ? 0 : 1;
+            return ax - ay;
+          });
+          setSupplierLinks(links);
+        })
+        .catch(() => { if (alive) setSupplierLinks([]); })
+        .finally(() => { if (alive) setSupplierLinksLoading(false); });
+
+      return () => { alive = false; };
+    }, [bokunActivityId]);
 
     const setTranslation = (field, lang, value) => {
       setForm((f) => ({
@@ -1075,6 +1138,29 @@
               <p className="admin-page-sub" style={{ marginTop: 0 }}>
                 English source (Bókun): <strong>{form.english.title}</strong>
               </p>
+              <div style={{ margin: '8px 0 16px' }}>
+                <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 6 }}>
+                  Supplier reference links (from Bókun payload)
+                </div>
+                {supplierLinksLoading ? (
+                  <div className="admin-empty" style={{ padding: 0, color: 'var(--fg-3)' }}>Loading links…</div>
+                ) : supplierLinks.length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
+                    {supplierLinks.slice(0, 8).map((l) => (
+                      <li key={`${l.source}:${l.href}`}>
+                        <a href={l.href} target="_blank" rel="noopener noreferrer">
+                          {l.label ? l.label : l.href}
+                        </a>
+                        <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--fg-3)' }}>
+                          {l.source}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="admin-empty" style={{ padding: 0, color: 'var(--fg-3)' }}>No links detected.</div>
+                )}
+              </div>
               <div className="admin-form-grid">
                 <label className="admin-field">
                   <span>Featured on homepage</span>
