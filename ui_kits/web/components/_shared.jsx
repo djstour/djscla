@@ -701,6 +701,162 @@
       .replace(/>/g, '&gt;');
   }
 
+  function escapeHtmlAttr(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function vendorDecodeHtmlEntities(text) {
+    return String(text || '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/gi, "'");
+  }
+
+  function vendorNormalizeLinkText(text) {
+    return vendorDecodeHtmlEntities(text)
+      .replace(/\s+/g, ' ')
+      .replace(/[''']/g, "'")
+      .trim();
+  }
+
+  function vendorExtractLinksFromHtml(html) {
+    const raw = String(html || '');
+    if (!raw || !/<a\b/i.test(raw)) return [];
+    const out = [];
+    const re = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = re.exec(raw))) {
+      const href = vendorDecodeHtmlEntities(m[1] || m[2] || '').trim();
+      const text = vendorNormalizeLinkText(m[3]);
+      if (!href || !text) continue;
+      if (!/^(https?:\/\/|mailto:|tel:)/i.test(href)) continue;
+      out.push({ href, text });
+    }
+    return out;
+  }
+
+  const VENDOR_LINK_ZH_CANDIDATES = [
+    ["arctic adventures' pick-up list", ['北極冒險的接送清單', '北极冒险的接送清单', 'Arctic Adventures 接送清單']],
+    ['pick-up list', ['接送清單', '接駁清單', '接送列表', '接送清单', '接驳清单']],
+    ['pick up list', ['接送清單', '接駁清單', '接送清单']],
+    ['customer care', ['客戶服務', '客户服务', '客服中心', '客戶支援', '客户支持']],
+    ['tour description', ['行程說明', '旅遊說明', '行程描述', '行程说明']],
+    ['northern lights photos', ['極光照片', '极光照片']],
+    ['rental equipment', ['租賃裝備', '裝備租借', '租赁装备']],
+    ['tripadvisor', ['Tripadvisor', '貓途鷹', '猫途鹰']],
+  ];
+
+  function vendorLinkTextZhCandidates(englishText) {
+    const en = vendorNormalizeLinkText(englishText);
+    const lower = en.toLowerCase();
+    const out = [];
+    const push = (s) => {
+      const t = String(s || '').trim();
+      if (t && !out.includes(t)) out.push(t);
+    };
+    push(en);
+    for (let i = 0; i < VENDOR_LINK_ZH_CANDIDATES.length; i += 1) {
+      const [key, zhList] = VENDOR_LINK_ZH_CANDIDATES[i];
+      if (lower.includes(key)) zhList.forEach(push);
+    }
+    if (/pick[- ]?up/i.test(lower)) {
+      push('接送清單');
+      push('接送清单');
+    }
+    if (/customer/i.test(lower) && /care|service/i.test(lower)) {
+      push('客戶服務');
+      push('客户服务');
+    }
+    return out;
+  }
+
+  function vendorIsInsideAnchor(html, pos) {
+    const open = html.lastIndexOf('<a', pos);
+    if (open < 0) return false;
+    const close = html.indexOf('</a>', open);
+    return close < 0 || pos <= close + 4;
+  }
+
+  function vendorOverlapsRange(pos, len, ranges) {
+    const end = pos + len;
+    return ranges.some((r) => pos < r.end && end > r.start);
+  }
+
+  function vendorFindLinkableTextIndex(html, text, usedRanges) {
+    const needle = String(text || '');
+    if (!needle) return -1;
+    let i = 0;
+    while (i < html.length) {
+      const tagStart = html.indexOf('<', i);
+      const hit = html.indexOf(needle, i);
+      if (hit < 0) return -1;
+      if (tagStart < 0 || hit < tagStart) {
+        if (!vendorIsInsideAnchor(html, hit) && !vendorOverlapsRange(hit, needle.length, usedRanges)) return hit;
+        i = hit + 1;
+        continue;
+      }
+      const tagEnd = html.indexOf('>', tagStart);
+      if (tagEnd < 0) return -1;
+      const tag = html.slice(tagStart, tagEnd + 1);
+      if (/^<a\b/i.test(tag)) {
+        const closeA = html.indexOf('</a>', tagEnd);
+        i = closeA >= 0 ? closeA + 4 : tagEnd + 1;
+      } else {
+        i = tagEnd + 1;
+      }
+    }
+    return -1;
+  }
+
+  function vendorMarkdownLinksToHtml(text) {
+    return String(text || '').replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+|mailto:[^)\s]+|tel:[^)\s]+)\)/gi,
+      (_, label, href) => `<a href="${escapeHtmlAttr(href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlText(label.trim())}</a>`,
+    );
+  }
+
+  function vendorInjectLinksIntoHtml(html, sourceHtml) {
+    let out = String(html || '');
+    const source = String(sourceHtml || '');
+    if (!out || !source) return out;
+    const links = vendorExtractLinksFromHtml(source);
+    if (!links.length) return out;
+
+    const usedRanges = [];
+    const replacements = [];
+    const sortedLinks = links.slice().sort((a, b) => b.text.length - a.text.length);
+
+    for (let i = 0; i < sortedLinks.length; i += 1) {
+      const link = sortedLinks[i];
+      const cands = vendorLinkTextZhCandidates(link.text).sort((a, b) => b.length - a.length);
+      for (let c = 0; c < cands.length; c += 1) {
+        const zh = cands[c];
+        const pos = vendorFindLinkableTextIndex(out, zh, usedRanges);
+        if (pos < 0) continue;
+        usedRanges.push({ start: pos, end: pos + zh.length });
+        replacements.push({ pos, len: zh.length, zh, href: link.href });
+        break;
+      }
+    }
+
+    if (!replacements.length) return out;
+    replacements.sort((a, b) => b.pos - a.pos);
+    for (let r = 0; r < replacements.length; r += 1) {
+      const item = replacements[r];
+      const anchor = `<a href="${escapeHtmlAttr(item.href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlText(item.zh)}</a>`;
+      out = out.slice(0, item.pos) + anchor + out.slice(item.pos + item.len);
+    }
+    return out;
+  }
+
   function extractParagraphTextsFromHtml(html) {
     const raw = String(html || '');
     if (!raw) return [];
@@ -1101,11 +1257,21 @@
     return plainTextToStructuredHtml(text, sourceHtml);
   }
 
+  function applyVendorSourceLinks(html, sourceHtml) {
+    const source = String(sourceHtml || '');
+    if (!source) return String(html || '');
+    let out = vendorMarkdownLinksToHtml(String(html || ''));
+    out = vendorInjectLinksIntoHtml(out, source);
+    return out;
+  }
+
   function prepareVendorHtml(content, sourceHtml) {
     const raw = String(content || '').trim();
     if (!raw) return '';
-    if (/<[a-z][\s\S]*?>/i.test(raw)) return raw;
-    return plainTextToStructuredHtml(raw, sourceHtml);
+    const structured = /<[a-z][\s\S]*?>/i.test(raw)
+      ? raw
+      : plainTextToStructuredHtml(raw, sourceHtml);
+    return sanitizeVendorHtml(applyVendorSourceLinks(structured, sourceHtml));
   }
 
   function cancellationPolicyHasVendorHtml(policy) {
@@ -1189,13 +1355,8 @@
   function prepareActivityDescription(description, sourceHtml) {
     const raw = String(description || '').trim();
     if (!raw) return { html: '', isRich: false, textLen: 0 };
-    const hasTags = /<[a-z][\s\S]*?>/i.test(raw);
-    const html = sanitizeVendorHtml(
-      hasTags ? raw : prepareVendorHtml(raw, sourceHtml),
-    );
-    const textLen = hasTags
-      ? html.replace(/<[^>]*>/g, '').length
-      : raw.length;
+    const html = prepareVendorHtml(raw, sourceHtml);
+    const textLen = html.replace(/<[^>]*>/g, '').length;
     return { html, isRich: true, textLen };
   }
 

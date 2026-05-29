@@ -607,9 +607,7 @@
     const guestTotalLive = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
     const stopsNamed = (tour.stops || []).filter((s) => s.name);
     const rawActivity = tour.raw || {};
-    const prepVendorHtml = (content, sourceHtml) => sanitizeVendorHtml(
-      prepareVendorHtml(content, sourceHtml || ''),
-    );
+    const prepVendorHtml = (content, sourceHtml) => prepareVendorHtml(content, sourceHtml || '');
     const alignListToEnglish = (items, sourceItems) => (
       lang === 'en' ? items : alignStringListToSource(items, sourceItems)
     );
