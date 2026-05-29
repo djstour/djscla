@@ -714,6 +714,75 @@
     return out;
   }
 
+  /** Document-order <p> and <li> blocks from vendor HTML. */
+  function extractHtmlBlocks(html) {
+    const raw = String(html || '');
+    if (!raw) return [];
+    const out = [];
+    const re = /<(p|li)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+    let m;
+    while ((m = re.exec(raw))) {
+      const type = String(m[1] || '').toLowerCase();
+      const text = String(m[2] || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text) continue;
+      out.push({ type: type === 'li' ? 'li' : 'p', text });
+    }
+    return out;
+  }
+
+  function blocksToHtml(blocks, texts) {
+    const specs = Array.isArray(blocks) ? blocks : [];
+    const parts = Array.isArray(texts) ? texts : [];
+    let html = '';
+    let liBuffer = [];
+
+    const flushList = () => {
+      if (!liBuffer.length) return;
+      html += `<ul>${liBuffer.map((t) => `<li>${escapeHtmlText(t)}</li>`).join('')}</ul>`;
+      liBuffer = [];
+    };
+
+    specs.forEach((spec, i) => {
+      const t = String(parts[i] || '').trim();
+      if (!t) return;
+      if (spec.type === 'li') {
+        liBuffer.push(t);
+        return;
+      }
+      flushList();
+      html += `<p>${escapeHtmlText(t)}</p>`;
+    });
+    flushList();
+    return html;
+  }
+
+  function alignPlainPartsToSource(text, sourceTexts) {
+    const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+    const source = (sourceTexts || []).map((s) => String(s || '').trim()).filter(Boolean);
+    if (!cleaned) return [];
+    if (!source.length) return [cleaned];
+    let parts = cleaned.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length !== source.length) {
+      parts = alignTextToSourceParagraphs(cleaned, source);
+    }
+    if (parts.length !== source.length) {
+      parts = splitBySourceParagraphWeights(cleaned, source);
+    }
+    while (parts.length < source.length) parts.push('');
+    if (parts.length > source.length) parts = parts.slice(0, source.length);
+    return parts.map((p) => String(p || '').trim());
+  }
+
+  /** Align translated plain strings to an English list (Quick facts chips/items). */
+  function alignStringListToSource(items, sourceItems) {
+    const source = (sourceItems || []).map((s) => String(s || '').trim()).filter(Boolean);
+    if (!source.length) {
+      return Array.isArray(items) ? items.map((s) => String(s || '').trim()).filter(Boolean) : [];
+    }
+    const input = Array.isArray(items) ? items.join(' ') : String(items || '');
+    return alignPlainPartsToSource(input, source);
+  }
+
   function splitBySourceParagraphWeights(text, sourceParagraphs) {
     const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
     const n = Array.isArray(sourceParagraphs) ? sourceParagraphs.length : 0;
@@ -756,48 +825,161 @@
     return parts.filter((p) => p && p.trim());
   }
 
+  function splitSegmentByWeights(segment, weights) {
+    const cleaned = String(segment || '').replace(/\s+/g, ' ').trim();
+    if (!cleaned) return [];
+    const n = Array.isArray(weights) ? weights.length : 0;
+    if (n <= 1) return [cleaned];
+
+    const safeWeights = weights.map((w) => Math.max(1, Number(w) || 1));
+    const out = [];
+    let cursor = 0;
+
+    const findBoundary = (base, minEnd, maxEnd) => {
+      const rightLimit = Math.min(maxEnd, base + 80);
+      for (let i = base; i <= rightLimit; i += 1) {
+        const ch = cleaned[i - 1];
+        if (/[。！？!?；;.]/.test(ch)) return i;
+      }
+      const leftLimit = Math.max(minEnd, base - 80);
+      for (let i = base; i >= leftLimit; i -= 1) {
+        const ch = cleaned[i - 1];
+        if (/[。！？!?；;.]/.test(ch)) return i;
+      }
+      return base;
+    };
+
+    for (let i = 0; i < n - 1; i += 1) {
+      const remainingParts = n - i;
+      const remainingChars = cleaned.length - cursor;
+      const remainingWeight = safeWeights.slice(i).reduce((a, b) => a + b, 0);
+      const target = Math.max(1, Math.round((remainingChars * safeWeights[i]) / remainingWeight));
+      const minEnd = cursor + 1;
+      const maxEnd = cleaned.length - (remainingParts - 1);
+      let end = Math.min(maxEnd, Math.max(minEnd, cursor + target));
+      end = findBoundary(end, minEnd, maxEnd);
+      end = Math.min(maxEnd, Math.max(minEnd, end));
+      const piece = cleaned.slice(cursor, end).trim();
+      out.push(piece || cleaned.slice(cursor, Math.min(cleaned.length, cursor + 1)));
+      cursor = end;
+    }
+    out.push(cleaned.slice(cursor).trim());
+    return out.filter((p) => p && p.trim());
+  }
+
+  function isHeadingParagraph(text) {
+    const t = String(text || '').trim();
+    if (!t) return false;
+    if (t.length > 60) return false;
+    // Mostly Latin heading (e.g. "Sólheimajökull", "Reynisfjara", "Vík").
+    if (/[\u4e00-\u9fff]/.test(t)) return false;
+    return /^[A-Za-zÀ-ÿ0-9'().,&\-\s/]+$/.test(t);
+  }
+
+  function alignTextToSourceParagraphs(text, sourceParagraphs) {
+    const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+    const paras = Array.isArray(sourceParagraphs) ? sourceParagraphs : [];
+    if (!cleaned || paras.length <= 1) return splitBySourceParagraphWeights(cleaned, paras);
+
+    const headingIdx = [];
+    paras.forEach((p, i) => { if (isHeadingParagraph(p)) headingIdx.push(i); });
+    if (!headingIdx.length) return splitBySourceParagraphWeights(cleaned, paras);
+
+    const lower = cleaned.toLowerCase();
+    const anchors = [];
+    let searchFrom = 0;
+    for (const idx of headingIdx) {
+      const key = String(paras[idx] || '').trim();
+      const pos = lower.indexOf(key.toLowerCase(), searchFrom);
+      if (pos < 0) continue;
+      anchors.push({ idx, key, start: pos, end: pos + key.length });
+      searchFrom = pos + key.length;
+    }
+    if (!anchors.length) return splitBySourceParagraphWeights(cleaned, paras);
+
+    const out = [];
+    const pushBodyRange = (bodyText, paraStart, paraEndExclusive) => {
+      if (paraEndExclusive <= paraStart) return;
+      const bodyParas = paras.slice(paraStart, paraEndExclusive);
+      const weights = bodyParas.map((p) => Math.max(1, String(p || '').length));
+      const chunks = splitSegmentByWeights(bodyText, weights);
+      for (let i = 0; i < bodyParas.length; i += 1) {
+        out.push(chunks[i] || '');
+      }
+    };
+
+    // Before first heading anchor.
+    const first = anchors[0];
+    pushBodyRange(cleaned.slice(0, first.start).trim(), 0, first.idx);
+
+    for (let i = 0; i < anchors.length; i += 1) {
+      const curr = anchors[i];
+      out.push(curr.key);
+      const next = anchors[i + 1];
+      const bodyStartIdx = curr.idx + 1;
+      const bodyEndIdx = next ? next.idx : paras.length;
+      const bodyStartPos = curr.end;
+      const bodyEndPos = next ? next.start : cleaned.length;
+      const bodyText = cleaned.slice(bodyStartPos, bodyEndPos).trim();
+      pushBodyRange(bodyText, bodyStartIdx, bodyEndIdx);
+    }
+
+    // Normalize count to match source paragraph count exactly.
+    if (out.length !== paras.length) return splitBySourceParagraphWeights(cleaned, paras);
+    return out.map((p) => String(p || '').trim());
+  }
+
   /**
-   * Bókun descriptions are HTML; OpenAI overlays are often plain text.
-   * Re-wrap plain copy into <p> blocks and align zh paragraph count with
-   * source English HTML where available.
+   * Bókun vendor HTML; OpenAI overlays are often plain text.
+   * Re-wrap into the same <p>/<ul><li> structure as English source.
    */
-  function plainTextToParagraphHtml(text, sourceHtml) {
+  function plainTextToStructuredHtml(text, sourceHtml) {
     const trimmed = String(text || '').trim();
     if (!trimmed) return '';
     if (/<[a-z][\s\S]*?>/i.test(trimmed)) return trimmed;
 
-    const sourceParagraphs = extractParagraphTextsFromHtml(sourceHtml);
-
-    let parts = trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
-    if (sourceParagraphs.length > 1 && parts.length !== sourceParagraphs.length) {
-      parts = splitBySourceParagraphWeights(trimmed, sourceParagraphs);
+    const sourceBlocks = extractHtmlBlocks(sourceHtml);
+    if (sourceBlocks.length > 0) {
+      const sourceTexts = sourceBlocks.map((b) => b.text);
+      const parts = alignPlainPartsToSource(trimmed, sourceTexts);
+      return blocksToHtml(sourceBlocks, parts);
     }
 
+    const sourceParagraphs = extractParagraphTextsFromHtml(sourceHtml);
+    let parts = alignPlainPartsToSource(trimmed, sourceParagraphs);
     if (parts.length <= 1) {
       parts = trimmed
         .split(/(?<=[。！？])\s*(?=[A-Z])/)
         .map((p) => p.trim())
         .filter(Boolean);
     }
-
     if (parts.length <= 1) {
       return `<p>${escapeHtmlText(trimmed)}</p>`;
     }
-
     return parts.map((p) => `<p>${escapeHtmlText(p)}</p>`).join('');
+  }
+
+  function plainTextToParagraphHtml(text, sourceHtml) {
+    return plainTextToStructuredHtml(text, sourceHtml);
+  }
+
+  function prepareVendorHtml(content, sourceHtml) {
+    const raw = String(content || '').trim();
+    if (!raw) return '';
+    if (/<[a-z][\s\S]*?>/i.test(raw)) return raw;
+    return plainTextToStructuredHtml(raw, sourceHtml);
   }
 
   function prepareActivityDescription(description, sourceHtml) {
     const raw = String(description || '').trim();
     if (!raw) return { html: '', isRich: false, textLen: 0 };
     const hasTags = /<[a-z][\s\S]*?>/i.test(raw);
-    if (hasTags) {
-      const html = sanitizeVendorHtml(raw);
-      const textLen = html.replace(/<[^>]*>/g, '').length;
-      return { html, isRich: true, textLen };
-    }
-    const html = sanitizeVendorHtml(plainTextToParagraphHtml(raw, sourceHtml));
-    const textLen = raw.length;
+    const html = sanitizeVendorHtml(
+      hasTags ? raw : prepareVendorHtml(raw, sourceHtml),
+    );
+    const textLen = hasTags
+      ? html.replace(/<[^>]*>/g, '').length
+      : raw.length;
     return { html, isRich: true, textLen };
   }
 
@@ -1355,7 +1537,9 @@
     TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
     isWishlisted, toggleWishlist, subscribeWishlist,
     showToast,
-    sanitizeVendorHtml, vendorHtmlIsMeaningful, plainTextToParagraphHtml, prepareActivityDescription,
+    sanitizeVendorHtml, vendorHtmlIsMeaningful,
+    plainTextToParagraphHtml, plainTextToStructuredHtml, prepareVendorHtml,
+    prepareActivityDescription, alignStringListToSource,
     facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,

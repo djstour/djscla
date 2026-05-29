@@ -5,7 +5,8 @@
   const {
     Icon, formatDisplayPrice, fakePhoto, pick, proxyImageUrl,
     useResponsiveImageProfile, useMobileViewport,
-    sanitizeVendorHtml, vendorHtmlIsMeaningful, prepareActivityDescription,
+    sanitizeVendorHtml, vendorHtmlIsMeaningful,
+    prepareActivityDescription, prepareVendorHtml, alignStringListToSource,
   } = window.AuralisUI;
   const Pax = window.AuralisPax || {};
 
@@ -604,12 +605,19 @@
     });
     const guestTotalLive = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
     const stopsNamed = (tour.stops || []).filter((s) => s.name);
+    const rawActivity = tour.raw || {};
+    const prepVendorHtml = (content, sourceHtml) => sanitizeVendorHtml(
+      prepareVendorHtml(content, sourceHtml || ''),
+    );
+    const alignListToEnglish = (items, sourceItems) => (
+      lang === 'en' ? items : alignStringListToSource(items, sourceItems)
+    );
     // Bókun ships descriptions as inline-styled HTML (rich paragraphs with
     // <p>, <br>, vendor styles). Detect that and route through the sanitiser
     // so paragraphs actually render, instead of collapsing into a wall of text.
     const descriptionPrepared = prepareActivityDescription(
       tour.description,
-      (tour.raw && tour.raw.description) || '',
+      rawActivity.description || '',
     );
     const descriptionIsHtml = descriptionPrepared.isRich;
     const descriptionSanitizedHtml = descriptionPrepared.html;
@@ -619,11 +627,14 @@
       ? `${tour.description.slice(0, DESC_PREVIEW_CHARS).trim()}…`
       : tour.description;
 
-    const includedHtml = sanitizeVendorHtml(tour.includedHtml);
-    const excludedHtml = sanitizeVendorHtml(tour.excludedHtml);
-    const requirementsHtml = sanitizeVendorHtml(tour.requirementsHtml);
-    const attentionHtml = sanitizeVendorHtml(tour.attentionHtml);
-    const cancellationPolicyHtml = sanitizeVendorHtml(tour.cancellationPolicyHtml);
+    const includedHtml = prepVendorHtml(tour.includedHtml, rawActivity.includedHtml);
+    const excludedHtml = prepVendorHtml(tour.excludedHtml, rawActivity.excludedHtml);
+    const requirementsHtml = prepVendorHtml(tour.requirementsHtml, rawActivity.requirementsHtml);
+    const attentionHtml = prepVendorHtml(tour.attentionHtml, rawActivity.attentionHtml);
+    const cancellationPolicyHtml = prepVendorHtml(
+      tour.cancellationPolicyHtml,
+      rawActivity.cancellationPolicyHtml,
+    );
     const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
     const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml)
@@ -636,7 +647,6 @@
     const pickupPlaces = Array.isArray(pickupInfo?.places) ? pickupInfo.places : [];
     const pickupAtHostedCheckout = !!(pickupInfo && pickupInfo.selectionAtHostedCheckout);
     const dropoffEnabled = !!(pickupInfo && pickupInfo.dropoffEnabled);
-    const rawActivity = tour.raw || {};
     const isComboTour = !!(tour.isCombo || rawActivity.isCombo);
     const isPrivateTour = !!(tour.privateExperience || rawActivity.privateExperience);
     const locationLabel = String(
@@ -646,11 +656,14 @@
       || (rawActivity.location && rawActivity.location.name)
       || '',
     ).trim();
-    const seasonalHoursLabels = (
-      tour.seasonalOpeningHoursLabels
-      || rawActivity.seasonalOpeningHoursLabels
-      || []
-    ).filter(Boolean);
+    const seasonalHoursLabels = alignListToEnglish(
+      (
+        tour.seasonalOpeningHoursLabels
+        || rawActivity.seasonalOpeningHoursLabels
+        || []
+      ).filter(Boolean),
+      (rawActivity.seasonalOpeningHoursLabels || []).filter(Boolean),
+    );
     const detailVideos = (tour.videos || rawActivity.videos || [])
       .map((v) => ({ ...v, embedUrl: videoEmbedUrl(v.sourceUrl) }))
       .filter((v) => v.embedUrl);
@@ -677,6 +690,13 @@
       const map = (window.AuralisData && window.AuralisData.BOKUN_TRANSLATIONS && window.AuralisData.BOKUN_TRANSLATIONS[group]) || null;
       const overlay = map && map[code];
       if (overlay && overlay[lang]) return overlay[lang];
+      if (overlay && overlay.en) return overlay.en;
+      return String(code).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    };
+    const enumLabelEn = (group, code) => {
+      if (!code) return '';
+      const map = (window.AuralisData && window.AuralisData.BOKUN_TRANSLATIONS && window.AuralisData.BOKUN_TRANSLATIONS[group]) || null;
+      const overlay = map && map[code];
       if (overlay && overlay.en) return overlay.en;
       return String(code).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
     };
@@ -780,6 +800,22 @@
         : lbl;
       if (translated && !categoryChips.includes(translated)) categoryChips.push(translated);
     });
+    const sourceCategoryChips = [];
+    (rawActivity.activityCategories || []).forEach((c) => {
+      const lbl = enumLabelEn('ACTIVITY_CATEGORY', c);
+      if (lbl && !sourceCategoryChips.includes(lbl)) sourceCategoryChips.push(lbl);
+    });
+    (rawActivity.activityAttributes || []).forEach((c) => {
+      const lbl = enumLabelEn('ACTIVITY_ATTRIBUTE', c);
+      if (lbl && !sourceCategoryChips.includes(lbl)) sourceCategoryChips.push(lbl);
+    });
+    if (sourceCategoryChips.length > 0 && categoryChips.length !== sourceCategoryChips.length) {
+      const alignedCategories = alignListToEnglish(categoryChips, sourceCategoryChips);
+      categoryChips.length = 0;
+      alignedCategories.forEach((chip) => {
+        if (chip && !categoryChips.includes(chip)) categoryChips.push(chip);
+      });
+    }
 
     // "Know before you go" — Bókun auto-prefixes "Minimum age of participants is: N"
     // when the activity has a minAge but vendor didn't write a custom item, so we
@@ -796,6 +832,20 @@
       const code = typeof item === 'string' ? item : (item?.code || item?.type || item?.text || '');
       const text = enumLabel('KNOW_BEFORE_YOU_GO', code) || (typeof item === 'string' ? item : (item?.text || item?.label || ''));
       if (text && !knowItems.includes(text)) knowItems.push(text);
+    });
+    const sourceKnowItems = [];
+    if (Number.isFinite(Number(rawActivity.minAge)) && Number(rawActivity.minAge) > 0) {
+      sourceKnowItems.push(`Minimum age of participants is: ${rawActivity.minAge}`);
+    }
+    (rawActivity.knowBeforeYouGoItems || []).forEach((item) => {
+      const code = typeof item === 'string' ? item : (item?.code || item?.type || item?.text || '');
+      const text = enumLabelEn('KNOW_BEFORE_YOU_GO', code) || (typeof item === 'string' ? item : (item?.text || item?.label || ''));
+      if (text && !sourceKnowItems.includes(text)) sourceKnowItems.push(text);
+    });
+    const alignedKnowItems = alignListToEnglish(knowItems, sourceKnowItems);
+    knowItems.length = 0;
+    alignedKnowItems.forEach((item) => {
+      if (item && !knowItems.includes(item)) knowItems.push(item);
     });
 
     // Live tour guide — prefer guidanceTypes' pre-localised displayLanguages,
@@ -820,6 +870,25 @@
           ? window.AuralisData.BokunAdapter.guideLanguageLabel(code, lang)
           : enumLabel('GUIDE_LANGUAGE', code);
         if (lbl && !liveGuideNames.includes(lbl)) liveGuideNames.push(lbl);
+      });
+    }
+    const sourceGuideNames = [];
+    (rawActivity.guidanceTypes || []).forEach((g) => {
+      (g.languages || []).forEach((code) => {
+        const lbl = window.AuralisData?.BokunAdapter?.guideLanguageLabel
+          ? window.AuralisData.BokunAdapter.guideLanguageLabel(code, 'en')
+          : enumLabel('GUIDE_LANGUAGE', code);
+        if (lbl && !sourceGuideNames.includes(lbl)) sourceGuideNames.push(lbl);
+      });
+      (g.displayLanguages || []).forEach((d) => {
+        if (d && !sourceGuideNames.includes(d)) sourceGuideNames.push(d);
+      });
+    });
+    if (sourceGuideNames.length > 0 && liveGuideNames.length !== sourceGuideNames.length) {
+      const alignedGuides = alignListToEnglish(liveGuideNames, sourceGuideNames);
+      liveGuideNames.length = 0;
+      alignedGuides.forEach((name) => {
+        if (name && !liveGuideNames.includes(name)) liveGuideNames.push(name);
       });
     }
 
