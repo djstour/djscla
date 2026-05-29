@@ -46,17 +46,38 @@
    */
   function tripToBokunItems(trip) {
     return trip.map((t) => {
+      const cats = (t.pricingCategories && t.pricingCategories.length)
+        ? t.pricingCategories
+        : ((t.raw && t.raw.pricingCategories) || []);
+
+      const paxCounts = t.tripGuests && t.tripGuests.paxCounts;
+      let pricingCategoryBookings = [];
+
+      // Detail page stores per-category counts in tripGuests.paxCounts — prefer that
+      // over legacy adults/children so multi-tier products (resident, teen, etc.) work.
+      if (paxCounts && typeof paxCounts === 'object' && cats.length) {
+        pricingCategoryBookings = cats
+          .map((cat) => ({
+            pricingCategoryId: cat.id,
+            quantity: Number(paxCounts[String(cat.id)]) || 0,
+          }))
+          .filter((row) => row.quantity > 0);
+      }
+
       const adults = (t.tripGuests && Number(t.tripGuests.adults)) || 0;
       const children = (t.tripGuests && Number(t.tripGuests.children)) || 0;
 
-      const cats = (t.raw && t.raw.pricingCategories) || [];
-      const findCat = (re) => cats.find((c) => re.test((c.title || c.fullTitle || '').toString()));
-      const adultCat = cats.find((c) => c.defaultCategory) || findCat(/adult/i) || cats[0] || null;
-      const childCat = findCat(/child|youth|kid/i) || null;
-
-      const pricingCategoryBookings = [];
-      if (adults > 0 && adultCat) pricingCategoryBookings.push({ pricingCategoryId: adultCat.id, quantity: adults });
-      if (children > 0 && childCat) pricingCategoryBookings.push({ pricingCategoryId: childCat.id, quantity: children });
+      if (!pricingCategoryBookings.length) {
+        const findCat = (re) => cats.find((c) => re.test((c.title || c.fullTitle || '').toString()));
+        const adultCat = cats.find((c) => c.defaultCategory) || findCat(/adult/i) || cats[0] || null;
+        const childCat = findCat(/child|youth|kid/i) || null;
+        if (adults > 0 && adultCat) {
+          pricingCategoryBookings.push({ pricingCategoryId: adultCat.id, quantity: adults });
+        }
+        if (children > 0 && childCat) {
+          pricingCategoryBookings.push({ pricingCategoryId: childCat.id, quantity: children });
+        }
+      }
 
       const extras = Array.isArray(t.tripExtras)
         ? t.tripExtras.map((ex) => ({ extraId: Number(ex.id), quantity: Number(ex.quantity) || 1 }))
@@ -76,6 +97,7 @@
         // Echoed back for UI use only — backend ignores these.
         _adults: adults,
         _children: children,
+        _paxTotal: pricingCategoryBookings.reduce((s, r) => s + (Number(r.quantity) || 0), 0),
       };
     });
   }
@@ -203,7 +225,10 @@
         });
         const data = await res.json();
         if (!res.ok || !data.ok) {
-          throw new Error(data.error || `HTTP ${res.status}`);
+          const detail = Array.isArray(data.details) && data.details.length
+            ? data.details.join('; ')
+            : '';
+          throw new Error(detail || data.error || `HTTP ${res.status}`);
         }
         // Hand off to Bókun. We replace history so the back button returns
         // to our trip page instead of bouncing through the redirect.
@@ -299,7 +324,10 @@
   // ─────────────────────────────────────────────────────────────────
   function OrderSummary({ trip, items, totalUsd, open, onToggle, lang, displayCurrency, fxRates }) {
     const T = (opts) => pick(lang, opts);
-    const totalCount = items.reduce((sum, it) => sum + (it._adults || 0) + (it._children || 0), 0);
+    const totalCount = items.reduce((sum, it) => {
+      if (Number(it._paxTotal) > 0) return sum + Number(it._paxTotal);
+      return sum + (it._adults || 0) + (it._children || 0);
+    }, 0);
 
     return (
       <div className="checkout-order-summary">
