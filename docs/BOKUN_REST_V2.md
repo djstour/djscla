@@ -51,8 +51,12 @@
 ## 行程詳情
 
 `GET /restapi/v2.0/experience/{id}/components?componentType=ALL`  
-→ `v2ExperienceToActivity` → `normalizeActivity`  
+→ `v2ExperienceToActivity`（`type`、`cutoff`、`meetingPoint`、`categories` 等）  
+→ `enrichActivityCancellationPolicy`（`GET /cancellation/policies` 依 rate 的 `cancellationPolicyId` 補全）  
+→ `normalizeActivity`  
 → `GET /api/bokun/activity`
+
+快取在 Supabase 的 `bokun_payload` 需 **Admin 詳情同步** 或 `source=bokun` 才會帶齊新欄位。
 
 ---
 

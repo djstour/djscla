@@ -226,32 +226,46 @@
     TRANSFER:             { hant: '接駁',           hans: '接驳',           en: 'Transfer' },
     RENTAL:               { hant: '租賃',           hans: '租赁',           en: 'Rental' },
     ATTRACTION:           { hant: '景點門票',       hans: '景点门票',       en: 'Attraction' },
+    EVENT:                { hant: '活動',           hans: '活动',           en: 'Event' },
+    TRANSPORT:            { hant: '交通',           hans: '交通',           en: 'Transport' },
   };
 
   const DIFFICULTY = {
-    EASY:      { hant: '輕鬆',     hans: '轻松',     en: 'Easy' },
-    MODERATE:  { hant: '中等',     hans: '中等',     en: 'Moderate' },
-    CHALLENGING: { hant: '具挑戰', hans: '具挑战',   en: 'Challenging' },
-    HARD:      { hant: '困難',     hans: '困难',     en: 'Hard' },
-    EXTREME:   { hant: '極具挑戰', hans: '极具挑战', en: 'Extreme' },
+    VERY_EASY:   { hant: '非常輕鬆', hans: '非常轻松', en: 'Very easy' },
+    EASY:        { hant: '輕鬆',     hans: '轻松',     en: 'Easy' },
+    MODERATE:    { hant: '中等',     hans: '中等',     en: 'Moderate' },
+    CHALLENGING: { hant: '具挑戰',   hans: '具挑战',   en: 'Challenging' },
+    DEMANDING:   { hant: '高強度',   hans: '高强度',   en: 'Demanding' },
+    HARD:        { hant: '困難',     hans: '困难',     en: 'Hard' },
+    EXTREME:     { hant: '極具挑戰', hans: '极具挑战', en: 'Extreme' },
   };
 
   const ACTIVITY_CATEGORY = {
-    ADVENTURE:           { hant: '冒險',       hans: '冒险',       en: 'Adventure' },
-    BUS_OR_MINIVAN_TOUR: { hant: '巴士／小巴', hans: '巴士/小巴',   en: 'Bus / minivan tour' },
-    NATURE:              { hant: '自然',       hans: '自然',       en: 'Nature' },
-    SIGHTSEEING:         { hant: '觀光',       hans: '观光',       en: 'Sightseeing' },
-    CULTURE:             { hant: '文化',       hans: '文化',       en: 'Culture' },
-    FOOD_AND_DRINK:      { hant: '美食',       hans: '美食',       en: 'Food & drink' },
-    WATER_ACTIVITY:      { hant: '水上活動',   hans: '水上活动',   en: 'Water activity' },
-    WILDLIFE:            { hant: '野生動物',   hans: '野生动物',   en: 'Wildlife' },
-    WALKING_TOUR:        { hant: '步行行程',   hans: '步行行程',   en: 'Walking tour' },
-    HIKING:              { hant: '健行',       hans: '徒步',       en: 'Hiking' },
+    WALKING_TOUR:          { hant: '步行行程',     hans: '步行行程',     en: 'Walking tour' },
+    BUS_OR_MINIVAN_TOUR:   { hant: '巴士／小巴',   hans: '巴士/小巴',     en: 'Bus / minivan tour' },
+    AIR_OR_HELICOPTER_TOUR:{ hant: '空中／直升機', hans: '空中/直升机',   en: 'Air / helicopter tour' },
+    SAILING_OR_BOAT_TOUR:  { hant: '船遊',         hans: '船游',         en: 'Sailing / boat tour' },
+    PRIVATE_CAR_TOUR:      { hant: '私人包車',     hans: '私人包车',     en: 'Private car tour' },
+    SEAT_IN_COACH_TOUR:    { hant: '合乘巴士團',   hans: '合乘巴士团',   en: 'Seat-in-coach tour' },
+    BIKE_TOUR:             { hant: '單車行程',     hans: '单车行程',     en: 'Bike tour' },
+    SIGHTSEEING:           { hant: '觀光',         hans: '观光',         en: 'Sightseeing' },
+    SIGHTSEEING_ATTRACTION:{ hant: '觀光景點',     hans: '观光景点',     en: 'Sightseeing attraction' },
+    NATURE:                { hant: '自然',         hans: '自然',         en: 'Nature' },
+    WILDLIFE:              { hant: '野生動物',     hans: '野生动物',     en: 'Wildlife' },
+    CULTURE:               { hant: '文化',         hans: '文化',         en: 'Culture' },
+    ARTS_AND_CULTURE:      { hant: '藝術文化',     hans: '艺术文化',     en: 'Arts & culture' },
+    FOOD_AND_DRINK:        { hant: '美食',         hans: '美食',         en: 'Food & drink' },
+    WATER_ACTIVITY:        { hant: '水上活動',     hans: '水上活动',     en: 'Water activity' },
+    HIKING:                { hant: '健行',         hans: '徒步',         en: 'Hiking' },
+    ADVENTURE:             { hant: '冒險',         hans: '冒险',         en: 'Adventure' },
+    MUSEUMS_AND_EXHIBITIONS:{ hant: '博物館',      hans: '博物馆',       en: 'Museums & exhibitions' },
   };
 
   const ACTIVITY_ATTRIBUTE = {
     FAMILY_FRIENDLY: { hant: '親子友善', hans: '亲子友善', en: 'Family friendly' },
     ECO_FRIENDLY:    { hant: '環境友善', hans: '环境友善', en: 'Eco friendly' },
+    ROMANTIC:        { hant: '浪漫',     hans: '浪漫',     en: 'Romantic' },
+    LUXURY:          { hant: '奢華',     hans: '奢华',     en: 'Luxury' },
     OUTDOOR:         { hant: '戶外',     hans: '户外',     en: 'Outdoor' },
     INDOOR:          { hant: '室內',     hans: '室内',     en: 'Indoor' },
     ACCESSIBLE:      { hant: '無障礙',   hans: '无障碍',   en: 'Accessible' },
@@ -260,9 +274,35 @@
     SMALL_GROUP:     { hant: '小團',     hans: '小团',     en: 'Small group' },
   };
 
+  const KNOW_BEFORE_YOU_GO = {
+    STROLLER_OR_PRAM_ACCESSIBLE: { hant: '可推嬰兒車',     hans: '可推婴儿车',     en: 'Stroller / pram accessible' },
+    WHEELCHAIR_ACCESSIBLE:       { hant: '輪椅友善',       hans: '轮椅友善',       en: 'Wheelchair accessible' },
+    LIMITED_MOBILITY_ACCESSIBLE: { hant: '行動不便者可參加', hans: '行动不便者可参加', en: 'Limited mobility accessible' },
+    LIMITED_SIGHT_ACCESSIBLE:    { hant: '視障友善',       hans: '视障友善',       en: 'Limited sight accessible' },
+    ANIMALS_OR_PETS_ALLOWED:     { hant: '可攜寵物',       hans: '可携宠物',       en: 'Animals / pets allowed' },
+    PUBLIC_TRANSPORTATION_NEARBY:{ hant: '鄰近大眾運輸',   hans: '邻近大众运输',   en: 'Public transportation nearby' },
+    INFANT_SEATS_AVAILABLE:      { hant: '提供嬰兒座椅',   hans: '提供婴儿座椅',   en: 'Infant seats available' },
+    INFANTS_MUST_SIT_ON_LAPS:    { hant: '嬰兒需坐於膝上', hans: '婴儿需坐于膝上', en: 'Infants must sit on laps' },
+    PASSPORT_REQUIRED:           { hant: '需護照',         hans: '需护照',         en: 'Passport required' },
+    DRESS_CODE:                  { hant: '有服裝規定',     hans: '有着装规定',     en: 'Dress code' },
+  };
+
+  const INCLUSION_EXCLUSION = {
+    ENTRY_OR_ADMISSION_FEE:      { hant: '門票／入場費',   hans: '门票/入场费',   en: 'Entry or admission fee' },
+    FUEL_SURCHARGE:              { hant: '燃油附加費',     hans: '燃油附加费',     en: 'Fuel surcharge' },
+    LANDING_AND_FACILITY_FEES:   { hant: '起降／設施費',   hans: '起降/设施费',   en: 'Landing & facility fees' },
+    PARKING_FEES:                { hant: '停車費',         hans: '停车费',         en: 'Parking fees' },
+    NATIONAL_PARK_ENTRANCE_FEE:  { hant: '國家公園門票',   hans: '国家公园门票',   en: 'National park entrance fee' },
+    TIP_OR_GRATUITY:             { hant: '小費',           hans: '小费',           en: 'Tip / gratuity' },
+    FOOD_AND_DRINKS:             { hant: '餐飲',           hans: '餐饮',           en: 'Food & drinks' },
+    WIFI:                        { hant: 'Wi‑Fi',          hans: 'Wi‑Fi',          en: 'Wi‑Fi' },
+    BUS_FARE:                    { hant: '巴士費',         hans: '巴士费',         en: 'Bus fare' },
+  };
+
   window.AuralisData = window.AuralisData || {};
   window.AuralisData.BOKUN_TRANSLATIONS = {
     ACTIVITIES, VENDOR, TAG, CATEGORY, PRICING_CATEGORY, WARNING, GUIDE_LANGUAGE,
     ACTIVITY_TYPE, DIFFICULTY, ACTIVITY_CATEGORY, ACTIVITY_ATTRIBUTE,
+    KNOW_BEFORE_YOU_GO, INCLUSION_EXCLUSION,
   };
 })();

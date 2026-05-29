@@ -495,6 +495,9 @@
         name: stop.title || '',
         geo: stop.geoPoint,
         durationMinutes: stop.durationMinutes,
+        excerpt: stop.excerpt || '',
+        description: stop.description || '',
+        address: stop.address || '',
       }));
 
       // ---- availability ----

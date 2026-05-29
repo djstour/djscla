@@ -603,8 +603,6 @@
     const requirementsHtml = sanitizeVendorHtml(tour.requirementsHtml);
     const attentionHtml = sanitizeVendorHtml(tour.attentionHtml);
     const cancellationPolicyHtml = sanitizeVendorHtml(tour.cancellationPolicyHtml);
-    const hasIncluded = vendorHtmlIsMeaningful(includedHtml);
-    const hasExcluded = vendorHtmlIsMeaningful(excludedHtml);
     const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
     const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml);
@@ -641,6 +639,14 @@
     };
     const experienceType = enumLabel('ACTIVITY_TYPE', tour.activityType);
     const difficultyLabel = enumLabel('DIFFICULTY', tour.difficultyLevel);
+    const inclusionLabels = (tour.inclusionsList || [])
+      .map((code) => enumLabel('INCLUSION_EXCLUSION', code))
+      .filter(Boolean);
+    const exclusionLabels = (tour.exclusionsList || [])
+      .map((code) => enumLabel('INCLUSION_EXCLUSION', code))
+      .filter(Boolean);
+    const hasIncluded = vendorHtmlIsMeaningful(includedHtml) || inclusionLabels.length > 0;
+    const hasExcluded = vendorHtmlIsMeaningful(excludedHtml) || exclusionLabels.length > 0;
 
     // Booking cutoff: compose a human-readable string from whichever of
     // days/hours/minutes/weeks Bókun populated. We pluralise minimally so
@@ -659,13 +665,40 @@
     cutoffPush(tour.bookingCutoffDays,  '天',   '天',   'day',    'days');
     cutoffPush(tour.bookingCutoffHours, '小時', '小时', 'hour',   'hours');
     cutoffPush(tour.bookingCutoffMinutes, '分鐘', '分钟', 'minute', 'minutes');
-    const bookingCutoffText = cutoffParts.length
+    let bookingCutoffText = cutoffParts.length
       ? T({
           hant: `截止：${cutoffParts.join(' ')}`,
           hans: `截止：${cutoffParts.join(' ')}`,
           en: `Cut off: ${cutoffParts.join(' ')}`,
         })
       : '';
+    if (!bookingCutoffText && Number.isFinite(Number(tour.bookingCutoffTotalMinutes)) && tour.bookingCutoffTotalMinutes > 0) {
+      const totalMin = Number(tour.bookingCutoffTotalMinutes);
+      const hours = Math.floor(totalMin / 60);
+      const mins = totalMin % 60;
+      const parts = [];
+      if (hours > 0) {
+        parts.push(T({
+          hant: `${hours} 小時`,
+          hans: `${hours} 小时`,
+          en: `${hours} hour${hours === 1 ? '' : 's'}`,
+        }));
+      }
+      if (mins > 0) {
+        parts.push(T({
+          hant: `${mins} 分鐘`,
+          hans: `${mins} 分钟`,
+          en: `${mins} minute${mins === 1 ? '' : 's'}`,
+        }));
+      }
+      if (parts.length) {
+        bookingCutoffText = T({
+          hant: `截止：${parts.join(' ')}`,
+          hans: `截止：${parts.join(' ')}`,
+          en: `Cut off: ${parts.join(' ')}`,
+        });
+      }
+    }
 
     // Combine ACTIVITY_CATEGORY + ACTIVITY_ATTRIBUTE chips (same visual row
     // in Bókun). De-dupe in case a vendor tags the same theme twice.
@@ -694,7 +727,8 @@
       }));
     }
     (tour.knowBeforeYouGoItems || []).forEach((item) => {
-      const text = typeof item === 'string' ? item : (item?.text || item?.label || '');
+      const code = typeof item === 'string' ? item : (item?.code || item?.type || item?.text || '');
+      const text = enumLabel('KNOW_BEFORE_YOU_GO', code) || (typeof item === 'string' ? item : (item?.text || item?.label || ''));
       if (text && !knowItems.includes(text)) knowItems.push(text);
     });
 
@@ -1152,13 +1186,27 @@
 
                     {hasIncluded && (
                       <SubSection title={T({ hant: '費用包含', hans: '费用包含', en: 'Included' })}>
-                        <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: includedHtml }} />
+                        {inclusionLabels.length > 0 && (
+                          <ul className="detail-fact__items detail-enum-list">
+                            {inclusionLabels.map((lbl) => (<li key={lbl}>{lbl}</li>))}
+                          </ul>
+                        )}
+                        {vendorHtmlIsMeaningful(includedHtml) && (
+                          <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: includedHtml }} />
+                        )}
                       </SubSection>
                     )}
 
                     {hasExcluded && (
                       <SubSection title={T({ hant: '費用不含', hans: '费用不含', en: 'Excluded' })}>
-                        <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: excludedHtml }} />
+                        {exclusionLabels.length > 0 && (
+                          <ul className="detail-fact__items detail-enum-list">
+                            {exclusionLabels.map((lbl) => (<li key={lbl}>{lbl}</li>))}
+                          </ul>
+                        )}
+                        {vendorHtmlIsMeaningful(excludedHtml) && (
+                          <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: excludedHtml }} />
+                        )}
                       </SubSection>
                     )}
 
@@ -1241,17 +1289,36 @@
                   >
                     <ItineraryMap stops={stopsNamed} />
                     <ol className="detail-stops-list">
-                      {stopsNamed.map((stop, i) => (
-                        <li key={stop.id} className="detail-stop">
-                          <span className="detail-stop__num">{i + 1}</span>
-                          <div>
-                            <div className="detail-stop__name">{stop.name}</div>
-                            {stop.durationMinutes > 0 && (
-                              <div className="detail-stop__dur">{stop.durationMinutes} min</div>
-                            )}
-                          </div>
-                        </li>
-                      ))}
+                      {stopsNamed.map((stop, i) => {
+                        const stopDescHtml = stop.description && /<[a-z][\s\S]*?>/i.test(stop.description)
+                          ? sanitizeVendorHtml(stop.description)
+                          : '';
+                        return (
+                          <li key={stop.id} className="detail-stop">
+                            <span className="detail-stop__num">{i + 1}</span>
+                            <div>
+                              <div className="detail-stop__name">{stop.name}</div>
+                              {stop.excerpt && (
+                                <div className="detail-stop__excerpt">{stop.excerpt}</div>
+                              )}
+                              {stopDescHtml ? (
+                                <div
+                                  className="detail-vendor-html detail-stop__body"
+                                  dangerouslySetInnerHTML={{ __html: stopDescHtml }}
+                                />
+                              ) : (stop.description && (
+                                <div className="detail-stop__body">{stop.description}</div>
+                              ))}
+                              {stop.address && (
+                                <div className="detail-stop__address">{stop.address}</div>
+                              )}
+                              {stop.durationMinutes > 0 && (
+                                <div className="detail-stop__dur">{stop.durationMinutes} min</div>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ol>
                   </div>
                 )}
