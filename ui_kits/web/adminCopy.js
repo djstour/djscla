@@ -257,6 +257,41 @@
       hans: '尚有 {pending} 笔待详情同步（本轮已处理 {queued} / 共需 {total}）',
       en: '{pending} still need detail sync ({queued} processed this run of {total})',
     },
+    syncDetailCatalog: {
+      hant: '詳情進度（全庫）',
+      hans: '详情进度（全库）',
+      en: 'Detail progress (catalog)',
+    },
+    syncDetailCatalogErr: {
+      hant: '詳情進度（全庫 · 本輪 {n} 錯）',
+      hans: '详情进度（全库 · 本轮 {n} 错）',
+      en: 'Detail progress (catalog · {n} err. this run)',
+    },
+    syncDetailCatalogHint: {
+      hant: '本輪成功 {run} 筆 · 全庫尚缺 {missing} 筆',
+      hans: '本轮成功 {run} 笔 · 全库尚缺 {missing} 笔',
+      en: '+{run} this run · {missing} still missing catalog-wide',
+    },
+    syncDetailCatalogHintErr: {
+      hant: '本輪成功 {run} 筆、{errors} 筆錯誤 · 全庫尚缺 {missing} 筆',
+      hans: '本轮成功 {run} 笔、{errors} 笔错误 · 全库尚缺 {missing} 笔',
+      en: '+{run} this run, {errors} error(s) · {missing} still missing catalog-wide',
+    },
+    syncDetailCatalogComplete: {
+      hant: '全庫詳情已齊',
+      hans: '全库详情已齐',
+      en: 'All catalog details complete',
+    },
+    syncDetailThisRun: {
+      hant: '本輪 queue',
+      hans: '本轮 queue',
+      en: 'This run queue',
+    },
+    syncDetailRunQueueHint: {
+      hant: '本輪排程 {queued} / 共 {total}（含 force detail 時分母固定）',
+      hans: '本轮排程 {queued} / 共 {total}（含 force detail 时分母固定）',
+      en: 'Queued {queued} of {total} this run (force detail keeps run total high)',
+    },
     healthPickupHostedNote: {
       hant: '「僅 Hosted 結帳選接送點」為 Bókun v2 常態（共 {n} 筆），通常無需修復。',
       hans: '「仅 Hosted 结账选接送点」为 Bókun v2 常态（共 {n} 笔），通常无需修复。',

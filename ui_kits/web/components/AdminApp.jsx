@@ -591,24 +591,62 @@
     }
 
     if (options.forceDetail || counts.detailSynced > 0 || (counts.detailPending || 0) > 0) {
-      const detailLabel = counts.detailErrors > 0
-        ? t('syncDetailSyncedErr', { n: counts.detailErrors })
-        : t('syncDetailSynced');
-      const detailTotal = counts.detailNeedingTotal ?? counts.detailPending ?? 0;
-      const detailQueued = counts.detailQueued ?? counts.detailSynced ?? 0;
-      statGroups[1].stats.push({
-        label: detailLabel,
-        value: `${formatNumber(counts.detailSynced)} / ${formatNumber(detailTotal)}`,
-        tone: counts.detailErrors > 0 ? 'warn' : 'neutral',
-        raw: true,
-        hint: (counts.detailPending || 0) > 0
-          ? t('syncDetailPendingHint', {
-            pending: counts.detailPending,
-            queued: detailQueued,
-            total: detailTotal,
-          })
-          : null,
-      });
+      const detailProgress = result.detailProgress;
+      const runSynced = counts.detailSynced || 0;
+      const runErrors = counts.detailErrors || 0;
+      const detailQueued = counts.detailQueued ?? runSynced;
+      const runQueueTotal = counts.detailNeedingTotal ?? counts.detailPending ?? 0;
+
+      if (detailProgress && detailProgress.total > 0) {
+        const { complete, total, missing } = detailProgress;
+        const detailLabel = runErrors > 0
+          ? t('syncDetailCatalogErr', { n: runErrors })
+          : t('syncDetailCatalog');
+        const allComplete = missing === 0;
+        statGroups[1].stats.push({
+          label: detailLabel,
+          value: `${formatNumber(complete)} / ${formatNumber(total)}`,
+          tone: allComplete ? 'accent' : (runErrors > 0 ? 'warn' : 'neutral'),
+          raw: true,
+          hint: allComplete
+            ? t('syncDetailCatalogComplete')
+            : (runErrors > 0
+              ? t('syncDetailCatalogHintErr', { run: runSynced, errors: runErrors, missing })
+              : t('syncDetailCatalogHint', { run: runSynced, missing })),
+        });
+        if (runSynced > 0 || runErrors > 0) {
+          statGroups[1].stats.push({
+            label: t('syncDetailThisRun'),
+            value: `${formatNumber(runSynced)} / ${formatNumber(detailQueued)}`,
+            tone: runErrors > 0 ? 'warn' : 'muted',
+            raw: true,
+            hint: runQueueTotal > 0
+              ? t('syncDetailRunQueueHint', {
+                queued: detailQueued,
+                total: runQueueTotal,
+              })
+              : null,
+          });
+        }
+      } else {
+        const detailLabel = runErrors > 0
+          ? t('syncDetailSyncedErr', { n: runErrors })
+          : t('syncDetailSynced');
+        const detailTotal = runQueueTotal;
+        statGroups[1].stats.push({
+          label: detailLabel,
+          value: `${formatNumber(runSynced)} / ${formatNumber(detailTotal)}`,
+          tone: runErrors > 0 ? 'warn' : 'neutral',
+          raw: true,
+          hint: (counts.detailPending || 0) > 0
+            ? t('syncDetailPendingHint', {
+              pending: counts.detailPending,
+              queued: detailQueued,
+              total: detailTotal,
+            })
+            : null,
+        });
+      }
       if ((counts.detailPriceWarnings || 0) > 0) {
         statGroups[1].stats.push({
           label: t('syncDetailPriceWarnings'),
