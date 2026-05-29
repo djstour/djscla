@@ -705,6 +705,8 @@
   // ---------------- Overview ----------------
   function OverviewPage({ overview, token, onRefresh, lang, t }) {
     const [syncing, setSyncing] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [refreshError, setRefreshError] = useState('');
     const [syncError, setSyncError] = useState('');
     const [syncResult, setSyncResult] = useState(null);
     const [syncElapsed, setSyncElapsed] = useState(0);
@@ -730,6 +732,19 @@
       return () => window.clearInterval(tick);
     }, [syncing]);
 
+    const runRefreshStats = async () => {
+      if (refreshing || typeof onRefresh !== 'function') return;
+      setRefreshing(true);
+      setRefreshError('');
+      try {
+        await onRefresh();
+      } catch (err) {
+        setRefreshError(err.message || t('refreshStatsFailed'));
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
     const runCatalogSync = async () => {
       setSyncing(true);
       setSyncError('');
@@ -740,7 +755,7 @@
           body: syncOpts,
         });
         setSyncResult(res);
-        onRefresh();
+        await onRefresh();
       } catch (err) {
         setSyncError(err.message || t('syncFailed'));
       } finally {
@@ -750,7 +765,7 @@
 
     if (!overview) return <div className="admin-empty">{t('loading')}</div>;
 
-    const { activities, vendors, totals, lastSyncedAt, inquiries } = overview;
+    const { activities, vendors, totals, lastSyncedAt, inquiries, generatedAt } = overview;
 
     return (
       <div>
@@ -758,6 +773,13 @@
         <p className="admin-page-sub">
           {t('overviewSub')}<strong>{formatDateTime(lastSyncedAt, lang)}</strong>
           {lastSyncedAt ? <span> · {timeAgo(lastSyncedAt, lang)}</span> : null}
+          {generatedAt ? (
+            <span>
+              {' · '}
+              {t('statsRefreshedAt')}{' '}
+              <strong>{formatDateTime(generatedAt, lang)}</strong>
+            </span>
+          ) : null}
         </p>
 
         <section className={`admin-sync-panel${syncing ? ' admin-sync-panel--busy' : ''}`}>
@@ -824,13 +846,24 @@
             </button>
             <button
               type="button"
-              className="admin-btn admin-btn--ghost"
-              onClick={onRefresh}
-              disabled={syncing}
+              className={`admin-btn admin-btn--ghost${refreshing ? ' admin-btn--loading' : ''}`}
+              onClick={runRefreshStats}
+              disabled={refreshing}
+              aria-busy={refreshing}
             >
-              {t('refreshStats')}
+              {refreshing ? (
+                <>
+                  <span className="admin-sync-spinner" aria-hidden="true" />
+                  {t('refreshingStats')}
+                </>
+              ) : (
+                t('refreshStats')
+              )}
             </button>
           </div>
+          {refreshError ? (
+            <div className="admin-result admin-result--error">{refreshError}</div>
+          ) : null}
           {syncing ? (
             <CatalogSyncRunning elapsedSec={syncElapsed} stepIndex={syncStep} t={t} lang={lang} />
           ) : null}
@@ -2488,19 +2521,27 @@
     }, [navOpen]);
 
     const loadOverview = useCallback(() => {
-      adminFetch('/api/admin/overview', token)
-        .then((res) => { setOverview(res); setOverviewError(''); })
+      const cacheBust = `_=${Date.now()}`;
+      return adminFetch(`/api/admin/overview?${cacheBust}`, token)
+        .then((res) => {
+          setOverview(res);
+          setOverviewError('');
+          return res;
+        })
         .catch((err) => {
-          setOverviewError(err.message || (t ? t('loadOverviewFailed') : 'Failed to load overview'));
+          const message = err.message || (t ? t('loadOverviewFailed') : 'Failed to load overview');
+          setOverviewError(message);
           if (err.status === 401) onLogout();
+          throw err;
         });
     }, [token, onLogout, t]);
 
-    useEffect(() => { loadOverview(); }, [loadOverview]);
+    useEffect(() => { loadOverview().catch(() => {}); }, [loadOverview]);
 
     const refreshAll = useCallback(() => {
-      loadOverview();
-      setReloadKey((k) => k + 1);
+      return loadOverview().then(() => {
+        setReloadKey((k) => k + 1);
+      });
     }, [loadOverview]);
 
     const counts = {

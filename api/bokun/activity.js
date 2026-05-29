@@ -1,6 +1,6 @@
 const { getActivityById, getQuoteCurrency } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
-const { fetchActivityFromDb } = require('../../lib/catalogDb');
+const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const {
   hasPlausiblePrice,
@@ -57,10 +57,28 @@ function hasUsablePricing(pricing) {
     && pricing.some((row) => Number.isFinite(Number(row && row.amount)) && Number(row.amount) > 0);
 }
 
+function isPlaceholderVendor(v) {
+  if (!v || typeof v !== 'object') return true;
+  const t = String(v.titleOriginal || v.title || '').trim();
+  return !t || t === 'Supplier' || /^Supplier \d+$/.test(t);
+}
+
+async function graftCatalogVendor(activity, bokunId) {
+  if (!activity || !isPlaceholderVendor(activity.vendor)) return activity;
+  try {
+    const vendor = await fetchVendorForBokunActivity(bokunId);
+    if (vendor) return { ...activity, vendor };
+  } catch (err) {
+    console.warn('[activity] vendor graft failed:', err.message);
+  }
+  return activity;
+}
+
 async function fetchFromBokun(id, uiLang) {
   const raw = unwrapActivity(await getActivityById(id, { uiLang }));
   const quoteCurrency = getQuoteCurrency();
-  const activity = normalizeActivity(raw);
+  let activity = normalizeActivity(raw);
+  activity = await graftCatalogVendor(activity, id);
   return { activity, quoteCurrency, raw };
 }
 
@@ -214,6 +232,10 @@ module.exports = async function handler(req, res) {
           activityAttributes: rawUpstream.activityAttributes,
         },
       });
+    }
+
+    if (activity) {
+      activity = await graftCatalogVendor(activity, id);
     }
 
     const translations = await loadTranslationsForActivities([activity]);

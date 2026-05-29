@@ -1575,6 +1575,29 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   max-width: 20ch;
 }
 
+/* Bókun-style duration / difficulty pills under the title */
+.detail-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.detail-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font: 600 13px/1.2 var(--font-text);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
 .detail-hero-facts {
   display: flex;
   flex-wrap: wrap;
@@ -1842,6 +1865,24 @@ html[data-site-theme="sun"] .supplier-pill.is-active {
   align-items: start;
   padding-top: 20px;
   padding-bottom: 48px;
+}
+
+/* Short description lead — mirrors Bókun product header blurb */
+.detail-intro {
+  margin: 0;
+  padding: 0;
+}
+
+.detail-intro__lead {
+  margin: 0;
+  font: 500 16px/1.55 var(--font-text);
+  color: var(--fg-1);
+  letter-spacing: -0.01em;
+}
+
+.detail-intro__skeleton {
+  display: flex;
+  flex-direction: column;
 }
 
 .detail-main {
@@ -2974,6 +3015,15 @@ textarea.detail-book-field {
 
   .detail-hero {
     height: clamp(260px, 52vh, 360px);
+  }
+
+  .detail-intro__lead {
+    font-size: 15px;
+  }
+
+  .detail-hero-chip {
+    font-size: 12px;
+    padding: 5px 10px;
   }
 
   .detail-hero-title {

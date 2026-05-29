@@ -384,7 +384,14 @@
       const sourceAttentionHtml = String(activity.attentionHtml || '');
       const sourceCancellationPolicyTitle = String(activity.cancellationPolicyTitle || '');
       const sourceCancellationPolicyHtml = String(activity.cancellationPolicyHtml || '');
-      const sourceDurationText = String(activity.durationText || activity.duration || '');
+      const PaxRef = typeof window !== 'undefined' ? window.AuralisPax : null;
+      const sourceDurationText = (PaxRef && PaxRef.resolveActivityDuration)
+        ? PaxRef.resolveActivityDuration({
+          raw: activity,
+          durationText: activity.durationText,
+          duration: activity.duration,
+        })
+        : String(activity.durationText || activity.duration || '');
       const sourceKnowItems = Array.isArray(activity.knowBeforeYouGoItems) ? activity.knowBeforeYouGoItems : [];
       const title = pickFromOverlay(overlay.title, lang, sourceTitle)
         || (lang === 'en' ? sourceTitle : '');
@@ -419,9 +426,10 @@
         || (catKey ? pickFromOverlay(T.CATEGORY[catKey], lang, lang === 'en' ? catKey : '') : '');
 
       // ---- vendor — Latin brand name only; never localized ----
-      const supplier = activity.vendor
+      let supplier = activity.vendor
         ? (activity.vendor.titleOriginal || activity.vendor.title)
         : '';
+      if (isPlaceholderSupplierName(supplier)) supplier = '';
       const supplierRole = '';
 
       const duration = durationText || '';
@@ -662,9 +670,39 @@
     return Array.isArray(tour.priceTable) && tour.priceTable.some((row) => hasPositiveAmount(row && row.amount));
   }
 
+  function isPlaceholderSupplierName(name) {
+    if (name == null || name === '') return true;
+    const t = String(name).trim();
+    return t === 'Supplier' || /^Supplier \d+$/.test(t);
+  }
+
   function mergePreviewPriceFallback(tour, previewVm) {
     if (!tour || !previewVm) return tour || previewVm || null;
     const merged = { ...tour };
+
+    const previewSupplier = previewVm.supplier
+      || (previewVm.vendor && (previewVm.vendor.titleOriginal || previewVm.vendor.title));
+    if (isPlaceholderSupplierName(merged.supplier) && previewSupplier && !isPlaceholderSupplierName(previewSupplier)) {
+      merged.supplier = previewSupplier;
+      merged.vendor = previewVm.vendor || merged.vendor;
+    }
+    const previewDuration = previewVm.duration || previewVm.durationText;
+    if (!String(merged.duration || merged.durationText || '').trim() && previewDuration) {
+      merged.duration = previewDuration;
+      merged.durationText = previewVm.durationText || previewDuration;
+    }
+    if (previewVm.raw && merged.raw) {
+      merged.raw = { ...merged.raw };
+      if (isPlaceholderSupplierName(merged.raw.vendor?.title) && previewVm.raw.vendor) {
+        merged.raw.vendor = previewVm.raw.vendor;
+      }
+      if (!String(merged.raw.durationText || '').trim() && previewVm.raw.durationText) {
+        merged.raw.durationText = previewVm.raw.durationText;
+      }
+      if ((!merged.raw.durationMinutes || merged.raw.durationMinutes <= 0) && previewVm.raw.durationMinutes > 0) {
+        merged.raw.durationMinutes = previewVm.raw.durationMinutes;
+      }
+    }
 
     if (!merged.coverImageOwnedUrl && previewVm.coverImageOwnedUrl) merged.coverImageOwnedUrl = previewVm.coverImageOwnedUrl;
     if (!merged.coverImageCardUrl && previewVm.coverImageCardUrl) merged.coverImageCardUrl = previewVm.coverImageCardUrl;

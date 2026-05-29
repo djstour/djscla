@@ -78,6 +78,9 @@
     runCatalogSync: { hant: '執行目錄同步', hans: '执行目录同步', en: 'Run catalog sync' },
     syncing: { hant: '同步中…', hans: '同步中…', en: 'Syncing…' },
     refreshStats: { hant: '重新整理統計', hans: '刷新统计', en: 'Refresh stats' },
+    refreshingStats: { hant: '重新整理中…', hans: '刷新中…', en: 'Refreshing…' },
+    statsRefreshedAt: { hant: '統計更新於', hans: '统计更新于', en: 'Stats refreshed' },
+    refreshStatsFailed: { hant: '無法重新整理統計', hans: '无法刷新统计', en: 'Failed to refresh stats' },
     syncFailed: { hant: '同步失敗', hans: '同步失败', en: 'Sync failed' },
     loadOverviewFailed: { hant: '無法載入總覽', hans: '无法加载总览', en: 'Failed to load overview' },
 

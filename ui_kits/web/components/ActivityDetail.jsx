@@ -641,6 +641,25 @@
     };
     const experienceType = enumLabel('ACTIVITY_TYPE', tour.activityType);
     const difficultyLabel = enumLabel('DIFFICULTY', tour.difficultyLevel);
+    const rawActivity = tour.raw || {};
+    const heroDuration = Pax.resolveActivityDuration
+      ? Pax.resolveActivityDuration(tour)
+      : String(
+        tour.duration || tour.durationText || rawActivity.durationText || rawActivity.duration || '',
+      ).trim();
+    const heroSupplier = Pax.resolveSupplierLabel ? Pax.resolveSupplierLabel(tour) : '';
+    const heroDifficulty = difficultyLabel
+      || enumLabel('DIFFICULTY', rawActivity.difficultyLevel);
+    let heroIntro = String(tour.summary || '').trim()
+      || String(rawActivity.summary || rawActivity.shortDescription || '').trim();
+    if (!heroIntro && tour.description && !descriptionIsHtml) {
+      heroIntro = String(tour.description).trim();
+    }
+    if (!heroIntro && descriptionIsHtml && descriptionSanitizedHtml) {
+      const plain = descriptionSanitizedHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (plain) heroIntro = plain;
+    }
+    const hasHeroHighlights = !!(heroDuration || heroDifficulty);
     const inclusionLabels = (tour.inclusionsList || [])
       .map((code) => enumLabel('INCLUSION_EXCLUSION', code))
       .filter(Boolean);
@@ -766,7 +785,7 @@
 
     const quickFacts = [
       experienceType && { label: T({ hant: '行程類型', hans: '行程类型', en: 'Experience type' }), value: experienceType },
-      tour.durationText && { label: T({ hant: '時長', hans: '时长', en: 'Duration' }), value: tour.durationText },
+      heroDuration && { label: T({ hant: '時長', hans: '时长', en: 'Duration' }), value: heroDuration },
       bookingCutoffText && { label: T({ hant: '預訂提前期', hans: '预订提前期', en: 'Booking in advance' }), value: bookingCutoffText },
       difficultyLabel && { label: T({ hant: '體能難度', hans: '体能难度', en: 'Physical difficulty level' }), value: difficultyLabel },
       knowItems.length > 0 && { label: T({ hant: '出發前須知', hans: '出发前须知', en: 'Know before you go' }), valueItems: knowItems },
@@ -1060,6 +1079,25 @@
               <span className="detail-hero-badge">{tour.badge}</span>
             )}
             <h1 className="detail-hero-title">{tour.title}</h1>
+            {hasHeroHighlights && (
+              <div
+                className="detail-hero-chips"
+                aria-label={T({ hant: '行程重點', hans: '行程重点', en: 'Trip highlights' })}
+              >
+                {heroDuration && (
+                  <span className="detail-hero-chip">
+                    <Icon name="clock" size={14} color="rgba(255,255,255,0.9)" />
+                    {heroDuration}
+                  </span>
+                )}
+                {heroDifficulty && (
+                  <span className="detail-hero-chip">
+                    <Icon name="footprints" size={14} color="rgba(255,255,255,0.9)" />
+                    {heroDifficulty}
+                  </span>
+                )}
+              </div>
+            )}
             <div className="detail-hero-facts">
               {tour.rating > 0 && (
                 <span className="detail-hero-fact">
@@ -1068,16 +1106,16 @@
                   <span>· {tour.reviews.toLocaleString()} {T({ hant: '則評價', hans: '条评价', en: 'reviews' })}</span>
                 </span>
               )}
-              {tour.duration && (
+              {tour.duration && !heroDuration && (
                 <span className="detail-hero-fact">
                   <Icon name="clock" size={13} color="rgba(255,255,255,0.72)" />
                   {tour.duration}
                 </span>
               )}
-              {tour.supplier && (
+              {heroSupplier && (
                 <span className="detail-hero-fact">
                   <Icon name="building-2" size={13} color="rgba(255,255,255,0.72)" />
-                  {tour.supplier}
+                  {heroSupplier}
                 </span>
               )}
             </div>
@@ -1131,6 +1169,20 @@
               <p className="detail-loading-hint" style={{ marginBottom: 0 }}>
                 {T({ hant: '正在載入完整內容…', hans: '正在加载完整内容…', en: 'Loading full details…' })}
               </p>
+            )}
+
+            {(heroIntro || (loading && !heroIntro)) && (
+              <div className="detail-intro">
+                {heroIntro ? (
+                  <p className="detail-intro__lead">{heroIntro}</p>
+                ) : (
+                  <div className="detail-intro__skeleton" aria-hidden="true">
+                    <div className="tour-card-image-shimmer" style={{ width: '100%', height: 14 }} />
+                    <div className="tour-card-image-shimmer" style={{ width: '92%', height: 14, marginTop: 8 }} />
+                    <div className="tour-card-image-shimmer" style={{ width: '78%', height: 14, marginTop: 8 }} />
+                  </div>
+                )}
+              </div>
             )}
 
             {detailTabs.length > 0 && (
