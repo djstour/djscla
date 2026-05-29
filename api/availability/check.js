@@ -1,5 +1,6 @@
 const { getActivityById, getActivityAvailabilities, getQuoteCurrency } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
+const { isDisplayableCatalogPrice } = require('../../lib/catalogPriceVerification');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -35,7 +36,7 @@ function matchAvailability(availabilities, date, startTimeId) {
   return dated.find((row) => String(row.startTimeId) === wanted || String(row.id) === wanted) || null;
 }
 
-function extractCategoryUnitPrices(activity, availability, currency) {
+function extractCategoryUnitPrices(activity, availability, currency, { allowCatalogFallback = false } = {}) {
   const categories = Array.isArray(activity.pricingCategories) ? activity.pricingCategories : [];
   const rates = Array.isArray(availability?.pricesByRate) ? availability.pricesByRate : [];
   const defaultRateId = availability?.defaultRateId;
@@ -50,12 +51,14 @@ function extractCategoryUnitPrices(activity, availability, currency) {
       currency: entry.amount?.currency || currency,
     });
   });
-  (activity.pricing || []).forEach((row) => {
-    const key = String(row.pricingCategoryId);
-    if (!unitById.has(key) && Number(row.amount) > 0) {
-      unitById.set(key, { unitAmount: Number(row.amount), currency: row.currency || currency });
-    }
-  });
+  if (allowCatalogFallback) {
+    (activity.pricing || []).forEach((row) => {
+      const key = String(row.pricingCategoryId);
+      if (!unitById.has(key) && Number(row.amount) > 0) {
+        unitById.set(key, { unitAmount: Number(row.amount), currency: row.currency || currency });
+      }
+    });
+  }
 
   return categories.map((cat) => {
     const hit = unitById.get(String(cat.id));
@@ -68,13 +71,16 @@ function extractCategoryUnitPrices(activity, availability, currency) {
   }).filter((row) => row.unitAmount != null && row.unitAmount > 0);
 }
 
-function computeLineItems(activity, availability, pax) {
+function computeLineItems(activity, availability, pax, { allowCatalogFallback = false } = {}) {
   const rates = Array.isArray(availability?.pricesByRate) ? availability.pricesByRate : [];
   const defaultRateId = availability?.defaultRateId;
   const priceRow = rates.find((row) => String(row.activityRateId) === String(defaultRateId)) || rates[0] || null;
   const currency = getQuoteCurrency();
 
   if (!priceRow) {
+    if (!allowCatalogFallback) {
+      return { currency, lineItems: [], priceUnverified: true };
+    }
     const fallback = Array.isArray(activity.pricing) ? activity.pricing : [];
     const lines = pax.map((row) => {
       const price = fallback.find((p) => String(p.pricingCategoryId) === String(row.pricingCategoryId));
@@ -184,9 +190,15 @@ module.exports = async function handler(req, res) {
     const minRequired = Number(availability.minParticipantsToBookNow || availability.minParticipants || 1);
     const capacityOk = availability.unlimitedAvailability || capacity == null || requested <= capacity;
     const minOk = requested >= minRequired;
-    const pricing = computeLineItems(activity, availability, pax);
+    const allowCatalogFallback = isDisplayableCatalogPrice(activity);
+    const pricing = computeLineItems(activity, availability, pax, { allowCatalogFallback });
     const total = pricing.lineItems.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
-    const categoryUnitPrices = extractCategoryUnitPrices(activity, availability, pricing.currency);
+    const categoryUnitPrices = extractCategoryUnitPrices(
+      activity,
+      availability,
+      pricing.currency,
+      { allowCatalogFallback },
+    );
 
     return res.status(200).json({
       available: !soldOut && capacityOk && minOk,
@@ -206,9 +218,11 @@ module.exports = async function handler(req, res) {
         minParticipantsToBookNow: minRequired,
         soldOut,
       },
+      priceUnverified: !!pricing.priceUnverified,
       warnings: [
         !capacityOk && 'Requested passengers exceed remaining capacity.',
         !minOk && `Booking requires at least ${minRequired} participants.`,
+        pricing.priceUnverified && 'Catalog price is not verified; complete booking in Bókun for the final fare.',
       ].filter(Boolean),
       raw: {
         rates: availability.rates || [],

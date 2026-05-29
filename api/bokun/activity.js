@@ -5,10 +5,8 @@ const { enrichActivityTicketInfo } = require('../../lib/bokunCustomFieldsV1Fallb
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
-const {
-  hasPlausiblePrice,
-  isDbDetailCacheUsable,
-} = require('../../lib/catalogQuality');
+const { isDbDetailCacheUsable } = require('../../lib/catalogQuality');
+const { isDisplayableCatalogPrice } = require('../../lib/catalogPriceVerification');
 
 const DEFAULT_FRESHNESS_MS = 6 * 60 * 60 * 1000;
 const FRESHNESS_MS = Number.isFinite(Number(process.env.CATALOG_DETAIL_TTL_MS))
@@ -53,6 +51,17 @@ function hasBookingFields(activity) {
   if (activity.pickupInfo === undefined) return false;
   if (activity.bookableExtras === undefined) return false;
   return true;
+}
+
+function stripUnverifiedCatalogPricing(activity) {
+  if (!activity || isDisplayableCatalogPrice(activity)) return activity;
+  return {
+    ...activity,
+    pricing: [],
+    nextDefaultPrice: null,
+    fromPrice: null,
+    priceUnverified: true,
+  };
 }
 
 function hasUsablePricing(pricing) {
@@ -208,24 +217,8 @@ module.exports = async function handler(req, res) {
       usedSource = 'bokun';
     }
 
-    // v2 components may lack list pricing — graft from DB cache when needed.
-    // If the live response lacks a
-    // usable price, graft it from the DB-cached pricing[] / nextDefaultPrice
-    // so the booking sidebar shows a real number instead of "Price loading".
-    if (activity && !hasPlausiblePrice(activity)) {
-      try {
-        const cached = await fetchActivityFromDb(id);
-        if (cached && cached.activity && hasPlausiblePrice(cached.activity)) {
-          activity = {
-            ...activity,
-            pricing: hasUsablePricing(cached.activity.pricing) ? cached.activity.pricing : activity.pricing,
-            nextDefaultPrice: cached.activity.nextDefaultPrice || activity.nextDefaultPrice,
-            defaultCurrency: cached.activity.defaultCurrency || activity.defaultCurrency,
-          };
-        }
-      } catch (priceErr) {
-        console.warn('[Auralis] price hydration failed:', priceErr.message);
-      }
+    if (activity) {
+      activity = stripUnverifiedCatalogPricing(activity);
     }
 
     if (req.query.debug === 'extras' && rawUpstream) {

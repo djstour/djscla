@@ -231,6 +231,16 @@
       hans: '需处理的行程',
       en: 'Activities to review',
     },
+    healthUntrustedPriceHint: {
+      hant: '依 REST v2 規範，components 牌價預設不作前台售價。請在 Bókun 後台／Hosted 結帳對照後，勾選產品並按「核准前台牌價」（僅限已確認與後台一致者，如 825419）。',
+      hans: '依 REST v2 规范，components 牌价默认不作前台售价。请在 Bókun 后台／Hosted 结账对照后，勾选产品并按「核准前台牌价」。',
+      en: 'Per REST v2, component list prices are not shown by default. Compare in Bókun / Hosted checkout, then approve display for matching products only.',
+    },
+    healthVerifyPricesBtn: { hant: '重新稽核（v2）', hans: '重新稽核（v2）', en: 'Re-audit (v2)' },
+    healthTrustPricesBtn: { hant: '核准前台牌價', hans: '核准前台牌价', en: 'Approve display price' },
+    healthRevokePricesBtn: { hant: '撤回核准', hans: '撤回核准', en: 'Revoke approval' },
+    healthColRefUsd: { hant: '核准來源', hans: '核准来源', en: 'Trust source' },
+    healthColReason: { hant: '原因', hans: '原因', en: 'Reason' },
     healthImplausiblePriceHint: {
       hant: '快取展示價低於 USD {min}。請在 Bókun 核對定價後，於 Activities 觸發詳情同步，或執行 resync-activity-detail。',
       hans: '缓存展示价低于 USD {min}。请在 Bókun 核对定价后，于 Activities 触发详情同步，或执行 resync-activity-detail。',
@@ -281,6 +291,12 @@
     syncChipUpserted: { hant: '{n} 筆已更新', hans: '{n} 笔已更新', en: '{n} upserted' },
     syncChipUnchanged: { hant: '{n} 筆未變', hans: '{n} 笔未变', en: '{n} unchanged' },
     syncChipDeactivated: { hant: '{n} 筆已下架', hans: '{n} 笔已下架', en: '{n} deactivated' },
+    syncChipFetchFailed: {
+      hant: '{n} 筆元件抓取失敗（仍留在合約，未下架）',
+      hans: '{n} 笔元件抓取失败（仍在合约，未下架）',
+      en: '{n} component fetch failed (still on contract)',
+    },
+    syncComponentsFailed: { hant: '元件抓取失敗', hans: '元件抓取失败', en: 'Component fetch failed' },
     syncChipImages: { hant: '{n} 張圖已鏡像', hans: '{n} 张图已镜像', en: '{n} images mirrored' },
     syncChipDetailErr: { hant: '{n} 筆詳情錯誤', hans: '{n} 笔详情错误', en: '{n} detail error(s)' },
     syncChipPriceWarn: {

@@ -471,11 +471,12 @@
       const pricingById = new Map(
         (activity.pricing || []).map((row) => [String(row.pricingCategoryId), row]),
       );
+      const priceTrusted = isDisplayableCatalogPrice(activity);
       const priceTable = (activity.pricingCategories || []).length
         ? (activity.pricingCategories || []).map((catRaw) => {
           const row = pricingById.get(String(catRaw.id));
           const rowCur = row?.currency || resolvedPriceCurrency;
-          const nativeAmount = row && Number(row.amount) > 0 ? row.amount : null;
+          const nativeAmount = priceTrusted && row && Number(row.amount) > 0 ? row.amount : null;
           return {
             categoryId: catRaw.id,
             label: catRaw.fullTitle || catRaw.title || (lang === 'en' ? 'Traveler' : ''),
@@ -492,13 +493,16 @@
             return {
               categoryId: row.pricingCategoryId,
               label: catRaw?.fullTitle || catRaw?.title || (lang === 'en' ? 'Traveler' : ''),
-              amount: toUsd(row.amount, rowCur),
+              amount: priceTrusted ? toUsd(row.amount, rowCur) : null,
               currency: 'USD',
-              sourceAmount: row.amount,
+              sourceAmount: priceTrusted ? row.amount : null,
               sourceCurrency: rowCur,
             };
           })
           .filter((row) => row.label);
+      const displayPriceUsd = priceTrusted && resolvedPriceAmount > 0
+        ? toUsd(resolvedPriceAmount, resolvedPriceCurrency)
+        : null;
 
       // ---- stops (for the trip-with-map screen) ----
       const stops = (activity.stops || []).map(stop => ({
@@ -535,8 +539,9 @@
         mode,
         rating: activity.averageRating,
         reviews: activity.reviewCount,
-        priceUsd: toUsd(resolvedPriceAmount, resolvedPriceCurrency),
-        price: toUsd(resolvedPriceAmount, resolvedPriceCurrency),
+        priceUsd: displayPriceUsd,
+        price: displayPriceUsd,
+        priceTrusted,
         priceCurrency: 'USD',
         sourcePriceCurrency: resolvedPriceCurrency,
         priceTable,
@@ -666,6 +671,8 @@
   }
 
   /** Legacy payloads stored ISK magnitudes with currency=USD (e.g. 26990). */
+  const MIN_PLAUSIBLE_DISPLAY_PRICE = 12;
+
   function pricingLooksMislabeled(activity) {
     if (!activity || typeof activity !== 'object') return false;
     const rows = Array.isArray(activity.pricing) ? activity.pricing : [];
@@ -676,10 +683,43 @@
     });
   }
 
-  function tourHasResolvablePrice(tour) {
-    if (!tour) return false;
+  function collectCatalogDisplayAmounts(activity) {
+    if (!activity) return [];
+    const amounts = [];
+    (activity.pricing || []).forEach((row) => {
+      const n = Number(row && row.amount);
+      if (Number.isFinite(n) && n > 0) amounts.push(n);
+    });
+    const next = activity.nextDefaultPrice && Number(activity.nextDefaultPrice.amount);
+    if (Number.isFinite(next) && next > 0) amounts.push(next);
+    return amounts;
+  }
+
+  const PRICE_DISPLAY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+  function isPriceDisplayFresh(pd) {
+    if (!pd || !pd.checkedAt) return false;
+    const age = Date.now() - new Date(pd.checkedAt).getTime();
+    return Number.isFinite(age) && age >= 0 && age < PRICE_DISPLAY_TTL_MS;
+  }
+
+  /** 僅顯示管理員核准或 v2 即時報價（見 lib/catalogPriceVerification.js，不用 v1）。 */
+  function isDisplayableCatalogPrice(activity) {
+    if (!activity || pricingLooksMislabeled(activity)) return false;
+    const pd = activity.priceDisplay;
+    if (!isPriceDisplayFresh(pd) || !pd.trusted) return false;
+    const src = String(pd.source || '');
+    return src === 'admin' || src === 'v2_availability';
+  }
+
+  function tourHasTrustedDisplayPrice(tour) {
+    if (!tour || tour.priceTrusted === false) return false;
     if (hasPositiveAmount(tour.priceUsd) || hasPositiveAmount(tour.price)) return true;
     return Array.isArray(tour.priceTable) && tour.priceTable.some((row) => hasPositiveAmount(row && row.amount));
+  }
+
+  function tourHasResolvablePrice(tour) {
+    return tourHasTrustedDisplayPrice(tour);
   }
 
   function isPlaceholderSupplierName(name) {
@@ -727,16 +767,13 @@
       merged.imageAssets = previewVm.imageAssets;
     }
 
-    if (tourHasResolvablePrice(merged) || !tourHasResolvablePrice(previewVm)) return merged;
-
-    const previewPrice = previewVm.priceUsd ?? previewVm.price;
-    const previewLooksBad = Number(previewPrice) >= 5000;
-    if (previewLooksBad) return merged;
+    if (tourHasResolvablePrice(merged) || !tourHasTrustedDisplayPrice(previewVm)) return merged;
 
     return {
       ...merged,
-      priceUsd: previewVm.priceUsd ?? previewVm.price ?? merged.priceUsd ?? merged.price ?? null,
-      price: previewVm.price ?? previewVm.priceUsd ?? merged.price ?? merged.priceUsd ?? null,
+      priceUsd: previewVm.priceUsd ?? previewVm.price ?? null,
+      price: previewVm.price ?? previewVm.priceUsd ?? null,
+      priceTrusted: previewVm.priceTrusted !== false,
       priceCurrency: merged.priceCurrency || previewVm.priceCurrency || 'USD',
       priceTable: Array.isArray(merged.priceTable) && merged.priceTable.some((row) => hasPositiveAmount(row && row.amount))
         ? merged.priceTable

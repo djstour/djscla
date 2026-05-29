@@ -289,9 +289,9 @@
                         </div>
                       </div>
                       <div className="search-overlay__price">
-                        {vm.priceUsd != null || vm.price != null
+                        {vm.priceTrusted !== false && (vm.priceUsd != null || vm.price != null)
                           ? formatDisplayPriceCompact(vm.priceUsd ?? vm.price, displayCurrency, fxRates)
-                          : null}
+                          : (trimmed ? T({ hant: '查看價格', hans: '查看价格', en: 'See pricing' }) : null)}
                       </div>
                     </li>
                   );

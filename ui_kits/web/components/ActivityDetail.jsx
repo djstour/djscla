@@ -61,8 +61,10 @@
     return out;
   }
 
-  /** Prefer catalog price; fall back to cheapest ticket row while detail loads. */
+  /** Catalog "from" price — only when Bókun components pass plausibility checks. */
   function resolvePriceUsd(tour) {
+    if (!tour || tour.priceTrusted === false) return null;
+
     const UI = window.AuralisUI || {};
     const fxRates = (window.AuralisData && window.AuralisData._fxRates) || { USD: 1 };
     const toUsd = (amount, currency) => (
@@ -597,13 +599,15 @@
         );
       }
     });
-    bookableCategories.forEach((cat) => {
-      const key = String(cat.id);
-      if (!unitPriceByCategoryId.has(key) && Pax.unitPriceFromTour) {
-        const fromTour = Pax.unitPriceFromTour(tour, cat.id);
-        if (fromTour != null && fromTour > 0) unitPriceByCategoryId.set(key, fromTour);
-      }
-    });
+    if (tour.priceTrusted !== false) {
+      bookableCategories.forEach((cat) => {
+        const key = String(cat.id);
+        if (!unitPriceByCategoryId.has(key) && Pax.unitPriceFromTour) {
+          const fromTour = Pax.unitPriceFromTour(tour, cat.id);
+          if (fromTour != null && fromTour > 0) unitPriceByCategoryId.set(key, fromTour);
+        }
+      });
+    }
     const guestTotalLive = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
     const stopsNamed = (tour.stops || []).filter((s) => s.name);
     const rawActivity = tour.raw || {};
@@ -1760,7 +1764,7 @@
       ? formatDisplayPrice(priceUsd, displayCurrency, fxRates)
       : (loading
         ? '…'
-        : T({ hant: '價格載入中', hans: '价格加载中', en: 'Price loading' }));
+        : T({ hant: '選擇日期查看價格', hans: '选择日期查看价格', en: 'Select a date for pricing' }));
     const guestTotal = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
     const peopleUnitPriceLine = bookableCategories
       .map((cat) => {
@@ -1810,15 +1814,26 @@
           <div className="detail-sticky-book__card">
             <div className="detail-book-summary">
               <div className="detail-book-label">
-                {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
+                {priceUsd != null
+                  ? T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })
+                  : T({ hant: '價格', hans: '价格', en: 'Pricing' })}
               </div>
               <div className={`detail-book-price${priceUsd == null && loading ? ' is-loading' : ''}`}>
                 {priceLabel}
               </div>
-              {priceUsd != null && (
+              {priceUsd != null ? (
                 <p className="detail-book-trust" style={{ display: 'flex' }}>
                   <Icon name="sparkles" size={14} color="var(--aurora-deep)" />
-                  {T({ hant: '先顯示基礎票價，查詢後更新即時可售與總價', hans: '先显示基础票价，查询后更新即时可售与总价', en: 'Base fare shown now. Live availability updates below.' })}
+                  {T({ hant: '查詢日期後更新即時可售與總價', hans: '查询日期后更新即时可售与总价', en: 'Select a date below for live availability and total.' })}
+                </p>
+              ) : (
+                <p className="detail-book-trust" style={{ display: 'flex' }}>
+                  <Icon name="sparkles" size={14} color="var(--aurora-deep)" />
+                  {T({
+                    hant: '牌價須經 Bókun 查詢確認；請選日期與人數後查看',
+                    hans: '牌价须经 Bókun 查询确认；请选日期与人数后查看',
+                    en: 'Fare is confirmed via Bókun after you choose a date and travelers.',
+                  })}
                 </p>
               )}
               {isMobile && hasMultiPrice && (

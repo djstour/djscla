@@ -283,12 +283,20 @@
 
           <div className="tour-card__price-row" style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
             <div className="tour-card__price">
-              <div className="tour-card__price-caption" style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {T({ hant: '起', hans: '起', en: 'from' })}
-              </div>
-              <div className="tour-card__price-amount" style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 4 }}>
-                {formatDisplayPriceCompact(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
-              </div>
+              {tour.priceTrusted !== false && (tour.priceUsd != null || tour.price != null) ? (
+                <>
+                  <div className="tour-card__price-caption" style={{ font: '500 11px/1 var(--font-text)', color: 'var(--fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {T({ hant: '起', hans: '起', en: 'from' })}
+                  </div>
+                  <div className="tour-card__price-amount" style={{ font: '700 22px/1 var(--font-display)', color: 'var(--fg-1)', letterSpacing: '-0.02em', marginTop: 4 }}>
+                    {formatDisplayPriceCompact(tour.priceUsd ?? tour.price, displayCurrency, fxRates)}
+                  </div>
+                </>
+              ) : (
+                <div className="tour-card__price-amount" style={{ font: '600 14px/1.2 var(--font-text)', color: 'var(--fg-2)', marginTop: 4 }}>
+                  {T({ hant: '查看價格', hans: '查看价格', en: 'See pricing' })}
+                </div>
+              )}
             </div>
             <button
               type="button"

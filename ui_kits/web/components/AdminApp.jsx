@@ -498,6 +498,12 @@
     if (counts.deactivated > 0) {
       summaryChips.push({ text: t('syncChipDeactivated', { n: formatNumber(counts.deactivated) }), tone: 'warn' });
     }
+    if ((counts.componentsFetchFailed || 0) > 0) {
+      summaryChips.push({
+        text: t('syncChipFetchFailed', { n: formatNumber(counts.componentsFetchFailed) }),
+        tone: 'warn',
+      });
+    }
     if ((counts.imageSynced || 0) > 0) {
       summaryChips.push({ text: t('syncChipImages', { n: formatNumber(counts.imageSynced) }), tone: 'accent' });
     }
@@ -536,6 +542,11 @@
         stats: [
           { label: t('syncUniqueChannel'), value: counts.uniqueInChannel, tone: 'neutral' },
           { label: t('syncContractProducts'), value: counts.contractTotal, tone: 'neutral' },
+          {
+            label: t('syncComponentsFailed'),
+            value: counts.componentsFetchFailed || 0,
+            tone: (counts.componentsFetchFailed || 0) > 0 ? 'warn' : 'muted',
+          },
           { label: t('navVendors'), value: counts.vendors, tone: 'neutral' },
         ],
       },
@@ -2469,12 +2480,14 @@
   }
 
   // ---------------- Health page ----------------
-  function CatalogQualityIssues({ check, t }) {
+  function CatalogQualityIssues({ check, t, token, onRefresh }) {
     if (!check || check.id !== 'catalog-quality') return null;
     const priceRows = (check.issues && check.issues.priceImplausible) || [];
+    const untrustedRows = (check.issues && check.issues.priceUntrusted) || [];
     const missingRows = (check.issues && check.issues.missingV2Detail) || [];
     const pickupHosted = Number(check.pickupHostedOnly) || 0;
-    if (!priceRows.length && !missingRows.length && !pickupHosted) return null;
+    const [verifyBusy, setVerifyBusy] = useState(false);
+    if (!priceRows.length && !untrustedRows.length && !missingRows.length && !pickupHosted) return null;
 
     const minUsd = check.minPlausibleUsd != null ? check.minPlausibleUsd : 12;
 
@@ -2484,7 +2497,23 @@
       }
     }
 
-    function issueTable(rows, showMaxUsd) {
+    async function postPriceAction(path, ids, extra = {}) {
+      if (!token || !ids.length) return;
+      setVerifyBusy(true);
+      try {
+        await adminFetch(path, token, {
+          method: 'POST',
+          body: { activityIds: ids.slice(0, 50), ...extra },
+        });
+        if (onRefresh) onRefresh();
+      } catch (err) {
+        console.warn('[admin] price action', err.message || err);
+      } finally {
+        setVerifyBusy(false);
+      }
+    }
+
+    function issueTable(rows, { showMaxUsd = false, showRefUsd = false, showReason = false } = {}) {
       if (!rows.length) return null;
       return (
         <div className="admin-table-wrap admin-health-issues__table">
@@ -2494,6 +2523,8 @@
                 <th>{t('healthColActivityId')}</th>
                 <th>{t('healthColTitle')}</th>
                 {showMaxUsd ? <th>{t('healthColMaxUsd')}</th> : null}
+                {showRefUsd ? <th>{t('healthColRefUsd')}</th> : null}
+                {showReason ? <th>{t('healthColReason')}</th> : null}
                 <th />
               </tr>
             </thead>
@@ -2504,6 +2535,12 @@
                   <td>{row.title || '—'}</td>
                   {showMaxUsd ? (
                     <td>{Number.isFinite(Number(row.maxDisplayUsd)) ? `$${row.maxDisplayUsd}` : '—'}</td>
+                  ) : null}
+                  {showRefUsd ? (
+                    <td>{row.source || '—'}</td>
+                  ) : null}
+                  {showReason ? (
+                    <td><code>{row.reason || '—'}</code></td>
                   ) : null}
                   <td className="admin-health-issues__actions">
                     <a href={`/tours/${row.id}`} target="_blank" rel="noopener noreferrer" className="admin-btn admin-btn--ghost admin-btn--sm">
@@ -2526,13 +2563,45 @@
         {priceRows.length > 0 ? (
           <div className="admin-health-issues__block">
             <p className="admin-health-issues__hint">{t('healthImplausiblePriceHint', { min: minUsd })}</p>
-            {issueTable(priceRows, true)}
+            {issueTable(priceRows, { showMaxUsd: true })}
+          </div>
+        ) : null}
+        {untrustedRows.length > 0 ? (
+          <div className="admin-health-issues__block">
+            <p className="admin-health-issues__hint">{t('healthUntrustedPriceHint')}</p>
+            <p style={{ marginBottom: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost admin-btn--sm"
+                disabled={verifyBusy}
+                onClick={() => postPriceAction('/api/admin/prices/verify', untrustedRows.map((r) => r.id))}
+              >
+                {verifyBusy ? '…' : t('healthVerifyPricesBtn')}
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--primary admin-btn--sm"
+                disabled={verifyBusy}
+                onClick={() => postPriceAction('/api/admin/prices/trust', untrustedRows.map((r) => r.id), { trusted: true })}
+              >
+                {verifyBusy ? '…' : t('healthTrustPricesBtn')}
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost admin-btn--sm"
+                disabled={verifyBusy}
+                onClick={() => postPriceAction('/api/admin/prices/trust', untrustedRows.map((r) => r.id), { trusted: false })}
+              >
+                {t('healthRevokePricesBtn')}
+              </button>
+            </p>
+            {issueTable(untrustedRows, { showMaxUsd: true, showRefUsd: true, showReason: true })}
           </div>
         ) : null}
         {missingRows.length > 0 ? (
           <div className="admin-health-issues__block">
             <p className="admin-health-issues__hint">{t('healthMissingV2Hint')}</p>
-            {issueTable(missingRows, false)}
+            {issueTable(missingRows, {})}
           </div>
         ) : null}
         {pickupHosted > 0 ? (
@@ -2611,7 +2680,9 @@
                   {c.latencyMs > 0 ? <span className="admin-health-check__latency">{c.latencyMs} ms</span> : null}
                 </div>
                 <p>{c.message}</p>
-                {c.id === 'catalog-quality' ? <CatalogQualityIssues check={c} t={t} /> : null}
+                {c.id === 'catalog-quality' ? (
+                  <CatalogQualityIssues check={c} t={t} token={token} onRefresh={loadHealth} />
+                ) : null}
               </div>
             ))}
           </div>
