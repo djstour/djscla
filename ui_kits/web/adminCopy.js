@@ -227,6 +227,26 @@
     healthHealthy: { hant: '正常', hans: '正常', en: 'healthy' },
     healthDegraded: { hant: '降級', hans: '降级', en: 'degraded' },
     healthUnhealthy: { hant: '異常', hans: '异常', en: 'unhealthy' },
+    healthTranslationLoading: {
+      hant: '翻譯統計載入中…',
+      hans: '翻译统计加载中…',
+      en: 'Loading translation stats…',
+    },
+    healthTranslationSummary: {
+      hant: '翻譯佇列 {queue} · {pct}% 欄位覆蓋',
+      hans: '翻译队列 {queue} · {pct}% 字段覆盖',
+      en: 'Translation queue {queue} · {pct}% field coverage',
+    },
+    healthTranslationError: {
+      hant: '翻譯統計無法載入：{msg}',
+      hans: '翻译统计无法加载：{msg}',
+      en: 'Translation stats unavailable: {msg}',
+    },
+    healthHeavyLoading: {
+      hant: '正在掃描 catalog 品質與翻譯覆蓋…',
+      hans: '正在扫描 catalog 质量与翻译覆盖…',
+      en: 'Scanning catalog quality and translation coverage…',
+    },
     healthCatalogIssuesTitle: {
       hant: '需處理的行程',
       hans: '需处理的行程',

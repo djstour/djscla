@@ -2658,16 +2658,54 @@
   function HealthPage({ token, overview, t }) {
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [heavyLoading, setHeavyLoading] = useState(false);
     const [error, setError] = useState('');
+
+    function overallFromChecks(checks) {
+      if (checks.some((c) => c.status === 'fail')) return 'unhealthy';
+      if (checks.some((c) => c.status === 'warn')) return 'degraded';
+      return 'healthy';
+    }
+
+    function mergeHealthReports(fast, heavy) {
+      if (!fast) return heavy;
+      if (!heavy) return fast;
+      const checkMap = new Map();
+      (fast.checks || []).forEach((c) => checkMap.set(c.id, c));
+      (heavy.checks || []).forEach((c) => checkMap.set(c.id, c));
+      const checks = [...checkMap.values()];
+      return {
+        ...fast,
+        ...heavy,
+        checks,
+        overall: overallFromChecks(checks),
+        env: fast.env || heavy.env,
+        translation: heavy.translation ?? fast.translation,
+        generatedAt: heavy.generatedAt || fast.generatedAt,
+      };
+    }
 
     const loadHealth = useCallback(() => {
       setLoading(true);
+      setHeavyLoading(true);
       setError('');
-      adminFetch('/api/admin/health', token)
+      setReport(null);
+
+      adminFetch('/api/admin/health?mode=fast', token)
         .then((res) => setReport(res))
         .catch((err) => setError(err.message || t('healthCheckFailed')))
         .finally(() => setLoading(false));
-    }, [token]);
+
+      adminFetch('/api/admin/health?mode=heavy', token)
+        .then((res) => setReport((prev) => mergeHealthReports(prev, res)))
+        .catch((err) => {
+          setReport((prev) => ({
+            ...(prev || {}),
+            translation: { error: err.message || t('healthCheckFailed') },
+          }));
+        })
+        .finally(() => setHeavyLoading(false));
+    }, [token, t]);
 
     useEffect(() => { loadHealth(); }, [loadHealth]);
 
@@ -2686,6 +2724,25 @@
     }
 
     const overall = report?.overall || 'unknown';
+    const translationCheck = (report?.checks || []).find((c) => c.id === 'translation-queue');
+    const translationBanner = (() => {
+      if (heavyLoading && !report?.translation) {
+        return t('healthTranslationLoading');
+      }
+      if (report?.translation?.error) {
+        return t('healthTranslationError', { msg: report.translation.error });
+      }
+      if (report?.translation && Number.isFinite(Number(report.translation.queueDepth))) {
+        return t('healthTranslationSummary', {
+          queue: formatNumber(report.translation.queueDepth),
+          pct: Number.isFinite(Number(report.translation.percentComplete))
+            ? report.translation.percentComplete
+            : '—',
+        });
+      }
+      if (translationCheck?.message) return translationCheck.message;
+      return null;
+    })();
 
     return (
       <div>
@@ -2693,11 +2750,14 @@
         <p className="admin-page-sub">{t('healthSub')}</p>
 
         <div className="admin-sync-actions" style={{ marginBottom: 16 }}>
-          <button type="button" className="admin-btn admin-btn--ghost" onClick={loadHealth} disabled={loading}>
-            {loading ? t('checking') : t('rerunChecks')}
+          <button type="button" className="admin-btn admin-btn--ghost" onClick={loadHealth} disabled={loading || heavyLoading}>
+            {loading || heavyLoading ? t('checking') : t('rerunChecks')}
           </button>
           {report?.generatedAt ? (
             <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{t('lastRun')} {formatDateTime(report.generatedAt)}</span>
+          ) : null}
+          {heavyLoading ? (
+            <span style={{ fontSize: 12, color: 'var(--fg-3)', marginLeft: 8 }}>{t('healthHeavyLoading')}</span>
           ) : null}
         </div>
 
@@ -2706,9 +2766,9 @@
         {report ? (
           <div className={`admin-health-banner admin-health-banner--${overall}`}>
             <strong>{t('healthOverall')}: {overall === 'healthy' ? t('healthHealthy') : overall === 'degraded' ? t('healthDegraded') : overall === 'unhealthy' ? t('healthUnhealthy') : overall}</strong>
-            {report.translation ? (
+            {translationBanner ? (
               <span style={{ marginLeft: 12, fontWeight: 400 }}>
-                Translation queue {formatNumber(report.translation.queueDepth)} · {report.translation.percentComplete}% field coverage
+                {translationBanner}
               </span>
             ) : null}
           </div>
@@ -2779,6 +2839,7 @@
     const [navOpen, setNavOpen] = useState(false);
     const [overview, setOverview] = useState(null);
     const [overviewError, setOverviewError] = useState('');
+    const [translationPending, setTranslationPending] = useState(null);
     const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
@@ -2813,18 +2874,30 @@
 
     useEffect(() => { loadOverview().catch(() => {}); }, [loadOverview]);
 
+    const loadTranslationPending = useCallback(() => {
+      if (!token) return Promise.resolve();
+      return adminFetch('/api/admin/translations?maxScan=200&pendingLimit=1', token)
+        .then((res) => {
+          const depth = res?.stats?.queueDepth;
+          setTranslationPending(Number.isFinite(Number(depth)) ? Number(depth) : null);
+        })
+        .catch(() => setTranslationPending(null));
+    }, [token]);
+
+    useEffect(() => { loadTranslationPending(); }, [loadTranslationPending, reloadKey]);
+
     const refreshAll = useCallback(() => {
-      return loadOverview().then(() => {
+      return Promise.all([loadOverview(), loadTranslationPending()]).then(() => {
         setReloadKey((k) => k + 1);
       });
-    }, [loadOverview]);
+    }, [loadOverview, loadTranslationPending]);
 
     const counts = {
       vendors: overview?.vendors?.filter((v) => v.isActive).length,
       activities: overview?.activities?.active,
       inquiries: overview?.inquiries?.total,
       collections: overview?.marketing?.collectionsActive,
-      translationPending: null,
+      translationPending,
     };
     const navItems = buildNavItems(t, counts);
     const activeNavLabel = (navItems.find((it) => it.id === tab) || navItems[0]).label;

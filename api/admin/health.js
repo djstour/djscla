@@ -14,10 +14,22 @@ async function handler(req, res) {
   }
   if (!requireAdmin(req, res)) return;
 
+  const modeRaw = String(req.query.mode || 'fast').toLowerCase();
+  const mode = modeRaw === 'heavy' || modeRaw === 'full' ? modeRaw : 'fast';
   const includeQueue = req.query.translation !== 'false';
+  const includeCatalog = req.query.catalog !== 'false';
+  const translationMaxScan = Math.min(
+    Math.max(parseInt(req.query.translationMaxScan || '150', 10) || 150, 50),
+    500,
+  );
 
   try {
-    const report = await runAdminHealthChecks({ includeTranslationQueue: includeQueue });
+    const report = await runAdminHealthChecks({
+      mode,
+      includeTranslationQueue: includeQueue,
+      includeCatalogQuality: includeCatalog,
+      translationMaxScan,
+    });
     return res.status(200).json(report);
   } catch (err) {
     return res.status(500).json({
