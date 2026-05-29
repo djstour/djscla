@@ -620,11 +620,9 @@
     const excludedHtml = sanitizeVendorHtml(tour.excludedHtml);
     const requirementsHtml = sanitizeVendorHtml(tour.requirementsHtml);
     const attentionHtml = sanitizeVendorHtml(tour.attentionHtml);
-    const ticketInfoHtml = sanitizeVendorHtml(tour.ticketInfoHtml);
     const cancellationPolicyHtml = sanitizeVendorHtml(tour.cancellationPolicyHtml);
     const hasRequirements = vendorHtmlIsMeaningful(requirementsHtml);
     const hasAttention = vendorHtmlIsMeaningful(attentionHtml);
-    const hasTicketInfo = vendorHtmlIsMeaningful(ticketInfoHtml);
     const hasCancellationPolicy = vendorHtmlIsMeaningful(cancellationPolicyHtml)
       || !!(tour.cancellationPolicyTitle && String(tour.cancellationPolicyTitle).trim());
     const extras = Array.isArray(tour.bookableExtras) ? tour.bookableExtras : [];
@@ -897,7 +895,6 @@
       || hasExcluded
       || hasRequirements
       || hasAttention
-      || hasTicketInfo
       || hasCancellationPolicy
       || hasVideos
       || hasQuickFacts
@@ -1387,15 +1384,6 @@
                         <div className="detail-attention-card">
                           <Icon name="info" size={18} color="var(--warning, #FFB347)" />
                           <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: attentionHtml }} />
-                        </div>
-                      </SubSection>
-                    )}
-
-                    {hasTicketInfo && (
-                      <SubSection title={T(bokunSectionLabel('detail.ticketInformation'))}>
-                        <div className="detail-attention-card detail-attention-card--ticket">
-                          <Icon name="ticket" size={18} color="var(--aurora-deep, #00837A)" />
-                          <div className="detail-vendor-html" dangerouslySetInnerHTML={{ __html: ticketInfoHtml }} />
                         </div>
                       </SubSection>
                     )}
