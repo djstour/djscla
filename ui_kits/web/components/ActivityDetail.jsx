@@ -607,7 +607,10 @@
     // Bókun ships descriptions as inline-styled HTML (rich paragraphs with
     // <p>, <br>, vendor styles). Detect that and route through the sanitiser
     // so paragraphs actually render, instead of collapsing into a wall of text.
-    const descriptionPrepared = prepareActivityDescription(tour.description);
+    const descriptionPrepared = prepareActivityDescription(
+      tour.description,
+      (tour.raw && tour.raw.description) || '',
+    );
     const descriptionIsHtml = descriptionPrepared.isRich;
     const descriptionSanitizedHtml = descriptionPrepared.html;
     const descriptionTextLen = descriptionPrepared.textLen;

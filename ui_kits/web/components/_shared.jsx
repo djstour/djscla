@@ -701,16 +701,77 @@
       .replace(/>/g, '&gt;');
   }
 
+  function extractParagraphTextsFromHtml(html) {
+    const raw = String(html || '');
+    if (!raw) return [];
+    const out = [];
+    const re = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+    let m;
+    while ((m = re.exec(raw))) {
+      const t = String(m[1] || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (t) out.push(t);
+    }
+    return out;
+  }
+
+  function splitBySourceParagraphWeights(text, sourceParagraphs) {
+    const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+    const n = Array.isArray(sourceParagraphs) ? sourceParagraphs.length : 0;
+    if (!cleaned) return [];
+    if (n <= 1) return [cleaned];
+
+    const weights = sourceParagraphs.map((p) => Math.max(1, String(p || '').length));
+    const parts = [];
+    let cursor = 0;
+
+    const findBoundary = (base, minEnd, maxEnd) => {
+      const rightLimit = Math.min(maxEnd, base + 80);
+      for (let i = base; i <= rightLimit; i += 1) {
+        const ch = cleaned[i - 1];
+        if (/[。！？!?；;.]/.test(ch)) return i;
+      }
+      const leftLimit = Math.max(minEnd, base - 80);
+      for (let i = base; i >= leftLimit; i -= 1) {
+        const ch = cleaned[i - 1];
+        if (/[。！？!?；;.]/.test(ch)) return i;
+      }
+      return base;
+    };
+
+    for (let i = 0; i < n - 1; i += 1) {
+      const remainingParas = n - i;
+      const remainingChars = cleaned.length - cursor;
+      const remainingWeight = weights.slice(i).reduce((a, b) => a + b, 0);
+      const target = Math.max(1, Math.round((remainingChars * weights[i]) / remainingWeight));
+      const minEnd = cursor + 1;
+      const maxEnd = cleaned.length - (remainingParas - 1);
+      let end = Math.min(maxEnd, Math.max(minEnd, cursor + target));
+      end = findBoundary(end, minEnd, maxEnd);
+      end = Math.min(maxEnd, Math.max(minEnd, end));
+      const piece = cleaned.slice(cursor, end).trim();
+      parts.push(piece || cleaned.slice(cursor, Math.min(cleaned.length, cursor + 1)));
+      cursor = end;
+    }
+    parts.push(cleaned.slice(cursor).trim());
+    return parts.filter((p) => p && p.trim());
+  }
+
   /**
-   * Bókun descriptions are HTML; OpenAI overlays are plain text with paragraph
-   * breaks stripped. Re-wrap plain copy into <p> blocks for readable layout.
+   * Bókun descriptions are HTML; OpenAI overlays are often plain text.
+   * Re-wrap plain copy into <p> blocks and align zh paragraph count with
+   * source English HTML where available.
    */
-  function plainTextToParagraphHtml(text) {
+  function plainTextToParagraphHtml(text, sourceHtml) {
     const trimmed = String(text || '').trim();
     if (!trimmed) return '';
     if (/<[a-z][\s\S]*?>/i.test(trimmed)) return trimmed;
 
+    const sourceParagraphs = extractParagraphTextsFromHtml(sourceHtml);
+
     let parts = trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+    if (sourceParagraphs.length > 1 && parts.length !== sourceParagraphs.length) {
+      parts = splitBySourceParagraphWeights(trimmed, sourceParagraphs);
+    }
 
     if (parts.length <= 1) {
       parts = trimmed
@@ -726,7 +787,7 @@
     return parts.map((p) => `<p>${escapeHtmlText(p)}</p>`).join('');
   }
 
-  function prepareActivityDescription(description) {
+  function prepareActivityDescription(description, sourceHtml) {
     const raw = String(description || '').trim();
     if (!raw) return { html: '', isRich: false, textLen: 0 };
     const hasTags = /<[a-z][\s\S]*?>/i.test(raw);
@@ -735,7 +796,7 @@
       const textLen = html.replace(/<[^>]*>/g, '').length;
       return { html, isRich: true, textLen };
     }
-    const html = sanitizeVendorHtml(plainTextToParagraphHtml(raw));
+    const html = sanitizeVendorHtml(plainTextToParagraphHtml(raw, sourceHtml));
     const textLen = raw.length;
     return { html, isRich: true, textLen };
   }
