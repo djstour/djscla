@@ -94,12 +94,26 @@
         pickupTitle: t.tripPickupTitle || null,
         pricingCategoryBookings,
         extras,
+        pax: pricingCategoryBookings,
         // Echoed back for UI use only — backend ignores these.
         _adults: adults,
         _children: children,
         _paxTotal: pricingCategoryBookings.reduce((s, r) => s + (Number(r.quantity) || 0), 0),
       };
     });
+  }
+
+  function isVisibleCheckoutQuestion(q) {
+    return q && q.scope !== 'contact';
+  }
+
+  function visibleCheckoutQuestions(questions) {
+    return (questions || []).filter(isVisibleCheckoutQuestion);
+  }
+
+  function checkoutAnswerFilled(q, value) {
+    if (q.type === 'boolean') return !!value;
+    return value != null && String(value).trim() !== '';
   }
 
   function checkoutItemPriceUsd(item) {
@@ -126,6 +140,7 @@
 
     const [questionsState, setQuestionsState] = useState({ loading: false, error: '', source: null, questions: [] });
     const [answers, setAnswers] = useState({});
+    const [answerErrors, setAnswerErrors] = useState({});
 
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
@@ -169,7 +184,29 @@
         })
         .then((data) => {
           if (cancelled) return;
-          setQuestionsState({ loading: false, error: '', source: data.source, questions: data.questions || [] });
+          const questions = data.questions || [];
+          setQuestionsState({ loading: false, error: '', source: data.source, questions });
+          const visible = visibleCheckoutQuestions(questions);
+          if (!visible.length) {
+            setStep(2);
+            return;
+          }
+          const seeded = {};
+          visible.forEach((q) => {
+            const key = `${q.scope}:${q.id}`;
+            if (q.id === 'travel_date' && items[0] && items[0].date) {
+              seeded[key] = items[0].date;
+            }
+            if (q.id === 'start_time_id' && items[0] && items[0].startTimeId) {
+              seeded[key] = String(items[0].startTimeId);
+            }
+            if (q.id === 'lead_traveler_name' && contact.firstName && contact.lastName) {
+              seeded[key] = `${contact.firstName} ${contact.lastName}`.trim();
+            }
+          });
+          if (Object.keys(seeded).length) {
+            setAnswers((prev) => ({ ...prev, ...seeded }));
+          }
         })
         .catch((err) => {
           if (cancelled) return;
@@ -189,9 +226,21 @@
     }
 
     function validateAnswers() {
-      // Required-questions only — optional ones can be filled on Bókun's page.
-      const missing = questionsState.questions.filter((q) => q.required && !answers[`${q.scope}:${q.id}`]);
-      return missing.length === 0;
+      const missing = visibleCheckoutQuestions(questionsState.questions).filter((q) => {
+        if (!q.required) return false;
+        return !checkoutAnswerFilled(q, answers[`${q.scope}:${q.id}`]);
+      });
+      if (missing.length) {
+        const errs = {};
+        missing.forEach((q) => {
+          const key = `${q.scope}:${q.id}`;
+          errs[key] = T({ hant: '請填寫此欄', hans: '请填写此栏', en: 'This field is required' });
+        });
+        setAnswerErrors(errs);
+        return false;
+      }
+      setAnswerErrors({});
+      return true;
     }
 
     function handleNextFromContact() {
@@ -289,7 +338,16 @@
               <QuestionsStep
                 state={questionsState}
                 answers={answers}
-                onAnswer={(key, value) => setAnswers((a) => ({ ...a, [key]: value }))}
+                answerErrors={answerErrors}
+                onAnswer={(key, value) => {
+                  setAnswers((a) => ({ ...a, [key]: value }));
+                  setAnswerErrors((errs) => {
+                    if (!errs[key]) return errs;
+                    const next = { ...errs };
+                    delete next[key];
+                    return next;
+                  });
+                }}
                 items={items}
                 onBack={() => setStep(0)}
                 onNext={handleNextFromQuestions}
@@ -502,7 +560,7 @@
   // ─────────────────────────────────────────────────────────────────
   // Step 2 · Booking questions (dynamic, grouped by scope)
   // ─────────────────────────────────────────────────────────────────
-  function QuestionsStep({ state, answers, onAnswer, items, onBack, onNext, lang }) {
+  function QuestionsStep({ state, answers, answerErrors, onAnswer, items, onBack, onNext, lang }) {
     const T = (opts) => pick(lang, opts);
     const grouped = useMemo(() => {
       // Group: contact (skip — captured in Step 1) | participants | supplier
@@ -561,6 +619,7 @@
                 title={T({ hant: '旅客資訊', hans: '旅客信息', en: 'Traveler information' })}
                 questions={grouped.participants}
                 answers={answers}
+                answerErrors={answerErrors}
                 onAnswer={onAnswer}
                 lang={lang}
               />
@@ -570,6 +629,7 @@
                 title={T({ hant: '行程細節', hans: '行程细节', en: 'Activity details' })}
                 questions={grouped.activity}
                 answers={answers}
+                answerErrors={answerErrors}
                 onAnswer={onAnswer}
                 lang={lang}
               />
@@ -579,6 +639,7 @@
                 title={T({ hant: '國籍', hans: '国籍', en: 'Nationality' })}
                 questions={grouped.country}
                 answers={answers}
+                answerErrors={answerErrors}
                 onAnswer={onAnswer}
                 lang={lang}
               />
@@ -588,6 +649,7 @@
                 title={T({ hant: '供應商問題', hans: '供应商问题', en: 'Supplier questions' })}
                 questions={grouped.supplier}
                 answers={answers}
+                answerErrors={answerErrors}
                 onAnswer={onAnswer}
                 lang={lang}
               />
@@ -597,6 +659,7 @@
                 title={T({ hant: '其他問題', hans: '其他问题', en: 'Other questions' })}
                 questions={grouped.mixed}
                 answers={answers}
+                answerErrors={answerErrors}
                 onAnswer={onAnswer}
                 lang={lang}
               />
@@ -628,7 +691,7 @@
     );
   }
 
-  function QuestionGroup({ title, questions, answers, onAnswer, lang }) {
+  function QuestionGroup({ title, questions, answers, answerErrors, onAnswer, lang }) {
     return (
       <div className="checkout-question-group">
         <h3 className="checkout-question-group__title">{title}</h3>
@@ -639,6 +702,7 @@
               key={key}
               q={q}
               value={answers[key] || ''}
+              error={answerErrors[key] || ''}
               onChange={(v) => onAnswer(key, v)}
               lang={lang}
             />
@@ -648,9 +712,9 @@
     );
   }
 
-  function QuestionField({ q, value, onChange, lang }) {
+  function QuestionField({ q, value, error, onChange, lang }) {
     const T = (opts) => pick(lang, opts);
-    const label = `${q.label}${q.required ? ' *' : ''}`;
+    const label = q.label;
     const help = q.helpText;
 
     if (q.type === 'options' || q.type === 'country' || q.type === 'language') {
@@ -711,7 +775,9 @@
         type={q.type === 'number' || q.type === 'date' || q.type === 'email' || q.type === 'tel' || q.type === 'datetime' ? q.type : 'text'}
         placeholder={q.placeholder || ''}
         helpText={help}
+        error={error}
         required={q.required}
+        inputClassName={q.type === 'date' || q.type === 'datetime' ? 'checkout-field__input checkout-field__input--date' : 'checkout-field__input'}
       />
     );
   }
@@ -800,12 +866,12 @@
   // ─────────────────────────────────────────────────────────────────
   // Shared form primitives
   // ─────────────────────────────────────────────────────────────────
-  function Field({ label, value, onChange, type = 'text', placeholder, error, helpText, autoComplete, required }) {
+  function Field({ label, value, onChange, type = 'text', placeholder, error, helpText, autoComplete, required, inputClassName = 'checkout-field__input' }) {
     return (
       <label className="checkout-field">
         <span className="checkout-field__label">{label}{required ? ' *' : ''}</span>
         <input
-          className={`checkout-field__input${error ? ' is-error' : ''}`}
+          className={`${inputClassName}${error ? ' is-error' : ''}`}
           type={type}
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}

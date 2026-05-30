@@ -8,6 +8,7 @@
 const { getActivityById } = require('../../lib/bokun');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { inferQuestionsFromActivity } = require('../../lib/checkoutQuestions');
+const { enrichPricingCategoriesFromV1 } = require('../../lib/bokunPricingCategoriesV1Fallback');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -56,8 +57,9 @@ async function buildInferredQuestions(items, lang) {
     if (!activityId) return [];
     try {
       const payload = await getActivityById(activityId, { uiLang: lang });
-      const activity = normalizeActivity(payload?.activity || payload);
-      return inferQuestionsFromActivity(activity, item, lang);
+      let activity = normalizeActivity(payload?.activity || payload);
+      activity = await enrichPricingCategoriesFromV1(activity);
+      return inferQuestionsFromActivity(activity, item, lang, { skipContactQuestions: true });
     } catch {
       return [];
     }

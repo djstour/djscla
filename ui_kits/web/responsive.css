@@ -3814,6 +3814,20 @@ textarea.detail-book-field {
 .checkout-field__select:focus {
   box-shadow: inset 0 0 0 2px var(--aurora-cyan);
 }
+.checkout-field__input--date {
+  color-scheme: dark;
+}
+html[data-site-theme="sun"] .checkout-field__input--date {
+  color-scheme: light;
+}
+.checkout-field__input--date::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
+  opacity: 0.9;
+}
+html[data-site-theme="sun"] .checkout-field__input--date::-webkit-calendar-picker-indicator {
+  filter: none;
+}
 .checkout-field__input.is-error,
 .checkout-field__phone.is-error {
   box-shadow: inset 0 0 0 1.5px var(--coral, #E16A6A);

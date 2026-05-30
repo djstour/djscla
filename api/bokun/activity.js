@@ -2,6 +2,7 @@ const { getActivityById, getQuoteCurrency } = require('../../lib/bokun');
 const { enrichActivityCancellationPolicy } = require('../../lib/bokunCancellationPolicies');
 const { enrichActivityBookableExtras } = require('../../lib/bokunExtrasV1Fallback');
 const { enrichActivityTicketInfo } = require('../../lib/bokunCustomFieldsV1Fallback');
+const { enrichPricingCategoriesFromV1 } = require('../../lib/bokunPricingCategoriesV1Fallback');
 const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
@@ -310,6 +311,7 @@ module.exports = async function handler(req, res) {
       activity = await hydrateCancellationIfNeeded(activity, id);
       activity = await hydrateExtrasIfNeeded(activity, id);
       activity = await hydrateTicketInfoIfNeeded(activity, id);
+      activity = await enrichPricingCategoriesFromV1(activity);
       activity = await graftCatalogVendor(activity, id);
     }
 
