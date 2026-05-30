@@ -2366,6 +2366,29 @@
       }
     };
 
+    const [trustBusy, setTrustBusy] = useState(null);
+
+    async function approveListing(bokunActivityId, lang) {
+      const busyKey = `${bokunActivityId}:${lang}`;
+      setTrustBusy(busyKey);
+      setError('');
+      try {
+        const res = await adminFetch('/api/admin/translations/trust', token, {
+          method: 'POST',
+          body: { activityIds: [String(bokunActivityId)], lang, trusted: true },
+        });
+        const row = (res.results || []).find((r) => String(r.id) === String(bokunActivityId));
+        if (row && !row.ok) {
+          throw new Error(row.error || row.audit?.message || t('translationTrustFailed'));
+        }
+        loadQueue();
+      } catch (err) {
+        setError(err.message || t('translationTrustFailed'));
+      } finally {
+        setTrustBusy(null);
+      }
+    }
+
     const cov = queue && queue.coverage;
     const stats = queue && queue.stats;
 
@@ -2375,6 +2398,10 @@
         <p className="admin-page-sub">
           {t('translationsSub', { n: formatNumber(queue?.activeActivities) })}
           {queue?.scannedAt ? ` · ${formatDateTime(queue.scannedAt)}` : ''}.
+        </p>
+
+        <p className="admin-page-sub" style={{ marginTop: -8 }}>
+          {t('translationVerifyPolicy')}
         </p>
 
         <div className="admin-grid" style={{ marginBottom: 20 }}>
@@ -2519,7 +2546,7 @@
                     <td>{row.percent}%</td>
                     <td>{formatNumber(row.missing)}</td>
                     <td>{formatNumber(row.stale)}</td>
-                    <td>
+                    <td className="admin-health-issues__actions">
                       <button
                         type="button"
                         className="admin-btn admin-btn--ghost admin-btn--sm"
@@ -2527,6 +2554,42 @@
                         onClick={() => syncOne(row.bokunActivityId)}
                       >
                         {rowBusy === row.bokunActivityId ? `… ${rowElapsed}s` : t('translateBtn')}
+                      </button>
+                      <a
+                        href={`/tours/${encodeURIComponent(row.bokunActivityId)}?lang=hant&translationPreview=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="admin-btn admin-btn--ghost admin-btn--sm"
+                        title={t('previewTranslationHantHint')}
+                      >
+                        {t('previewTranslationHantBtn')}
+                      </a>
+                      <a
+                        href={`/tours/${encodeURIComponent(row.bokunActivityId)}?lang=hans&translationPreview=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="admin-btn admin-btn--ghost admin-btn--sm"
+                        title={t('previewTranslationHansHint')}
+                      >
+                        {t('previewTranslationHansBtn')}
+                      </a>
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost admin-btn--sm"
+                        disabled={trustBusy === `${row.bokunActivityId}:hant` || running || !!rowBusy}
+                        onClick={() => approveListing(row.bokunActivityId, 'hant')}
+                        title={t('approveTranslationHantHint')}
+                      >
+                        {trustBusy === `${row.bokunActivityId}:hant` ? '…' : t('approveTranslationHantBtn')}
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost admin-btn--sm"
+                        disabled={trustBusy === `${row.bokunActivityId}:hans` || running || !!rowBusy}
+                        onClick={() => approveListing(row.bokunActivityId, 'hans')}
+                        title={t('approveTranslationHansHint')}
+                      >
+                        {trustBusy === `${row.bokunActivityId}:hans` ? '…' : t('approveTranslationHansBtn')}
                       </button>
                     </td>
                   </tr>
@@ -2810,7 +2873,7 @@
 
               <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>OpenAI</th></tr>
               <tr><td>OPENAI_API_KEY</td><td>{flagBadge(env.openai?.apiKey)}</td></tr>
-              <tr><td>OPENAI_TRANSLATION_MODEL</td><td><code>{env.openai?.model || 'gpt-4o-mini'}</code></td></tr>
+              <tr><td>OPENAI_TRANSLATION_MODEL</td><td><code>{env.openai?.model || 'gpt-4o'}</code></td></tr>
 
               <tr><th colSpan="2" style={{ background: 'rgba(0,0,0,0.04)' }}>Cron / Sync</th></tr>
               <tr><td>CRON_SECRET</td><td>{flagBadge(env.cron?.cronSecret)}</td></tr>

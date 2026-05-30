@@ -5,6 +5,7 @@
 const { fetchHomepageCollectionsForSite } = require('../../lib/homepageCollections');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
+const { isDisplayableTranslation } = require('../../lib/translationVerification');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,7 +29,7 @@ module.exports = async function handler(req, res) {
     const allActivities = [];
 
     result.collections.forEach((col) => {
-      const slim = col.activities.map(slimActivityForList);
+      let slim = col.activities.map(slimActivityForList);
       allActivities.push(...slim);
       collections.push({
         slug: col.slug,
@@ -44,13 +45,25 @@ module.exports = async function handler(req, res) {
 
     const translations = await loadTranslationsForActivities(allActivities);
 
+    if (lang === 'hant' || lang === 'hans') {
+      collections.forEach((col) => {
+        col.activities = col.activities.filter((activity) => isDisplayableTranslation(
+          activity,
+          lang,
+          translations[String(activity.id)] || null,
+        ));
+      });
+    }
+
+    const visibleCollections = collections.filter((col) => col.activities.length > 0);
+
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
 
     return res.status(200).json({
       source: 'db',
-      collections,
+      collections: visibleCollections,
       translations,
-      meta: result.meta,
+      meta: { ...result.meta, count: visibleCollections.length },
     });
   } catch (err) {
     const status = err.code === 'SUPABASE_CONFIG' ? 503 : 500;

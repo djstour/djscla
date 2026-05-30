@@ -40,6 +40,7 @@ async function handler(req, res) {
     const limit = Math.min(Number(body.limit) || 20, 50);
     const langs = Array.isArray(body.langs) ? body.langs : ['hant', 'hans'];
     const force = body.force === true;
+    const forceMarker = body.forceMarker != null ? String(body.forceMarker).trim() : null;
     const maxTranslations = body.maxTranslations != null ? Number(body.maxTranslations) : null;
 
     const summary = await runTranslationSync({
@@ -47,6 +48,7 @@ async function handler(req, res) {
       limit,
       langs,
       force,
+      forceMarker: forceMarker || null,
       uiLang: body.uiLang || 'hant',
       maxTranslations: Number.isFinite(maxTranslations) && maxTranslations > 0 ? maxTranslations : null,
     });

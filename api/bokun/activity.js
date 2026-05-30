@@ -7,6 +7,8 @@ const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { isDbDetailCacheUsable } = require('../../lib/catalogQuality');
 const { isDisplayableCatalogPrice } = require('../../lib/catalogPriceVerification');
+const { isDisplayableTranslation } = require('../../lib/translationVerification');
+const { isTranslationPreviewRequest } = require('../../lib/adminAuth');
 
 const DEFAULT_FRESHNESS_MS = 6 * 60 * 60 * 1000;
 const FRESHNESS_MS = Number.isFinite(Number(process.env.CATALOG_DETAIL_TTL_MS))
@@ -17,7 +19,7 @@ const FRESHNESS_MS = Number.isFinite(Number(process.env.CATALOG_DETAIL_TTL_MS))
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
 function unwrapActivity(payload) {
@@ -309,6 +311,17 @@ module.exports = async function handler(req, res) {
     }
 
     const translations = await loadTranslationsForActivities([activity]);
+    const overlay = translations[String(activity.id)] || null;
+    const translationPreview = isTranslationPreviewRequest(req);
+
+    if ((uiLang === 'hant' || uiLang === 'hans')
+      && !translationPreview
+      && !isDisplayableTranslation(activity, uiLang, overlay)) {
+      return res.status(404).json({
+        error: 'This tour is not yet available in the selected language.',
+        code: 'TRANSLATION_NOT_VERIFIED',
+      });
+    }
 
     res.setHeader(
       'Cache-Control',
@@ -323,6 +336,8 @@ module.exports = async function handler(req, res) {
       translations,
       meta: {
         quoteCurrency,
+        translationPreview,
+        translationTrusted: uiLang === 'en' || isDisplayableTranslation(activity, uiLang, overlay),
         ...(usedSource === 'db' ? { lastSyncedAt } : {}),
       },
     });

@@ -1727,10 +1727,12 @@
       route: params.get('route') || null,
       supplier: params.get('supplier') || 'all',
       q: params.get('q') || '',
+      lang: ['hant', 'hans', 'en'].includes(params.get('lang') || '') ? params.get('lang') : null,
+      translationPreview: params.get('translationPreview') === '1' || params.get('preview') === '1',
     };
   }
 
-  function buildUrlForState({ screen, chip, route, supplier, q, activityId }) {
+  function buildUrlForState({ screen, chip, route, supplier, q, activityId, lang, translationPreview }) {
     // Detail screen URL is /tours/<id> so the page survives a hard reload and
     // shareable links land directly on the activity.
     if (screen === 'detail' && Number.isFinite(Number(activityId)) && Number(activityId) > 0) {
@@ -1739,6 +1741,8 @@
       if (route) params.set('route', route);
       if (supplier && supplier !== 'all') params.set('supplier', String(supplier));
       if (q && String(q).trim()) params.set('q', String(q).trim());
+      if (lang && ['hant', 'hans', 'en'].includes(lang)) params.set('lang', lang);
+      if (translationPreview) params.set('translationPreview', '1');
       const search = params.toString();
       const detailPath = `/tours/${Number(activityId)}`;
       return search ? `${detailPath}?${search}` : detailPath;

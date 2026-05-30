@@ -307,6 +307,7 @@
     initialDate = null,
     initialGuestCounts = null,
     initialBookingSelection = null,
+    translationPreview = false,
   }) {
     const T = (opts) => pick(lang, opts);
     const imgProfile = useResponsiveImageProfile();
@@ -609,15 +610,27 @@
     }
 
     if (!tour && error) {
+      const needsAdminLogin = translationPreview
+        && (error.code === 'TRANSLATION_NOT_VERIFIED' || error.code === 'ADMIN_UNAUTHORIZED');
+      const message = needsAdminLogin
+        ? T({
+          hant: '請先在管理後台登入，再開啟預覽連結。',
+          hans: '请先在管理后台登录，再开启预览链接。',
+          en: 'Sign in to the admin console, then open this preview link again.',
+        })
+        : error.message;
       return (
         <section style={{ padding: '48px 32px', maxWidth: 720, margin: '0 auto' }}>
           <BackButton onBack={onBack} lang={lang} />
-          <p style={{ font: '500 15px/1.5 var(--font-text)', color: 'var(--coral)' }}>{error.message}</p>
+          <p style={{ font: '500 15px/1.5 var(--font-text)', color: 'var(--coral)' }}>{message}</p>
         </section>
       );
     }
 
     if (!tour) return null;
+
+    const showPreviewBanner = translationPreview || (tour && tour.translationPreview);
+    const previewUntrusted = showPreviewBanner && tour && tour.translationTrusted !== true;
 
     const safeIndex = Math.min(activePhoto, Math.max(0, galleryPhotos.length - 1));
     const activePhotoAsset = galleryPhotos[safeIndex] || null;
@@ -1233,6 +1246,27 @@
 
     return (
       <div className="detail-page">
+        {previewUntrusted ? (
+          <div
+            className="detail-translation-preview-banner"
+            role="status"
+            style={{
+              margin: '0 0 16px',
+              padding: '12px 16px',
+              borderRadius: 12,
+              background: 'rgba(255, 193, 7, 0.12)',
+              border: '1px solid rgba(255, 193, 7, 0.45)',
+              color: 'var(--ink)',
+              font: '500 14px/1.5 var(--font-text)',
+            }}
+          >
+            {T({
+              hant: '預覽模式 · 此語系尚未核准上架，僅供管理員核對。',
+              hans: '预览模式 · 此语系尚未核准上架，仅供管理员核对。',
+              en: 'Preview mode · this locale is not approved for public listing yet.',
+            })}
+          </div>
+        ) : null}
         <header
           className={`detail-mini-header${compactHeader ? ' is-visible' : ''}`}
           aria-hidden={!compactHeader}

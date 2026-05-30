@@ -145,7 +145,7 @@ When a new Bókun activity lands (initial sync or upstream edit), we run this pi
 │  })                                                                 │
 │                                                                     │
 │  response = openai.chat.completions.create({                        │
-│    model: 'gpt-4o-mini',                                            │
+│    model: 'gpt-4o',                                                 │
 │    response_format: { type: 'json_object' },                        │
 │    messages: [                                                      │
 │      { role: 'system',  content: brandSystemPrompt() },             │
@@ -236,7 +236,7 @@ Authored in version control as YAML, loaded at job time:
 
 ### Cost ceiling
 
-≈ 6 fields × 6 activities × 2 langs ≈ 72 translations on initial seed. At ~120 input tokens + ~80 output tokens per call and `gpt-4o-mini` pricing, that's < US$0.05. Per-day delta sync at the current Bókun catalogue size projects < US$1/day. Trivial.
+≈ 6 fields × 6 activities × 2 langs ≈ 72 translations on initial seed. At ~120 input tokens + ~80 output tokens per call and `gpt-4o` pricing, that's still modest for a one-off backfill. Per-day delta sync at the current Bókun catalogue size projects low single-digit USD/day.
 
 ## 5 · How the UI calls all this
 

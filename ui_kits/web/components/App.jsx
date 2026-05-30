@@ -53,14 +53,17 @@
 
     const initialUrl = (typeof window !== 'undefined' ? readUrlState() : null) || {
       screen: 'home', chip: null, route: null, supplier: 'all', activityId: null,
+      lang: null, translationPreview: false,
     };
     const [screen, setScreen] = useState(initialUrl.screen);  // home | tours | detail | trip | checkout
     // Pre-seed the detail id from the URL so a hard reload of /tours/<id>
     // renders the same activity instead of bouncing back to /tours.
     const [detailActivityId, setDetailActivityId] = useState(initialUrl.activityId || null);
     const [returnScreen, setReturnScreen] = useState(initialUrl.screen === 'detail' ? 'tours' : 'tours');
+    const [translationPreview] = useState(() => !!initialUrl.translationPreview);
 
     const [lang, setLang] = useState(() => {
+      if (initialUrl.lang && LANGS.find((l) => l.id === initialUrl.lang)) return initialUrl.lang;
       const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
       return LANGS.find(l => l.id === saved) ? saved : 'hant';
     });
@@ -221,6 +224,7 @@
       detailActivityId,
       lang,
       detailPreview,
+      { translationPreview },
     );
 
     // Tracks how many history entries this session pushed for the detail flow,
@@ -280,11 +284,13 @@
         supplier: activeSupplier,
         q: searchQuery,
         activityId: screen === 'detail' ? detailActivityId : null,
+        lang: translationPreview ? lang : undefined,
+        translationPreview: translationPreview || undefined,
       });
       if (currentUrlString() !== next) {
         window.history.pushState(null, '', next);
       }
-    }, [screen, activeCats, activeRoutes, activeSupplier, searchQuery, detailActivityId]);
+    }, [screen, activeCats, activeRoutes, activeSupplier, searchQuery, detailActivityId, lang, translationPreview]);
 
     // popstate → re-derive state from URL so back/forward feel native.
     useEffect(() => {
@@ -298,6 +304,7 @@
         setActiveSupplier(s.supplier || 'all');
         setSearchQuery(s.q || '');
         setDetailActivityId(s.screen === 'detail' ? (s.activityId || null) : null);
+        if (s.lang && LANGS.find((l) => l.id === s.lang)) setLang(s.lang);
         // Keep the depth counter honest when the user uses browser nav.
         if (s.screen !== 'detail' && detailEntryDepthRef.current > 0) {
           detailEntryDepthRef.current -= 1;
@@ -510,6 +517,7 @@
             lang={lang}
             displayCurrency={displayCurrency}
             fxRates={fxRates}
+            translationPreview={translationPreview}
             initialDate={(tripSelections[detailActivityId] && tripSelections[detailActivityId].date) || tripSearch.startDate}
             initialGuestCounts={(tripSelections[detailActivityId] && tripSelections[detailActivityId].guests) || { adults: tripSearch.adults, children: tripSearch.children }}
             initialBookingSelection={tripSelections[detailActivityId] || null}

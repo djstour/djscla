@@ -10,6 +10,7 @@ const {
 } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
+const { isDisplayableTranslation } = require('../../lib/translationVerification');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -105,8 +106,16 @@ module.exports = async function handler(req, res) {
       result = await readFromBokun(opts);
     }
 
-    const list = full ? result.activities : result.activities.map(slimActivityForList);
+    let list = full ? result.activities : result.activities.map(slimActivityForList);
     const translations = await loadTranslationsForActivities(list);
+
+    if (uiLang === 'hant' || uiLang === 'hans') {
+      list = list.filter((activity) => isDisplayableTranslation(
+        activity,
+        uiLang,
+        translations[String(activity.id)] || null,
+      ));
+    }
 
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
 

@@ -51,6 +51,17 @@
   const activityDetailCache = new Map();
   const activityDetailInflight = new Map();
 
+  const ADMIN_TOKEN_KEY = 'auralis.admin.token';
+
+  function readAdminPreviewToken() {
+    if (typeof window === 'undefined') return '';
+    try {
+      return window.sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+
   function detailCacheKey(id, lang) {
     return `${id}:${lang}`;
   }
@@ -305,37 +316,51 @@
     },
 
     fetchActivityById(id, opts = {}) {
-      const { lang = 'hant' } = opts;
+      const { lang = 'hant', translationPreview = false } = opts;
       const numId = Number(id);
       if (!Number.isFinite(numId)) {
         return Promise.reject(new Error('Invalid activity id'));
       }
 
-      const cacheKey = detailCacheKey(numId, lang);
-      const cached = getCachedActivityDetail(numId, lang);
-      if (cached) return Promise.resolve(cached);
+      const cacheKey = detailCacheKey(numId, lang) + (translationPreview ? ':preview' : '');
+      if (!translationPreview) {
+        const cached = getCachedActivityDetail(numId, lang);
+        if (cached) return Promise.resolve(cached);
+      }
 
       if (activityDetailInflight.has(cacheKey)) {
         return activityDetailInflight.get(cacheKey);
       }
 
       const qs = new URLSearchParams({ lang, id: String(numId) });
-      const request = fetch(`/api/bokun/activity?${qs}`)
+      if (translationPreview) qs.set('translationPreview', '1');
+      const headers = {};
+      if (translationPreview) {
+        const token = readAdminPreviewToken();
+        if (token) headers.Authorization = `Bearer ${token}`;
+      }
+      const request = fetch(`/api/bokun/activity?${qs}`, { headers })
         .then((res) => res.json().then((data) => ({ res, data })))
         .then(({ res, data }) => {
           if (!res.ok) {
             const err = new Error(data.error || `Bókun activity HTTP ${res.status}`);
             err.status = res.status;
+            err.code = data.code;
             err.hints = data.hints;
             throw err;
           }
           if (!data.activity || data.activity.id == null) {
             throw new Error('Invalid response from /api/bokun/activity');
           }
+          if (data.meta && typeof data.meta === 'object') {
+            data.activity.__fetchMeta = data.meta;
+          }
           if (data.translations && typeof data.translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
           }
-          setCachedActivityDetail(numId, lang, data.activity);
+          if (!translationPreview) {
+            setCachedActivityDetail(numId, lang, data.activity);
+          }
           return data.activity;
         })
         .finally(() => {
@@ -542,6 +567,8 @@
         priceUsd: displayPriceUsd,
         price: displayPriceUsd,
         priceTrusted,
+        translationTrusted: lang === 'en' || !!(activity.translationDisplay?.[lang]?.trusted === true),
+        translationUnverified: lang !== 'en' && activity.translationDisplay?.[lang]?.trusted !== true,
         priceCurrency: 'USD',
         sourcePriceCurrency: resolvedPriceCurrency,
         priceTable,
@@ -905,7 +932,8 @@
     /**
      * Detail page: show list preview immediately, then refresh from GET /api/bokun/activity.
      */
-    A.useActivityDetail = function useActivityDetail(activityId, lang, previewVm) {
+    A.useActivityDetail = function useActivityDetail(activityId, lang, previewVm, opts = {}) {
+      const { translationPreview = false } = opts;
       const [state, setState] = useState({
         loading: !!activityId,
         error: null,
@@ -920,7 +948,7 @@
         }
 
         let cancelled = false;
-        const cachedRaw = getCachedActivityDetail(activityId, lang);
+        const cachedRaw = translationPreview ? null : getCachedActivityDetail(activityId, lang);
         const initialRaw = cachedRaw || (previewVm && previewVm.raw) || null;
         const initialTour = cachedRaw
           ? BokunAdapter.toViewModel(cachedRaw, lang)
@@ -934,10 +962,15 @@
           raw: initialRaw,
         });
 
-        BokunAdapter.fetchActivityById(activityId, { lang })
+        BokunAdapter.fetchActivityById(activityId, { lang, translationPreview })
           .then((raw) => {
             if (cancelled) return;
             const tour = mergePreviewPriceFallback(BokunAdapter.toViewModel(raw, lang), previewVm);
+            if (translationPreview) {
+              tour.translationPreview = true;
+              tour.translationTrusted = raw.__fetchMeta?.translationTrusted === true
+                || raw.translationDisplay?.[lang]?.trusted === true;
+            }
             setState({ loading: false, error: null, tour, raw });
           })
           .catch((err) => {
@@ -951,7 +984,7 @@
           });
 
         return () => { cancelled = true; };
-      }, [activityId, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+      }, [activityId, lang, translationPreview]); // eslint-disable-line react-hooks/exhaustive-deps
 
       useEffect(() => {
         if (!state.raw) return;

@@ -7,7 +7,7 @@ Bókun API (English)  →  normalizeActivity
                               ↓
                     POST /api/translations/sync  (cron / manual)
                               ↓
-                    OpenAI gpt-4o-mini + glossary
+                    OpenAI gpt-4o + glossary
                               ↓
                     Supabase `translations` table
                               ↓
@@ -48,7 +48,7 @@ Apply migration in Supabase SQL editor or `supabase db push` if using CLI.
 | `SUPABASE_URL` | Yes | Project URL |
 | `SUPABASE_ANON_KEY` | Yes | Read overlays in API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes (sync) | Upsert during sync |
-| `OPENAI_API_KEY` | Yes (sync) | `gpt-4o-mini` by default |
+| `OPENAI_API_KEY` | Yes (sync) | `gpt-4o` by default |
 | `OPENAI_TRANSLATION_MODEL` | No | Override model |
 | `TRANSLATION_SYNC_SECRET` | Prod recommended | Bearer token for `POST /api/translations/sync` |
 | `CRON_SECRET` | Auto cron | Vercel Cron `Authorization` bearer (can match `TRANSLATION_SYNC_SECRET`) |
@@ -120,8 +120,10 @@ Response shape:
 ```
 
 - `force: true` — re-translate even when `sourceHash` unchanged.
+- `forceMarker` — optional string shared across chunked requests so force mode advances field-by-field instead of re-translating the same chunk repeatedly.
 - Default batch: first `limit` activities from catalog (`fetchAllCatalogPages`, capped).
 - Full channel: `./scripts/sync-all-translations.sh` (see [VENDOR_SCALE.md](./VENDOR_SCALE.md)).
+- Full **force** re-translate (e.g. after switching to `gpt-4.1`): `FORCE=1 ./scripts/sync-all-translations.sh` (requires deploy with `forceMarker` support).
 
 ## API routes
 

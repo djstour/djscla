@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Sync hant + hans for every activity in the Bókun channel catalog.
-# Each HTTP call translates at most CHUNK translations (title/summary before long description).
+# Each HTTP call translates at most CHUNK fields (title/summary before long description).
 #
 # Usage:
 #   export TRANSLATION_SYNC_SECRET='…'
 #   ./scripts/sync-all-translations.sh
 #
-# Optional: BASE_URL, MAX_ITEMS, SLEEP_SEC, CHUNK (default 6), CURL_MAX_TIME (default 180)
+# Force re-translate everything (e.g. after OPENAI_TRANSLATION_MODEL=gpt-4.1):
+#   export FORCE=1
+#   ./scripts/sync-all-translations.sh
+#
+# Optional: BASE_URL, MAX_ITEMS, SLEEP_SEC, CHUNK, CURL_MAX_TIME, FORCE_MARKER
 
 set -uo pipefail
 
@@ -14,15 +18,36 @@ set -uo pipefail
 BASE_URL="${BASE_URL:-https://www.djstour.com}"
 MAX_ITEMS="${MAX_ITEMS:-2000}"
 SLEEP_SEC="${SLEEP_SEC:-2}"
-CHUNK="${CHUNK:-6}"
+FORCE="${FORCE:-0}"
 # Vercel /api/translations/sync allows up to 300s on Pro; client must wait long enough.
 CURL_MAX_TIME="${CURL_MAX_TIME:-180}"
 CURL_FLAGS=(-fsSL --max-time "${CURL_MAX_TIME}")
+
+FORCE_JSON=false
+FORCE_MARKER=""
+if [[ "$FORCE" == "1" || "$FORCE" == "true" || "$FORCE" == "yes" ]]; then
+  FORCE_JSON=true
+  FORCE_MARKER="${FORCE_MARKER:-force-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+  CHUNK="${CHUNK:-24}"
+else
+  CHUNK="${CHUNK:-6}"
+fi
 
 if [[ -z "${TRANSLATION_SYNC_SECRET:-}" ]]; then
   echo "Set TRANSLATION_SYNC_SECRET first." >&2
   exit 1
 fi
+
+build_sync_body() {
+  local id="$1"
+  if [[ "$FORCE_JSON" == "true" ]]; then
+    printf '{"activityIds":[%s],"langs":["hant","hans"],"force":true,"forceMarker":"%s","maxTranslations":%s}' \
+      "$id" "$FORCE_MARKER" "$CHUNK"
+  else
+    printf '{"activityIds":[%s],"langs":["hant","hans"],"force":false,"maxTranslations":%s}' \
+      "$id" "$CHUNK"
+  fi
+}
 
 echo "Fetching activity IDs from ${BASE_URL}/api/catalog/activities?all=true …"
 CATALOG_JSON=$(curl "${CURL_FLAGS[@]}" "${BASE_URL}/api/catalog/activities?all=true&maxItems=${MAX_ITEMS}&lang=hant") || {
@@ -52,7 +77,11 @@ if [[ -z "$IDS" ]]; then
 fi
 
 COUNT=$(echo "$IDS" | wc -w | tr -d ' ')
-echo "Syncing ${COUNT} activities (chunk=${CHUNK} translations per request, max ${CURL_MAX_TIME}s each)…"
+if [[ "$FORCE_JSON" == "true" ]]; then
+  echo "Force re-translating ${COUNT} activities (marker=${FORCE_MARKER}, chunk=${CHUNK}, max ${CURL_MAX_TIME}s each)…"
+else
+  echo "Syncing ${COUNT} activities (chunk=${CHUNK} translations per request, max ${CURL_MAX_TIME}s each)…"
+fi
 
 parse_sync_response() {
   local http_code="$1"
@@ -108,6 +137,8 @@ sync_one_activity() {
   local total_errors=0
   local tmp
   tmp=$(mktemp)
+  local body
+  body=$(build_sync_body "$id")
 
   while [[ $round -lt $max_rounds ]]; do
     round=$((round + 1))
@@ -119,7 +150,7 @@ sync_one_activity() {
       -X POST "${BASE_URL}/api/translations/sync" \
       -H "Authorization: Bearer ${TRANSLATION_SYNC_SECRET}" \
       -H "Content-Type: application/json" \
-      -d "{\"activityIds\": [${id}], \"langs\": [\"hant\", \"hans\"], \"maxTranslations\": ${CHUNK}}" \
+      -d "$body" \
       2>/dev/null) || {
       echo "  round ${round}: curl failed — retrying in 5s…"
       curl_fail_rounds=$((curl_fail_rounds + 1))
@@ -156,10 +187,12 @@ sync_one_activity() {
 
     if [[ "$complete" == "true" ]]; then
       echo "  done: complete=true after ${round} rounds (translated=${total_translated}, skipped=${total_skipped}, errors=${total_errors})"
+      rm -f "$tmp"
       return 0
     fi
     if [[ "$translated" == "0" && "$errors" == "0" ]]; then
       echo "  done: no remaining work after ${round} rounds (translated=${total_translated}, skipped=${total_skipped})"
+      rm -f "$tmp"
       return 0
     fi
     # Same failing response repeatedly — do not burn 40 rounds.

@@ -208,6 +208,40 @@
     },
     refreshQueue: { hant: '重新整理佇列', hans: '刷新队列', en: 'Refresh queue' },
     runBatch: { hant: '執行批次翻譯', hans: '执行批次翻译', en: 'Run translation batch' },
+    translationVerifyPolicy: {
+      hant: '繁中與简中須分別核准後才會在對應語系前台上架。請先用「預覽繁中／預覽简中」在完整行程頁核對，再按「核准繁中」或「核准简中」。',
+      hans: '繁中与简中须分别核准后才会在对应语系前台上架。请先用「预览繁中／预览简中」在完整行程页核对，再按「核准繁中」或「核准简中」。',
+      en: 'TC and SC require separate admin approval before listing. Preview each locale on the full tour page, then approve hant and/or hans.',
+    },
+    previewTranslationHantBtn: { hant: '預覽繁中', hans: '预览繁中', en: 'Preview TC' },
+    previewTranslationHansBtn: { hant: '預覽简中', hans: '预览简中', en: 'Preview SC' },
+    previewTranslationHantHint: {
+      hant: '在新分頁以完整前台 UI 預覽繁中（須已登入管理後台）',
+      hans: '在新分页以完整前台 UI 预览繁中（须已登录管理后台）',
+      en: 'Open full tour page in TC preview (admin session required)',
+    },
+    previewTranslationHansHint: {
+      hant: '在新分頁以完整前台 UI 預覽简中（須已登入管理後台）',
+      hans: '在新分页以完整前台 UI 预览简中（须已登录管理后台）',
+      en: 'Open full tour page in SC preview (admin session required)',
+    },
+    approveTranslationHantBtn: { hant: '核准繁中', hans: '核准繁中', en: 'Approve TC' },
+    approveTranslationHansBtn: { hant: '核准简中', hans: '核准简中', en: 'Approve SC' },
+    approveTranslationHantHint: {
+      hant: '通过结构检查后核准繁中前台显示',
+      hans: '通过结构检查后核准繁中前台显示',
+      en: 'Approve Traditional Chinese public listing',
+    },
+    approveTranslationHansHint: {
+      hant: '通过结构检查后核准简中前台显示',
+      hans: '通过结构检查后核准简中前台显示',
+      en: 'Approve Simplified Chinese public listing',
+    },
+    translationTrustFailed: {
+      hant: '无法核准：翻译未通过自动检查（缺字段、结构不符或片段断裂）',
+      hans: '无法核准：翻译未通过自动检查（缺字段、结构不符或片段断裂）',
+      en: 'Approval blocked: translation failed automated checks',
+    },
     translateOne: { hant: '翻譯此行程', hans: '翻译此行程', en: 'Translate activity' },
 
     translationBatchProgress: { hant: '批次翻譯進行中', hans: '批次翻译进行中', en: 'Translation batch in progress' },

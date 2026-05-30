@@ -62,6 +62,7 @@ async function handler(req, res) {
         deadlineAtMs: Date.now() + budgetMs,
         langs: Array.isArray(body.langs) ? body.langs : ['hant', 'hans'],
         force: body.force === true,
+        forceMarker: body.forceMarker != null ? String(body.forceMarker).trim() : null,
         uiLang: body.uiLang || 'hant',
       });
       return res.status(200).json({
@@ -85,6 +86,7 @@ async function handler(req, res) {
         activityIds: ids.slice(0, 10),
         langs: Array.isArray(body.langs) ? body.langs : ['hant', 'hans'],
         force: body.force === true,
+        forceMarker: body.forceMarker != null ? String(body.forceMarker).trim() : null,
         uiLang: body.uiLang || 'hant',
         maxTranslations: body.maxTranslations != null ? Number(body.maxTranslations) : 80,
       });
