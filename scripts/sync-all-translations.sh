@@ -50,7 +50,8 @@ build_sync_body() {
 }
 
 echo "Fetching activity IDs from ${BASE_URL}/api/catalog/activities?all=true …"
-CATALOG_JSON=$(curl "${CURL_FLAGS[@]}" "${BASE_URL}/api/catalog/activities?all=true&maxItems=${MAX_ITEMS}&lang=hant") || {
+# Use lang=en — hant/hans responses filter to admin-approved listings only (often empty for sync).
+CATALOG_JSON=$(curl "${CURL_FLAGS[@]}" "${BASE_URL}/api/catalog/activities?all=true&maxItems=${MAX_ITEMS}&lang=en") || {
   echo "Failed to fetch catalog (check BASE_URL and network)." >&2
   exit 1
 }
@@ -117,10 +118,17 @@ errors = s.get('errors', []) or []
 err_count = len(errors)
 err_types = []
 for e in errors:
-    msg = str(e.get('message', '')).strip() if isinstance(e, dict) else str(e).strip()
-    if msg:
-        err_types.append(msg)
-err_hint = '; '.join(sorted(set(err_types))[:2]) if err_types else '-'
+    if isinstance(e, dict):
+        fp = e.get('fieldPath') or ''
+        lg = e.get('lang') or ''
+        msg = str(e.get('message', '')).strip()
+        if fp and lg:
+            err_types.append(f'{fp}:{lg}')
+        elif msg:
+            err_types.append(msg)
+    elif str(e).strip():
+        err_types.append(str(e).strip())
+err_hint = '; '.join(sorted(set(err_types))[:3]) if err_types else '-'
 print(f'{complete}\t{translated}\t{skipped}\t{err_count}\t{err_hint}')
 PY
 }
