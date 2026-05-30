@@ -8,7 +8,10 @@ const { loadTranslationsForActivities } = require('../../lib/attachTranslations'
 const { isDbDetailCacheUsable } = require('../../lib/catalogQuality');
 const { isDisplayableCatalogPrice } = require('../../lib/catalogPriceVerification');
 const { isDisplayableTranslation } = require('../../lib/translationVerification');
-const { isTranslationPreviewRequest } = require('../../lib/adminAuth');
+const {
+  isAdminAuthorized,
+  isTranslationPreviewQuery,
+} = require('../../lib/adminAuth');
 
 const DEFAULT_FRESHNESS_MS = 6 * 60 * 60 * 1000;
 const FRESHNESS_MS = Number.isFinite(Number(process.env.CATALOG_DETAIL_TTL_MS))
@@ -312,7 +315,15 @@ module.exports = async function handler(req, res) {
 
     const translations = await loadTranslationsForActivities([activity]);
     const overlay = translations[String(activity.id)] || null;
-    const translationPreview = isTranslationPreviewRequest(req);
+    const previewRequested = isTranslationPreviewQuery(req);
+    const translationPreview = previewRequested && isAdminAuthorized(req);
+
+    if (previewRequested && !isAdminAuthorized(req)) {
+      return res.status(401).json({
+        error: 'Admin authentication required for translation preview.',
+        code: 'ADMIN_UNAUTHORIZED',
+      });
+    }
 
     if ((uiLang === 'hant' || uiLang === 'hans')
       && !translationPreview

@@ -56,7 +56,10 @@
   function readAdminPreviewToken() {
     if (typeof window === 'undefined') return '';
     try {
-      return window.sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+      // localStorage is shared across tabs so preview links opened from admin work.
+      return window.localStorage.getItem(ADMIN_TOKEN_KEY)
+        || window.sessionStorage.getItem(ADMIN_TOKEN_KEY)
+        || '';
     } catch {
       return '';
     }

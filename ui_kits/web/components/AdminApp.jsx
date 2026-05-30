@@ -148,7 +148,14 @@
 
   function readToken() {
     try {
-      return window.sessionStorage.getItem(STORAGE_KEY) || '';
+      const fromLocal = window.localStorage.getItem(STORAGE_KEY) || '';
+      if (fromLocal) return fromLocal;
+      const fromSession = window.sessionStorage.getItem(STORAGE_KEY) || '';
+      if (fromSession) {
+        window.localStorage.setItem(STORAGE_KEY, fromSession);
+        return fromSession;
+      }
+      return '';
     } catch {
       return '';
     }
@@ -156,9 +163,26 @@
 
   function writeToken(token) {
     try {
-      if (token) window.sessionStorage.setItem(STORAGE_KEY, token);
-      else window.sessionStorage.removeItem(STORAGE_KEY);
+      if (token) {
+        window.localStorage.setItem(STORAGE_KEY, token);
+        window.sessionStorage.setItem(STORAGE_KEY, token);
+      } else {
+        window.localStorage.removeItem(STORAGE_KEY);
+        window.sessionStorage.removeItem(STORAGE_KEY);
+      }
     } catch { /* noop */ }
+  }
+
+  function ensureAdminTokenShared() {
+    const token = readToken();
+    if (token) writeToken(token);
+    return token;
+  }
+
+  function openTranslationPreview(activityId, lang) {
+    if (!ensureAdminTokenShared()) return;
+    const url = `/tours/${encodeURIComponent(activityId)}?lang=${encodeURIComponent(lang)}&translationPreview=1`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   async function adminFetch(path, token, opts = {}) {
@@ -2273,6 +2297,59 @@
     );
   }
 
+  function localeApprovalBadgeProps(ap) {
+    if (!ap) return { className: 'admin-locale-badge admin-locale-badge--none', label: '—', showCheck: false };
+    if (ap.live) {
+      return { className: 'admin-locale-badge admin-locale-badge--approved', label: 'approvalApproved', showCheck: true };
+    }
+    if (ap.readyToApprove) {
+      return { className: 'admin-locale-badge admin-locale-badge--ready', label: 'approvalReady', showCheck: false };
+    }
+    if ((ap.missing || 0) > 0 || (ap.stale || 0) > 0) {
+      return { className: 'admin-locale-badge admin-locale-badge--pending', label: 'approvalNeedsTranslation', showCheck: false };
+    }
+    return { className: 'admin-locale-badge admin-locale-badge--blocked', label: 'approvalBlocked', showCheck: false };
+  }
+
+  function LocaleApprovalBadge({ ap, t, localeTag, count }) {
+    const meta = localeApprovalBadgeProps(ap);
+    const label = meta.label === '—' ? '—' : t(meta.label);
+    const title = ap?.message || label;
+    return (
+      <span className={meta.className} title={title}>
+        {localeTag ? <span className="admin-locale-badge__tag">{localeTag}</span> : null}
+        {meta.showCheck ? <span className="admin-locale-badge__icon" aria-hidden="true">✓</span> : null}
+        {count != null ? formatNumber(count) : label}
+      </span>
+    );
+  }
+
+  function LocaleApprovalSummary({ summary, t }) {
+    if (!summary) return null;
+    return (
+      <div className="admin-locale-summary">
+        <div className="admin-locale-summary__group">
+          <span className="admin-locale-summary__label">{t('approvalSummaryApproved')}</span>
+          <LocaleApprovalBadge ap={{ live: true }} t={t} localeTag={t('localeTagHant')} count={summary.liveHant} />
+          <LocaleApprovalBadge ap={{ live: true }} t={t} localeTag={t('localeTagHans')} count={summary.liveHans} />
+        </div>
+        <div className="admin-locale-summary__group">
+          <span className="admin-locale-summary__label">{t('approvalSummaryReady')}</span>
+          <LocaleApprovalBadge ap={{ readyToApprove: true }} t={t} localeTag={t('localeTagHant')} count={summary.readyHant} />
+          <LocaleApprovalBadge ap={{ readyToApprove: true }} t={t} localeTag={t('localeTagHans')} count={summary.readyHans} />
+          <span className="admin-locale-badge admin-locale-badge--ready" title={t('approvalReadyCount', {
+            hant: formatNumber(summary.readyHant),
+            hans: formatNumber(summary.readyHans),
+            both: formatNumber(summary.readyBoth),
+          })}
+          >
+            {t('approvalBothReadyShort')} · {formatNumber(summary.readyBoth)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // ---------------- Translations page ----------------
   function TranslationsPage({ token, reloadKey, t }) {
     const [queue, setQueue] = useState(null);
@@ -2372,14 +2449,6 @@
         setRowBusy(null);
       }
     };
-
-    function localeApprovalLabel(ap) {
-      if (!ap) return '—';
-      if (ap.live) return t('approvalLive');
-      if (ap.readyToApprove) return t('approvalReady');
-      if ((ap.missing || 0) > 0 || (ap.stale || 0) > 0) return t('approvalNeedsTranslation');
-      return t('approvalBlocked');
-    }
 
     async function approveListing(bokunActivityId, lang) {
       const busyKey = `${bokunActivityId}:${lang}`;
@@ -2481,15 +2550,7 @@
         <p className="admin-page-sub" style={{ marginTop: -8 }}>
           {t('translationVerifyPolicy')}
         </p>
-        {approvalSummary ? (
-          <p className="admin-page-sub" style={{ marginTop: -8, opacity: 0.9 }}>
-            {t('approvalReadyCount', {
-              hant: formatNumber(approvalSummary.readyHant),
-              hans: formatNumber(approvalSummary.readyHans),
-              both: formatNumber(approvalSummary.readyBoth),
-            })}
-          </p>
-        ) : null}
+        <LocaleApprovalSummary summary={approvalSummary} t={t} />
 
         <div className="admin-grid" style={{ marginBottom: 20 }}>
           <div className="admin-card">
@@ -2698,27 +2759,25 @@
                       </td>
                       <td><strong>{row.title}</strong></td>
                       <td>{id}</td>
-                      <td>{localeApprovalLabel(hant)}</td>
-                      <td>{localeApprovalLabel(hans)}</td>
+                      <td><LocaleApprovalBadge ap={hant} t={t} localeTag={t('localeTagHant')} /></td>
+                      <td><LocaleApprovalBadge ap={hans} t={t} localeTag={t('localeTagHans')} /></td>
                       <td className="admin-health-issues__actions">
-                        <a
-                          href={`/tours/${encodeURIComponent(id)}?lang=hant&translationPreview=1`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
                           className="admin-btn admin-btn--ghost admin-btn--sm"
                           title={t('previewTranslationHantHint')}
+                          onClick={() => openTranslationPreview(id, 'hant')}
                         >
                           {t('previewTranslationHantBtn')}
-                        </a>
-                        <a
-                          href={`/tours/${encodeURIComponent(id)}?lang=hans&translationPreview=1`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        </button>
+                        <button
+                          type="button"
                           className="admin-btn admin-btn--ghost admin-btn--sm"
                           title={t('previewTranslationHansHint')}
+                          onClick={() => openTranslationPreview(id, 'hans')}
                         >
                           {t('previewTranslationHansBtn')}
-                        </a>
+                        </button>
                         <button
                           type="button"
                           className="admin-btn admin-btn--ghost admin-btn--sm"
@@ -2757,12 +2816,14 @@
                   <th>{t('thCoverage')}</th>
                   <th>{t('thMissing')}</th>
                   <th>{t('thStale')}</th>
+                  <th>{t('thApprovalHant')}</th>
+                  <th>{t('thApprovalHans')}</th>
                   <th>{t('thActions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {!queue?.pending?.length ? (
-                  <tr><td colSpan="6" className="admin-empty">{t('queueEmpty')}</td></tr>
+                  <tr><td colSpan="8" className="admin-empty">{t('queueEmpty')}</td></tr>
                 ) : queue.pending.map((row) => (
                   <tr key={row.bokunActivityId}>
                     <td><strong>{row.title}</strong></td>
@@ -2770,6 +2831,8 @@
                     <td>{row.percent}%</td>
                     <td>{formatNumber(row.missing)}</td>
                     <td>{formatNumber(row.stale)}</td>
+                    <td><LocaleApprovalBadge ap={row.approval?.hant} t={t} localeTag={t('localeTagHant')} /></td>
+                    <td><LocaleApprovalBadge ap={row.approval?.hans} t={t} localeTag={t('localeTagHans')} /></td>
                     <td className="admin-health-issues__actions">
                       <button
                         type="button"
@@ -2779,24 +2842,22 @@
                       >
                         {rowBusy === row.bokunActivityId ? `… ${rowElapsed}s` : t('translateBtn')}
                       </button>
-                      <a
-                        href={`/tours/${encodeURIComponent(row.bokunActivityId)}?lang=hant&translationPreview=1`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
                         className="admin-btn admin-btn--ghost admin-btn--sm"
                         title={t('previewTranslationHantHint')}
+                        onClick={() => openTranslationPreview(row.bokunActivityId, 'hant')}
                       >
                         {t('previewTranslationHantBtn')}
-                      </a>
-                      <a
-                        href={`/tours/${encodeURIComponent(row.bokunActivityId)}?lang=hans&translationPreview=1`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      </button>
+                      <button
+                        type="button"
                         className="admin-btn admin-btn--ghost admin-btn--sm"
                         title={t('previewTranslationHansHint')}
+                        onClick={() => openTranslationPreview(row.bokunActivityId, 'hans')}
                       >
                         {t('previewTranslationHansBtn')}
-                      </a>
+                      </button>
                       <button
                         type="button"
                         className="admin-btn admin-btn--ghost admin-btn--sm"

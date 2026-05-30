@@ -1,7 +1,8 @@
 /**
  * POST /api/admin/login — verifies an admin password without minting any
- * token. The client just stores the password in sessionStorage and sends it
- * back on every request as `Authorization: Bearer <password>`. This lets us
+ * token. The client stores the password in localStorage (and sessionStorage)
+ * and sends it back on every request as `Authorization: Bearer <password>`.
+ * localStorage is shared across tabs so translation preview links work. This lets us
  * rotate access by changing one env var with zero DB writes.
  */
 
