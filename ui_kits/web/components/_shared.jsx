@@ -315,12 +315,16 @@
     return pick(lang, {
       hant: '獨角獸旅遊',
       hans: '独角兽旅游',
-      en: 'Unicorn Travel',
+      en: '',
     });
   }
 
   function brandFullTitle(lang) {
-    return `DJS Tour · ${brandZhName(lang)}`;
+    return pick(lang, {
+      hant: 'DJS Tour 獨角獸旅遊',
+      hans: 'DJS Tour 独角兽旅游',
+      en: 'DJS Tour',
+    });
   }
 
   function brandLogoSrc(lang, siteThemeId) {

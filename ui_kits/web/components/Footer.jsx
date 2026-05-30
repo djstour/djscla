@@ -150,7 +150,10 @@
             display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
             font: '500 12px/1.5 var(--font-text)', color: 'var(--fg-3)',
           }}>
-            <span>© 2026 DJS Tour · {brandZhName(lang)} Ltd. · Reykjavík · Taipei</span>
+            <span>{lang === 'en'
+              ? '© 2026 DJS Tour Ltd. · Reykjavík · Taipei'
+              : `© 2026 DJS Tour · ${brandZhName(lang)} Ltd. · Reykjavík · Taipei`}
+            </span>
             <span>{T({
               hant: '庫存由 Bókun 提供 · ISO 27001 · GDPR 合規',
               hans: '库存由 Bókun 提供 · ISO 27001 · GDPR 合规',
