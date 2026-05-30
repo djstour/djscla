@@ -2286,6 +2286,10 @@
     const [batchStep, setBatchStep] = useState(0);
     const [rowElapsed, setRowElapsed] = useState(0);
     const [rowStep, setRowStep] = useState(0);
+    const [trustBusy, setTrustBusy] = useState(null);
+    const [selectedApproval, setSelectedApproval] = useState(() => new Set());
+    const [bothLangsOnly, setBothLangsOnly] = useState(false);
+    const [batchTrustNote, setBatchTrustNote] = useState('');
     const batchStartedRef = useRef(0);
     const rowStartedRef = useRef(0);
 
@@ -2324,8 +2328,11 @@
     const loadQueue = useCallback(() => {
       setLoading(true);
       setError('');
-      adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50', token)
-        .then((res) => setQueue(res))
+      adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50&approvalLimit=100', token)
+        .then((res) => {
+          setQueue(res);
+          setSelectedApproval(new Set());
+        })
         .catch((err) => setError(err.message || t('loadQueueFailed')))
         .finally(() => setLoading(false));
     }, [token]);
@@ -2366,12 +2373,19 @@
       }
     };
 
-    const [trustBusy, setTrustBusy] = useState(null);
+    function localeApprovalLabel(ap) {
+      if (!ap) return '—';
+      if (ap.live) return t('approvalLive');
+      if (ap.readyToApprove) return t('approvalReady');
+      if ((ap.missing || 0) > 0 || (ap.stale || 0) > 0) return t('approvalNeedsTranslation');
+      return t('approvalBlocked');
+    }
 
     async function approveListing(bokunActivityId, lang) {
       const busyKey = `${bokunActivityId}:${lang}`;
       setTrustBusy(busyKey);
       setError('');
+      setBatchTrustNote('');
       try {
         const res = await adminFetch('/api/admin/translations/trust', token, {
           method: 'POST',
@@ -2389,6 +2403,70 @@
       }
     }
 
+    async function approveListingBatch(lang) {
+      const rows = filteredApprovalRows;
+      const eligible = [...selectedApproval]
+        .filter((id) => {
+          const row = rows.find((r) => String(r.bokunActivityId) === String(id));
+          return row?.approval?.[lang]?.readyToApprove;
+        });
+      if (!eligible.length) return;
+      setTrustBusy(`batch:${lang}`);
+      setError('');
+      setBatchTrustNote('');
+      let ok = 0;
+      const failed = [];
+      try {
+        for (let i = 0; i < eligible.length; i += 50) {
+          const chunk = eligible.slice(i, i + 50);
+          // eslint-disable-next-line no-await-in-loop
+          const res = await adminFetch('/api/admin/translations/trust', token, {
+            method: 'POST',
+            body: { activityIds: chunk.map(String), lang, trusted: true },
+          });
+          (res.results || []).forEach((r) => {
+            if (r.ok) ok += 1;
+            else failed.push(`${r.id}: ${r.error || t('translationTrustFailed')}`);
+          });
+        }
+        if (failed.length) {
+          setError(failed.slice(0, 3).join(' · '));
+        }
+        setBatchTrustNote(t('batchApproveResult', {
+          ok: formatNumber(ok),
+          failed: failed.length ? ` · ${failed.length} failed` : '',
+        }));
+        loadQueue();
+      } catch (err) {
+        setError(err.message || t('translationTrustFailed'));
+      } finally {
+        setTrustBusy(null);
+      }
+    }
+
+    function toggleApprovalSelect(id, on) {
+      setSelectedApproval((prev) => {
+        const next = new Set(prev);
+        if (on) next.add(String(id));
+        else next.delete(String(id));
+        return next;
+      });
+    }
+
+    const approvalSummary = queue?.approvalSummary;
+    const filteredApprovalRows = (queue?.approvalQueue || []).filter((row) => (
+      !bothLangsOnly
+      || (row.approval?.hant?.readyToApprove && row.approval?.hans?.readyToApprove)
+    ));
+    const selectedHantCount = [...selectedApproval].filter((id) => {
+      const row = filteredApprovalRows.find((r) => String(r.bokunActivityId) === String(id));
+      return row?.approval?.hant?.readyToApprove;
+    }).length;
+    const selectedHansCount = [...selectedApproval].filter((id) => {
+      const row = filteredApprovalRows.find((r) => String(r.bokunActivityId) === String(id));
+      return row?.approval?.hans?.readyToApprove;
+    }).length;
+
     const cov = queue && queue.coverage;
     const stats = queue && queue.stats;
 
@@ -2403,6 +2481,15 @@
         <p className="admin-page-sub" style={{ marginTop: -8 }}>
           {t('translationVerifyPolicy')}
         </p>
+        {approvalSummary ? (
+          <p className="admin-page-sub" style={{ marginTop: -8, opacity: 0.9 }}>
+            {t('approvalReadyCount', {
+              hant: formatNumber(approvalSummary.readyHant),
+              hans: formatNumber(approvalSummary.readyHans),
+              both: formatNumber(approvalSummary.readyBoth),
+            })}
+          </p>
+        ) : null}
 
         <div className="admin-grid" style={{ marginBottom: 20 }}>
           <div className="admin-card">
@@ -2521,6 +2608,143 @@
         </section>
 
         {error ? <div className="admin-result admin-result--error">{error}</div> : null}
+        {batchTrustNote ? (
+          <div
+            className="admin-result"
+            style={{
+              marginBottom: 12,
+              background: 'rgba(34, 197, 94, 0.08)',
+              border: '1px solid rgba(34, 197, 94, 0.35)',
+            }}
+          >
+            {batchTrustNote}
+          </div>
+        ) : null}
+
+        <h2 style={{ fontSize: 16, margin: '8px 0 8px' }}>{t('approvalQueueTitle')}</h2>
+        <p className="admin-page-sub" style={{ marginTop: 0, marginBottom: 12 }}>{t('approvalQueueSub')}</p>
+        <div className="admin-sync-actions" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <label style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="checkbox"
+              checked={bothLangsOnly}
+              onChange={(e) => setBothLangsOnly(e.target.checked)}
+              disabled={loading || running || !!trustBusy}
+            />
+            {t('approvalBothLangsOnly')}
+          </label>
+          <button
+            type="button"
+            className="admin-btn admin-btn--ghost admin-btn--sm"
+            disabled={loading || running || !!trustBusy || !filteredApprovalRows.length}
+            onClick={() => setSelectedApproval(new Set(filteredApprovalRows.map((r) => String(r.bokunActivityId))))}
+          >
+            {t('batchApproveSelectAll')}
+          </button>
+          <button
+            type="button"
+            className="admin-btn admin-btn--ghost admin-btn--sm"
+            disabled={!selectedApproval.size || !!trustBusy}
+            onClick={() => setSelectedApproval(new Set())}
+          >
+            {t('batchApproveClear')}
+          </button>
+          <button
+            type="button"
+            className="admin-btn admin-btn--sm"
+            disabled={!selectedHantCount || running || !!rowBusy || trustBusy === 'batch:hant'}
+            onClick={() => approveListingBatch('hant')}
+          >
+            {trustBusy === 'batch:hant' ? '…' : `${t('batchApproveHantBtn')} (${selectedHantCount})`}
+          </button>
+          <button
+            type="button"
+            className="admin-btn admin-btn--sm"
+            disabled={!selectedHansCount || running || !!rowBusy || trustBusy === 'batch:hans'}
+            onClick={() => approveListingBatch('hans')}
+          >
+            {trustBusy === 'batch:hans' ? '…' : `${t('batchApproveHansBtn')} (${selectedHansCount})`}
+          </button>
+        </div>
+        <div className="admin-table-wrap" style={{ marginBottom: 28 }}>
+          {loading ? <div className="admin-empty">{t('scanningCatalog')}</div> : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 36 }} aria-label="Select" />
+                  <th>{t('navActivities')}</th>
+                  <th>ID</th>
+                  <th>{t('thApprovalHant')}</th>
+                  <th>{t('thApprovalHans')}</th>
+                  <th>{t('thActions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!filteredApprovalRows.length ? (
+                  <tr><td colSpan="6" className="admin-empty">{t('queueEmpty')}</td></tr>
+                ) : filteredApprovalRows.map((row) => {
+                  const id = String(row.bokunActivityId);
+                  const hant = row.approval?.hant;
+                  const hans = row.approval?.hans;
+                  return (
+                    <tr key={`approve-${id}`}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedApproval.has(id)}
+                          onChange={(e) => toggleApprovalSelect(id, e.target.checked)}
+                          disabled={!!trustBusy || running}
+                        />
+                      </td>
+                      <td><strong>{row.title}</strong></td>
+                      <td>{id}</td>
+                      <td>{localeApprovalLabel(hant)}</td>
+                      <td>{localeApprovalLabel(hans)}</td>
+                      <td className="admin-health-issues__actions">
+                        <a
+                          href={`/tours/${encodeURIComponent(id)}?lang=hant&translationPreview=1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
+                          title={t('previewTranslationHantHint')}
+                        >
+                          {t('previewTranslationHantBtn')}
+                        </a>
+                        <a
+                          href={`/tours/${encodeURIComponent(id)}?lang=hans&translationPreview=1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
+                          title={t('previewTranslationHansHint')}
+                        >
+                          {t('previewTranslationHansBtn')}
+                        </a>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
+                          disabled={!hant?.readyToApprove || trustBusy === `${id}:hant` || running || !!rowBusy || !!trustBusy}
+                          onClick={() => approveListing(id, 'hant')}
+                          title={hant?.readyToApprove ? t('approveTranslationHantHint') : (hant?.message || t('translationTrustFailed'))}
+                        >
+                          {trustBusy === `${id}:hant` ? '…' : t('approveTranslationHantBtn')}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
+                          disabled={!hans?.readyToApprove || trustBusy === `${id}:hans` || running || !!rowBusy || !!trustBusy}
+                          onClick={() => approveListing(id, 'hans')}
+                          title={hans?.readyToApprove ? t('approveTranslationHansHint') : (hans?.message || t('translationTrustFailed'))}
+                        >
+                          {trustBusy === `${id}:hans` ? '…' : t('approveTranslationHansBtn')}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
 
         <h2 style={{ fontSize: 16, margin: '8px 0 12px' }}>{t('pendingQueue')}</h2>
         <div className="admin-table-wrap">
@@ -2576,18 +2800,38 @@
                       <button
                         type="button"
                         className="admin-btn admin-btn--ghost admin-btn--sm"
-                        disabled={trustBusy === `${row.bokunActivityId}:hant` || running || !!rowBusy}
+                        disabled={
+                          !(row.approval?.hant?.readyToApprove)
+                          || trustBusy === `${row.bokunActivityId}:hant`
+                          || running
+                          || !!rowBusy
+                          || !!trustBusy
+                        }
                         onClick={() => approveListing(row.bokunActivityId, 'hant')}
-                        title={t('approveTranslationHantHint')}
+                        title={
+                          row.approval?.hant?.readyToApprove
+                            ? t('approveTranslationHantHint')
+                            : (row.approval?.hant?.message || t('translationTrustFailed'))
+                        }
                       >
                         {trustBusy === `${row.bokunActivityId}:hant` ? '…' : t('approveTranslationHantBtn')}
                       </button>
                       <button
                         type="button"
                         className="admin-btn admin-btn--ghost admin-btn--sm"
-                        disabled={trustBusy === `${row.bokunActivityId}:hans` || running || !!rowBusy}
+                        disabled={
+                          !(row.approval?.hans?.readyToApprove)
+                          || trustBusy === `${row.bokunActivityId}:hans`
+                          || running
+                          || !!rowBusy
+                          || !!trustBusy
+                        }
                         onClick={() => approveListing(row.bokunActivityId, 'hans')}
-                        title={t('approveTranslationHansHint')}
+                        title={
+                          row.approval?.hans?.readyToApprove
+                            ? t('approveTranslationHansHint')
+                            : (row.approval?.hans?.message || t('translationTrustFailed'))
+                        }
                       >
                         {trustBusy === `${row.bokunActivityId}:hans` ? '…' : t('approveTranslationHansBtn')}
                       </button>

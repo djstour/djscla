@@ -21,8 +21,9 @@ async function handler(req, res) {
   if (req.method === 'GET') {
     const maxScan = Math.min(parseInt(req.query.maxScan || '500', 10) || 500, 500);
     const pendingLimit = Math.min(parseInt(req.query.pendingLimit || '40', 10) || 40, 100);
+    const approvalLimit = Math.min(parseInt(req.query.approvalLimit || '100', 10) || 100, 200);
     try {
-      const queue = await scanTranslationQueue({ maxScan, pendingLimit });
+      const queue = await scanTranslationQueue({ maxScan, pendingLimit, approvalLimit });
       return res.status(200).json(queue);
     } catch (err) {
       const status = err.code === 'SUPABASE_CONFIG' ? 503 : 500;
