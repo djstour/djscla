@@ -2324,8 +2324,9 @@
     );
   }
 
-  function LocaleApprovalSummary({ summary, t }) {
+  function LocaleApprovalSummary({ summary, activeActivities, t }) {
     if (!summary) return null;
+    const total = formatNumber(activeActivities ?? summary.scannedTotal ?? 0);
     return (
       <div className="admin-locale-summary">
         <div className="admin-locale-summary__group">
@@ -2346,6 +2347,21 @@
             {t('approvalBothReadyShort')} · {formatNumber(summary.readyBoth)}
           </span>
         </div>
+        {(summary.blockedActivities > 0 || summary.blockedHant > 0 || summary.blockedHans > 0) ? (
+          <div className="admin-locale-summary__group">
+            <span className="admin-locale-summary__label">{t('approvalSummaryBlocked')}</span>
+            <LocaleApprovalBadge ap={{ message: t('approvalBlocked') }} t={t} localeTag={t('localeTagHant')} count={summary.blockedHant} />
+            <LocaleApprovalBadge ap={{ message: t('approvalBlocked') }} t={t} localeTag={t('localeTagHans')} count={summary.blockedHans} />
+            <span className="admin-locale-badge admin-locale-badge--blocked" title={t('blockedQueueSub', {
+              liveHant: formatNumber(summary.liveHant),
+              liveHans: formatNumber(summary.liveHans),
+              total,
+            })}
+            >
+              {t('navActivities')} · {formatNumber(summary.blockedActivities)}
+            </span>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -2367,6 +2383,9 @@
     const [selectedApproval, setSelectedApproval] = useState(() => new Set());
     const [bothLangsOnly, setBothLangsOnly] = useState(false);
     const [batchTrustNote, setBatchTrustNote] = useState('');
+    const [selectedBlocked, setSelectedBlocked] = useState(() => new Set());
+    const [blockedBatchBusy, setBlockedBatchBusy] = useState(null);
+    const [blockedBatchNote, setBlockedBatchNote] = useState('');
     const batchStartedRef = useRef(0);
     const rowStartedRef = useRef(0);
 
@@ -2402,13 +2421,27 @@
       return () => window.clearInterval(tick);
     }, [rowBusy]);
 
+    useEffect(() => {
+      if (!blockedBatchBusy) return undefined;
+      rowStartedRef.current = Date.now();
+      setRowElapsed(0);
+      setRowStep(0);
+      const tick = window.setInterval(() => {
+        const sec = Math.floor((Date.now() - rowStartedRef.current) / 1000);
+        setRowElapsed(sec);
+        setRowStep(Math.floor(sec / 4));
+      }, 500);
+      return () => window.clearInterval(tick);
+    }, [blockedBatchBusy?.currentId, blockedBatchBusy?.done]);
+
     const loadQueue = useCallback(async () => {
       setLoading(true);
       setError('');
       try {
-        const res = await adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50&approvalLimit=100', token);
+        const res = await adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50&approvalLimit=100&blockedLimit=100', token);
         setQueue(res);
         setSelectedApproval(new Set());
+        setSelectedBlocked(new Set());
         return res;
       } catch (err) {
         setError(err.message || t('loadQueueFailed'));
@@ -2438,13 +2471,18 @@
       }
     };
 
-    const syncOne = async (bokunActivityId) => {
+    const syncOne = async (bokunActivityId, { force = false } = {}) => {
       setRowBusy(bokunActivityId);
       setError('');
       try {
         await adminFetch('/api/admin/translations', token, {
           method: 'POST',
-          body: { action: 'sync-activities', activityIds: [Number(bokunActivityId)] },
+          body: {
+            action: 'sync-activities',
+            activityIds: [Number(bokunActivityId)],
+            force: force === true,
+            maxTranslations: 80,
+          },
         });
         loadQueue();
       } catch (err) {
@@ -2453,6 +2491,56 @@
         setRowBusy(null);
       }
     };
+
+    async function syncBlockedBatch(ids) {
+      const list = [...ids].map(String).filter(Boolean);
+      if (!list.length) return;
+      setBlockedBatchNote('');
+      setError('');
+      let ok = 0;
+      const failed = [];
+      setBlockedBatchBusy({ done: 0, total: list.length, currentId: list[0] });
+      try {
+        for (let i = 0; i < list.length; i += 1) {
+          const id = list[i];
+          setBlockedBatchBusy({ done: i, total: list.length, currentId: id });
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await adminFetch('/api/admin/translations', token, {
+              method: 'POST',
+              body: {
+                action: 'sync-activities',
+                activityIds: [Number(id)],
+                force: true,
+                maxTranslations: 80,
+              },
+            });
+            ok += 1;
+          } catch (err) {
+            failed.push(`${id}: ${err.message || 'Sync failed'}`);
+          }
+        }
+        if (failed.length) {
+          setError(failed.slice(0, 5).join(' · '));
+        }
+        await loadQueue();
+        setBlockedBatchNote(t('batchRetranslateBlockedResult', {
+          ok: formatNumber(ok),
+          failed: failed.length ? ` · ${failed.length} failed` : '',
+        }));
+      } finally {
+        setBlockedBatchBusy(null);
+      }
+    }
+
+    function toggleBlockedSelect(id, on) {
+      setSelectedBlocked((prev) => {
+        const next = new Set(prev);
+        if (on) next.add(String(id));
+        else next.delete(String(id));
+        return next;
+      });
+    }
 
     async function approveListing(bokunActivityId, lang) {
       const busyKey = `${bokunActivityId}:${lang}`;
@@ -2559,6 +2647,9 @@
       const row = filteredApprovalRows.find((r) => String(r.bokunActivityId) === String(id));
       return row?.approval?.hans?.readyToApprove;
     }).length;
+    const blockedRows = queue?.blockedQueue || [];
+    const selectedBlockedCount = selectedBlocked.size;
+    const anyTranslateBusy = running || !!rowBusy || !!blockedBatchBusy;
 
     const cov = queue && queue.coverage;
     const stats = queue && queue.stats;
@@ -2574,7 +2665,7 @@
         <p className="admin-page-sub" style={{ marginTop: -8 }}>
           {t('translationVerifyPolicy')}
         </p>
-        <LocaleApprovalSummary summary={approvalSummary} t={t} />
+        <LocaleApprovalSummary summary={approvalSummary} activeActivities={queue?.activeActivities} t={t} />
 
         <div className="admin-grid" style={{ marginBottom: 20 }}>
           <div className="admin-card">
@@ -2613,7 +2704,7 @@
                 max={30}
                 value={batchSize}
                 onChange={(e) => setBatchSize(Math.min(30, Math.max(1, Number(e.target.value) || 12)))}
-                disabled={running || !!rowBusy}
+                disabled={anyTranslateBusy}
                 style={{ width: 56 }}
               />
             </label>
@@ -2621,7 +2712,7 @@
               type="button"
               className={`admin-btn${running ? ' admin-btn--loading' : ''}`}
               onClick={runBatch}
-              disabled={running || !!rowBusy}
+              disabled={anyTranslateBusy}
             >
               {running ? (
                 <>
@@ -2632,7 +2723,7 @@
                 t('runBatchNow')
               )}
             </button>
-            <button type="button" className="admin-btn admin-btn--ghost" onClick={loadQueue} disabled={running || loading || !!rowBusy}>
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={loadQueue} disabled={anyTranslateBusy || loading}>
               {t('refreshQueue')}
             </button>
           </div>
@@ -2705,6 +2796,18 @@
             {batchTrustNote}
           </div>
         ) : null}
+        {blockedBatchNote ? (
+          <div
+            className="admin-result"
+            style={{
+              marginBottom: 12,
+              background: 'rgba(34, 197, 94, 0.08)',
+              border: '1px solid rgba(34, 197, 94, 0.35)',
+            }}
+          >
+            {blockedBatchNote}
+          </div>
+        ) : null}
 
         <h2 style={{ fontSize: 16, margin: '8px 0 8px' }}>{t('approvalQueueTitle')}</h2>
         <p className="admin-page-sub" style={{ marginTop: 0, marginBottom: 8 }}>{t('approvalQueueSub')}</p>
@@ -2715,14 +2818,14 @@
               type="checkbox"
               checked={bothLangsOnly}
               onChange={(e) => setBothLangsOnly(e.target.checked)}
-              disabled={loading || running || !!trustBusy}
+              disabled={loading || anyTranslateBusy || !!trustBusy}
             />
             {t('approvalBothLangsOnly')}
           </label>
           <button
             type="button"
             className="admin-btn admin-btn--ghost admin-btn--sm"
-            disabled={loading || running || !!trustBusy || !filteredApprovalRows.length}
+            disabled={loading || anyTranslateBusy || !!trustBusy || !filteredApprovalRows.length}
             onClick={() => setSelectedApproval(new Set(filteredApprovalRows.map((r) => String(r.bokunActivityId))))}
           >
             {t('batchApproveSelectAll')}
@@ -2738,7 +2841,7 @@
           <button
             type="button"
             className="admin-btn admin-btn--sm"
-            disabled={!selectedHantCount || running || !!rowBusy || trustBusy === 'batch:hant'}
+            disabled={!selectedHantCount || anyTranslateBusy || trustBusy === 'batch:hant'}
             onClick={() => approveListingBatch('hant')}
           >
             {trustBusy === 'batch:hant' ? '…' : `${t('batchApproveHantBtn')} (${selectedHantCount})`}
@@ -2746,7 +2849,7 @@
           <button
             type="button"
             className="admin-btn admin-btn--sm"
-            disabled={!(approvalSummary?.readyHant) || running || !!rowBusy || !!trustBusy}
+            disabled={!(approvalSummary?.readyHant) || anyTranslateBusy || !!trustBusy}
             onClick={() => approveAllReady('hant')}
           >
             {trustBusy === 'batch:hant' ? '…' : `${t('batchApproveAllReadyHant')} (${formatNumber(approvalSummary?.readyHant || 0)})`}
@@ -2754,7 +2857,7 @@
           <button
             type="button"
             className="admin-btn admin-btn--sm"
-            disabled={!selectedHansCount || running || !!rowBusy || trustBusy === 'batch:hans'}
+            disabled={!selectedHansCount || anyTranslateBusy || trustBusy === 'batch:hans'}
             onClick={() => approveListingBatch('hans')}
           >
             {trustBusy === 'batch:hans' ? '…' : `${t('batchApproveHansBtn')} (${selectedHansCount})`}
@@ -2762,7 +2865,7 @@
           <button
             type="button"
             className="admin-btn admin-btn--sm"
-            disabled={!(approvalSummary?.readyHans) || running || !!rowBusy || !!trustBusy}
+            disabled={!(approvalSummary?.readyHans) || anyTranslateBusy || !!trustBusy}
             onClick={() => approveAllReady('hans')}
           >
             {trustBusy === 'batch:hans' ? '…' : `${t('batchApproveAllReadyHans')} (${formatNumber(approvalSummary?.readyHans || 0)})`}
@@ -2795,7 +2898,7 @@
                           type="checkbox"
                           checked={selectedApproval.has(id)}
                           onChange={(e) => toggleApprovalSelect(id, e.target.checked)}
-                          disabled={!!trustBusy || running}
+                          disabled={!!trustBusy || anyTranslateBusy}
                         />
                       </td>
                       <td><strong>{row.title}</strong></td>
@@ -2822,7 +2925,7 @@
                         <button
                           type="button"
                           className="admin-btn admin-btn--ghost admin-btn--sm"
-                          disabled={!hant?.readyToApprove || trustBusy === `${id}:hant` || running || !!rowBusy || !!trustBusy}
+                          disabled={!hant?.readyToApprove || trustBusy === `${id}:hant` || anyTranslateBusy || !!trustBusy}
                           onClick={() => approveListing(id, 'hant')}
                           title={hant?.readyToApprove ? t('approveTranslationHantHint') : (hant?.message || t('translationTrustFailed'))}
                         >
@@ -2831,7 +2934,7 @@
                         <button
                           type="button"
                           className="admin-btn admin-btn--ghost admin-btn--sm"
-                          disabled={!hans?.readyToApprove || trustBusy === `${id}:hans` || running || !!rowBusy || !!trustBusy}
+                          disabled={!hans?.readyToApprove || trustBusy === `${id}:hans` || anyTranslateBusy || !!trustBusy}
                           onClick={() => approveListing(id, 'hans')}
                           title={hans?.readyToApprove ? t('approveTranslationHansHint') : (hans?.message || t('translationTrustFailed'))}
                         >
@@ -2845,6 +2948,131 @@
             </table>
           )}
         </div>
+
+        {(queue?.blockedQueue?.length > 0) ? (
+          <>
+            <h2 style={{ fontSize: 16, margin: '24px 0 8px' }}>{t('blockedQueueTitle')}</h2>
+            <p className="admin-page-sub" style={{ marginTop: 0, marginBottom: 8 }}>
+              {t('blockedQueueSub', {
+                liveHant: formatNumber(approvalSummary?.liveHant),
+                liveHans: formatNumber(approvalSummary?.liveHans),
+                total: formatNumber(queue?.activeActivities),
+              })}
+            </p>
+            <p className="admin-page-sub" style={{ marginTop: 0, marginBottom: 12 }}>
+              {t('batchRetranslateBlockedHint')}
+            </p>
+            {blockedBatchBusy ? (
+              <AdminJobRunning
+                title={t('batchRetranslateBlockedProgress', {
+                  done: formatNumber(blockedBatchBusy.done + 1),
+                  total: formatNumber(blockedBatchBusy.total),
+                  id: blockedBatchBusy.currentId,
+                })}
+                step={TRANSLATION_ROW_STEPS[rowStep % TRANSLATION_ROW_STEPS.length]}
+                elapsedSec={rowElapsed}
+                progressPct={Math.min(
+                  95,
+                  Math.round(((blockedBatchBusy.done + 0.5) / blockedBatchBusy.total) * 100),
+                )}
+                hint={t('batchRetranslateBlockedHint')}
+              />
+            ) : null}
+            <div className="admin-sync-actions" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost admin-btn--sm"
+                disabled={loading || anyTranslateBusy || !!trustBusy || !blockedRows.length}
+                onClick={() => setSelectedBlocked(new Set(blockedRows.map((r) => String(r.bokunActivityId))))}
+              >
+                {t('batchApproveSelectAll')}
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost admin-btn--sm"
+                disabled={!selectedBlockedCount || anyTranslateBusy || !!trustBusy}
+                onClick={() => setSelectedBlocked(new Set())}
+              >
+                {t('batchApproveClear')}
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--sm"
+                disabled={!selectedBlockedCount || anyTranslateBusy || !!trustBusy}
+                onClick={() => syncBlockedBatch([...selectedBlocked])}
+              >
+                {blockedBatchBusy
+                  ? '…'
+                  : `${t('batchRetranslateBlockedBtn')} (${formatNumber(selectedBlockedCount)})`}
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--sm"
+                disabled={!blockedRows.length || anyTranslateBusy || !!trustBusy}
+                onClick={() => syncBlockedBatch(blockedRows.map((r) => r.bokunActivityId))}
+              >
+                {blockedBatchBusy
+                  ? '…'
+                  : `${t('batchRetranslateAllBlockedBtn')} (${formatNumber(blockedRows.length)})`}
+              </button>
+            </div>
+            <div className="admin-table-wrap" style={{ marginBottom: 28 }}>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }} aria-label="Select" />
+                    <th>{t('navActivities')}</th>
+                    <th>ID</th>
+                    <th>{t('thApprovalHant')}</th>
+                    <th>{t('thApprovalHans')}</th>
+                    <th>{t('thBlockReason')}</th>
+                    <th>{t('thActions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queue.blockedQueue.map((row) => {
+                    const id = String(row.bokunActivityId);
+                    return (
+                      <tr key={`blocked-${id}`}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedBlocked.has(id)}
+                            onChange={(e) => toggleBlockedSelect(id, e.target.checked)}
+                            disabled={anyTranslateBusy || !!trustBusy}
+                          />
+                        </td>
+                        <td><strong>{row.title}</strong></td>
+                        <td>{id}</td>
+                        <td><LocaleApprovalBadge ap={row.approval?.hant} t={t} localeTag={t('localeTagHant')} /></td>
+                        <td><LocaleApprovalBadge ap={row.approval?.hans} t={t} localeTag={t('localeTagHans')} /></td>
+                        <td style={{ fontSize: 12, maxWidth: 320 }}>{row.blockHint || '—'}</td>
+                        <td className="admin-health-issues__actions">
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn--ghost admin-btn--sm"
+                            disabled={rowBusy === id || anyTranslateBusy}
+                            onClick={() => syncOne(id, { force: true })}
+                          >
+                            {rowBusy === id ? `… ${rowElapsed}s` : t('translateOne')}
+                          </button>
+                          <a
+                            href={`/tours/${id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="admin-btn admin-btn--ghost admin-btn--sm"
+                          >
+                            {t('healthViewTour')}
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : null}
 
         <h2 style={{ fontSize: 16, margin: '8px 0 12px' }}>{t('pendingQueue')}</h2>
         <div className="admin-table-wrap">
@@ -2878,7 +3106,7 @@
                       <button
                         type="button"
                         className="admin-btn admin-btn--ghost admin-btn--sm"
-                        disabled={rowBusy === row.bokunActivityId || running}
+                        disabled={rowBusy === row.bokunActivityId || anyTranslateBusy}
                         onClick={() => syncOne(row.bokunActivityId)}
                       >
                         {rowBusy === row.bokunActivityId ? `… ${rowElapsed}s` : t('translateBtn')}
