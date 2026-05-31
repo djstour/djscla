@@ -2,8 +2,12 @@
  * Checkout — 3-step pre-checkout mirroring Bókun back-office:
  *
  *   Step 1 · Main contact          (name / email / phone+country / opt-in)
- *   Step 2 · Booking questions     (dynamic per-activity questions)
+ *   Step 2 · Booking questions     (dynamic per-activity questions; hidden when none)
  *   Step 3 · Payment & confirmation (final review → redirect to Bókun)
+ *
+ * Questions are prefetched on mount. When every question is hidden or already
+ * answered on the detail page, step 2 is omitted from the stepper and contact
+ * goes straight to payment review (e.g. simple DATE tickets like 825419).
  *
  * The actual money movement happens on Bókun's hosted checkout page
  * (chosen for fastest time-to-launch). We collect contact + answers
@@ -138,7 +142,9 @@
 
     const items = useMemo(() => tripToBokunItems(trip), [trip]);
 
-    const [questionsState, setQuestionsState] = useState({ loading: false, error: '', source: null, questions: [] });
+    const [questionsState, setQuestionsState] = useState({
+      loading: true, error: '', source: null, questions: [], resolved: false,
+    });
     const [answers, setAnswers] = useState({});
     const [answerErrors, setAnswerErrors] = useState({});
 
@@ -149,19 +155,35 @@
     const feeUsd = 0; // Bókun hosted checkout adds its own fees on their page
     const totalUsd = subtotalUsd + feeUsd;
 
-    const steps = [
+    const allSteps = [
       { id: 'contact',   label: { hant: '聯絡資訊', hans: '联系信息', en: 'Main contact' } },
       { id: 'questions', label: { hant: '預訂問題', hans: '预订问题', en: 'Booking questions' } },
       { id: 'review',    label: { hant: '付款確認', hans: '付款确认', en: 'Payment' } },
     ];
 
-    // -- Step 1 → 2 transition: fetch questions on demand so we don't waste
-    //    a Bókun API call if the visitor bounces before reaching Step 2.
+    const visibleQuestions = useMemo(
+      () => visibleCheckoutQuestions(questionsState.questions),
+      [questionsState.questions],
+    );
+
+    const skipQuestionsStep = questionsState.resolved
+      && !questionsState.error
+      && visibleQuestions.length === 0;
+
+    const displaySteps = useMemo(
+      () => (skipQuestionsStep ? allSteps.filter((s) => s.id !== 'questions') : allSteps),
+      [skipQuestionsStep], // eslint-disable-line react-hooks/exhaustive-deps
+    );
+
+    const displayStepIndex = skipQuestionsStep
+      ? (step <= 0 ? 0 : 1)
+      : step;
+
+    // Prefetch booking questions as soon as checkout opens so we know whether
+    // step 2 applies before the visitor finishes contact details.
     useEffect(() => {
-      if (step !== 1) return;
-      if (questionsState.questions.length || questionsState.loading) return;
       let cancelled = false;
-      setQuestionsState((s) => ({ ...s, loading: true, error: '' }));
+      setQuestionsState({ loading: true, error: '', source: null, questions: [], resolved: false });
       fetch('/api/checkout/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -185,35 +207,46 @@
         .then((data) => {
           if (cancelled) return;
           const questions = data.questions || [];
-          setQuestionsState({ loading: false, error: '', source: data.source, questions });
-          const visible = visibleCheckoutQuestions(questions);
-          if (!visible.length) {
-            setStep(2);
-            return;
-          }
-          const seeded = {};
-          visible.forEach((q) => {
-            const key = `${q.scope}:${q.id}`;
-            if (q.id === 'travel_date' && items[0] && items[0].date) {
-              seeded[key] = items[0].date;
-            }
-            if (q.id === 'start_time_id' && items[0] && items[0].startTimeId) {
-              seeded[key] = String(items[0].startTimeId);
-            }
-            if (q.id === 'lead_traveler_name' && contact.firstName && contact.lastName) {
-              seeded[key] = `${contact.firstName} ${contact.lastName}`.trim();
-            }
+          setQuestionsState({
+            loading: false,
+            error: '',
+            source: data.source,
+            questions,
+            resolved: true,
           });
-          if (Object.keys(seeded).length) {
-            setAnswers((prev) => ({ ...prev, ...seeded }));
-          }
         })
         .catch((err) => {
           if (cancelled) return;
-          setQuestionsState({ loading: false, error: err.message, source: null, questions: [] });
+          setQuestionsState({
+            loading: false,
+            error: err.message,
+            source: null,
+            questions: [],
+            resolved: true,
+          });
         });
       return () => { cancelled = true; };
-    }, [step, lang, items]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [lang, items]);
+
+    useEffect(() => {
+      if (!questionsState.resolved || skipQuestionsStep || !visibleQuestions.length) return;
+      const seeded = {};
+      visibleQuestions.forEach((q) => {
+        const key = `${q.scope}:${q.id}`;
+        if (q.id === 'travel_date' && items[0] && items[0].date) {
+          seeded[key] = items[0].date;
+        }
+        if (q.id === 'start_time_id' && items[0] && items[0].startTimeId) {
+          seeded[key] = String(items[0].startTimeId);
+        }
+        if (q.id === 'lead_traveler_name' && contact.firstName && contact.lastName) {
+          seeded[key] = `${contact.firstName} ${contact.lastName}`.trim();
+        }
+      });
+      if (Object.keys(seeded).length) {
+        setAnswers((prev) => ({ ...prev, ...seeded }));
+      }
+    }, [questionsState.resolved, skipQuestionsStep, visibleQuestions, items, contact.firstName, contact.lastName]);
 
     function validateContact() {
       const errs = {};
@@ -244,7 +277,12 @@
     }
 
     function handleNextFromContact() {
-      if (validateContact()) setStep(1);
+      if (!validateContact() || !questionsState.resolved) return;
+      setStep(skipQuestionsStep ? 2 : 1);
+    }
+
+    function handleBackFromReview() {
+      setStep(skipQuestionsStep ? 0 : 1);
     }
 
     function handleNextFromQuestions() {
@@ -322,7 +360,7 @@
             fxRates={fxRates}
           />
 
-          <Stepper steps={steps} current={step} lang={lang} />
+          <Stepper steps={displaySteps} current={displayStepIndex} lang={lang} />
 
           <div className="checkout-step">
             {step === 0 && (
@@ -331,6 +369,8 @@
                 onChange={setContact}
                 errors={contactErrors}
                 onNext={handleNextFromContact}
+                questionsLoading={questionsState.loading}
+                skipQuestionsStep={skipQuestionsStep}
                 lang={lang}
               />
             )}
@@ -360,7 +400,7 @@
                 items={items}
                 contact={contact}
                 totalUsd={totalUsd}
-                onBack={() => setStep(1)}
+                onBack={handleBackFromReview}
                 onSubmit={handleSubmit}
                 submitting={submitting}
                 error={submitError}
@@ -472,8 +512,25 @@
   // ─────────────────────────────────────────────────────────────────
   // Step 1 · Main contact (minimal — Name / Email / Phone / Opt-in)
   // ─────────────────────────────────────────────────────────────────
-  function ContactStep({ contact, onChange, errors, onNext, lang }) {
+  function ContactStep({ contact, onChange, errors, onNext, lang, questionsLoading, skipQuestionsStep }) {
     const T = (opts) => pick(lang, opts);
+    const nextHint = questionsLoading
+      ? T({
+        hant: '正在確認是否需要額外問題…',
+        hans: '正在确认是否需要额外问题…',
+        en: 'Checking whether any extra questions apply…',
+      })
+      : skipQuestionsStep
+        ? T({
+          hant: '下一步：確認訂單並前往付款。',
+          hans: '下一步：确认订单并前往支付。',
+          en: 'Next: review your order and continue to payment.',
+        })
+        : T({
+          hant: '下一步：填寫供應商需要的訂購問題。',
+          hans: '下一步：填写供应商需要的预订问题。',
+          en: 'Next: supplier-specific booking questions.',
+        });
     return (
       <form className="checkout-card" onSubmit={(e) => { e.preventDefault(); onNext(); }}>
         <h2 className="checkout-card__title">
@@ -541,16 +598,12 @@
         </label>
 
         <div className="checkout-card__actions">
-          <span className="checkout-card__hint">
-            {T({
-              hant: '下一步：填寫供應商需要的訂購問題。',
-              hans: '下一步：填写供应商需要的预订问题。',
-              en: 'Next: supplier-specific booking questions.',
-            })}
-          </span>
-          <button type="submit" className="checkout-cta-primary">
-            {T({ hant: '下一步', hans: '下一步', en: 'Continue' })}
-            <Icon name="arrow-right" size={16} />
+          <span className="checkout-card__hint">{nextHint}</span>
+          <button type="submit" className="checkout-cta-primary" disabled={questionsLoading}>
+            {questionsLoading
+              ? T({ hant: '準備中…', hans: '准备中…', en: 'Preparing…' })
+              : T({ hant: '下一步', hans: '下一步', en: 'Continue' })}
+            {!questionsLoading && <Icon name="arrow-right" size={16} />}
           </button>
         </div>
       </form>

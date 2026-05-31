@@ -7,7 +7,7 @@ const { normalizeActivity } = require('../../lib/normalizeActivity');
 const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { isDbDetailCacheUsable } = require('../../lib/catalogQuality');
-const { isDisplayableCatalogPrice } = require('../../lib/catalogPriceVerification');
+const { isDisplayableCatalogPrice, hydrateCatalogPriceDisplay } = require('../../lib/catalogPriceVerification');
 const { isDisplayableTranslation } = require('../../lib/translationVerification');
 const {
   isAdminAuthorized,
@@ -224,6 +224,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (activity) {
+      activity = hydrateCatalogPriceDisplay(activity);
       activity = stripUnverifiedCatalogPricing(activity);
     }
 

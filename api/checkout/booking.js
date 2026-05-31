@@ -33,7 +33,7 @@
  *   { ok: true, hostedCheckoutUrl: "https://djs-tour.bokun.io/…", inquiryId: "uuid" }
  */
 
-const { buildHostedCheckoutUrl, getShopHost } = require('../../lib/bokunCheckoutUrl');
+const { buildHostedCheckoutUrl, getShopHost, getBookingChannelUuid } = require('../../lib/bokunCheckoutUrl');
 const { supabaseRestFetch } = require('../../lib/supabase');
 
 function cors(res) {
@@ -130,6 +130,13 @@ module.exports = async function handler(req, res) {
     return res.status(503).json({
       error: 'Bókun hosted checkout is not configured. Set BOKUN_SHOP_URL (e.g. https://djs-tour.bokun.io) on the server.',
       code: 'BOKUN_SHOP_NOT_CONFIGURED',
+    });
+  }
+
+  if (!getBookingChannelUuid()) {
+    return res.status(503).json({
+      error: 'Bókun booking channel UUID is not configured. Set BOKUN_BOOKING_CHANNEL_UUID from Bókun → Settings → Booking channels → Online sales URL.',
+      code: 'BOKUN_BOOKING_CHANNEL_NOT_CONFIGURED',
     });
   }
 

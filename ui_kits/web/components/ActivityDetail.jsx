@@ -77,11 +77,22 @@
     if (Number.isFinite(direct) && direct > 0) {
       return toUsd(direct, tour.priceCurrency || tour.sourcePriceCurrency || 'USD');
     }
+    const cats = tour.pricingCategories || [];
+    const defaultCat = cats.find((c) => c.defaultCategory)
+      || cats.find((c) => c.ticketCategory === 'ADULT')
+      || cats[0];
     const rows = tour.priceTable || [];
+    if (defaultCat) {
+      const adultRow = rows.find((r) => String(r.categoryId) === String(defaultCat.id));
+      const adultAmount = adultRow && Number(adultRow.amount);
+      if (Number.isFinite(adultAmount) && adultAmount > 0) {
+        return toUsd(adultAmount, adultRow.currency || adultRow.sourceCurrency || tour.sourcePriceCurrency || 'USD');
+      }
+    }
     const amounts = rows
       .map((r) => toUsd(r.amount, r.currency || r.sourceCurrency || tour.sourcePriceCurrency || 'USD'))
       .filter((n) => Number.isFinite(n) && n > 0);
-    if (amounts.length) return Math.min(...amounts);
+    if (amounts.length) return Math.max(...amounts);
     return null;
   }
 

@@ -273,6 +273,13 @@ PY
       else
         pass "hosted URL uses /online-sales/ prefix"
       fi
+      if [[ "$hosted_url" == *"/online-sales/experience/"* ]]; then
+        fail "hosted URL missing booking channel UUID (/online-sales/{uuid}/experience/…)"
+      elif [[ "$hosted_url" =~ /online-sales/[0-9a-f-]{36}/experience/ ]]; then
+        pass "hosted URL includes booking channel UUID"
+      else
+        fail "hosted URL path does not match /online-sales/{uuid}/experience/ ($hosted_url)"
+      fi
       hosted_code="$(curl -sS -L --max-time "$CURL_MAX_TIME" \
         -o /dev/null -w "%{http_code}" \
         "$hosted_url" || true)"
