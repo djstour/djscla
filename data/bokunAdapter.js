@@ -171,7 +171,17 @@
         all = false,
         vendorId,
         maxItems = 2000,
-        append = false,
+        chips,
+        routes,
+        facets,
+        q,
+        hub,
+        durationMin,
+        durationMax,
+        tripStart,
+        tripEnd,
+        sortHub,
+        playbookIds,
       } = opts;
 
       if (typeof fetch === 'undefined') {
@@ -189,6 +199,17 @@
         qs.set('pageSize', String(pageSize));
       }
       if (vendorId != null && vendorId !== '') qs.set('vendorId', String(vendorId));
+      if (chips) qs.set('chips', String(chips));
+      if (routes) qs.set('routes', String(routes));
+      if (facets) qs.set('facets', String(facets));
+      if (q) qs.set('q', String(q));
+      if (hub) qs.set('hub', String(hub));
+      if (durationMin != null) qs.set('durationMin', String(durationMin));
+      if (durationMax != null) qs.set('durationMax', String(durationMax));
+      if (tripStart) qs.set('tripStart', String(tripStart));
+      if (tripEnd) qs.set('tripEnd', String(tripEnd));
+      if (sortHub) qs.set('sortHub', String(sortHub));
+      if (playbookIds) qs.set('playbookIds', String(playbookIds));
 
       return fetch(`/api/catalog/activities?${qs}`)
         .then((res) => res.json().then((data) => ({ res, data })))
@@ -251,6 +272,54 @@
             translations: data.translations || {},
           };
         });
+    },
+
+    /**
+     * GET /api/catalog/playbooks — Hero trip playbook cards.
+     */
+    fetchPlaybooks(opts = {}) {
+      const { lang = 'hant', nights, startDate, hubId } = opts;
+      if (typeof fetch === 'undefined') {
+        return Promise.reject(new Error('fetch is not available'));
+      }
+      const qs = new URLSearchParams({ lang });
+      if (nights != null && Number.isFinite(Number(nights))) qs.set('nights', String(nights));
+      if (startDate) qs.set('startDate', String(startDate));
+      if (hubId) qs.set('hubId', String(hubId));
+      return fetch(`/api/catalog/playbooks?${qs}`)
+        .then((res) => res.json().then((data) => ({ res, data })))
+        .then(({ res, data }) => {
+          if (!res.ok) throw new Error(data.error || `Playbooks HTTP ${res.status}`);
+          return {
+            playbooks: Array.isArray(data.playbooks) ? data.playbooks : [],
+            meta: data.meta || {},
+          };
+        });
+    },
+
+    applyLiveAvailabilityRank(viewModels, liveMap = {}) {
+      if (!Array.isArray(viewModels) || !viewModels.length) return viewModels;
+      const boosted = viewModels.map((vm) => {
+        const id = String(vm.id);
+        const live = liveMap[id] === true;
+        const base = vm.tripRank && typeof vm.tripRank.score === 'number' ? vm.tripRank.score : 0;
+        const alreadyLive = vm.tripRank && vm.tripRank.liveAvailable;
+        const score = base + (live && !alreadyLive ? 40 : 0);
+        return {
+          ...vm,
+          tripRank: {
+            ...(vm.tripRank || {}),
+            score,
+            liveAvailable: live,
+          },
+        };
+      });
+      return boosted.sort((a, b) => {
+        const sa = a.tripRank?.score || 0;
+        const sb = b.tripRank?.score || 0;
+        if (sb !== sa) return sb - sa;
+        return String(a.title || '').localeCompare(String(b.title || ''));
+      });
     },
 
     /**
@@ -655,6 +724,8 @@
         seasonalOpeningHoursLabels: Array.isArray(activity.seasonalOpeningHoursLabels)
           ? activity.seasonalOpeningHoursLabels
           : [],
+        durationMinutes: activity.durationMinutes ?? null,
+        tripRank: activity.tripRank || null,
         raw: activity,
       };
     },
@@ -841,7 +912,7 @@
   // the view-model strings stay in sync with the toggle.
   function attachReactHook() {
     if (typeof React === 'undefined') return;
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useMemo } = React;
 
     const CATALOG_PAGE_SIZE = 36;
 
@@ -944,6 +1015,134 @@
       };
 
       return { ...state, hasMore, loadMore, catalogTotal };
+    };
+
+    /**
+     * Server-side catalog query for Tours — refetches when filters change.
+     * Uses Supabase GIN + FTS (+ zh translations for CJK queries).
+     */
+    A.useCatalogSearch = function useCatalogSearch(lang, filters, { enabled = true, probeLimit = 24 } = {}) {
+      const [state, setState] = useState({
+        loading: false,
+        error: null,
+        activities: [],
+        raw: [],
+        meta: { total: 0 },
+      });
+      const [liveAvailability, setLiveAvailability] = useState({});
+
+      const filtersKey = JSON.stringify(filters || {});
+
+      useEffect(() => {
+        if (!enabled) return undefined;
+        let cancelled = false;
+        setState((s) => ({ ...s, loading: true, error: null }));
+
+        const f = filters || {};
+        const opts = {
+          lang,
+          all: true,
+          maxItems: 500,
+          vendorId: f.vendorId,
+          chips: Array.isArray(f.chips) && f.chips.length ? f.chips.join(',') : undefined,
+          routes: Array.isArray(f.routes) && f.routes.length ? f.routes.join(',') : undefined,
+          facets: Array.isArray(f.facets) && f.facets.length ? f.facets.join(',') : undefined,
+          q: f.q || undefined,
+          tripStart: f.tripStart || undefined,
+          tripEnd: f.tripEnd || undefined,
+          sortHub: f.sortHub || undefined,
+          playbookIds: Array.isArray(f.playbookIds) && f.playbookIds.length
+            ? f.playbookIds.join(',')
+            : undefined,
+        };
+
+        BokunAdapter.fetchActivities(opts)
+          .then(({ activities: raw, meta, translations }) => {
+            if (cancelled) return;
+            if (translations && typeof translations === 'object') {
+              A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...translations };
+            }
+            const vms = BokunAdapter.toViewModels(raw, lang);
+            setState({
+              loading: false,
+              error: null,
+              raw,
+              activities: vms,
+              meta: meta || { total: raw.length },
+            });
+          })
+          .catch((err) => {
+            if (!cancelled) {
+              setState({
+                loading: false,
+                error: err,
+                raw: [],
+                activities: [],
+                meta: { total: 0 },
+              });
+            }
+          });
+
+        return () => { cancelled = true; };
+      }, [lang, filtersKey, enabled]);
+
+      useEffect(() => {
+        if (!enabled) return undefined;
+        const f = filters || {};
+        if (!f.tripStart || !f.tripEnd || !state.activities.length) {
+          setLiveAvailability({});
+          return undefined;
+        }
+        let cancelled = false;
+        const ids = state.activities.slice(0, probeLimit).map((vm) => vm.id).filter(Boolean);
+        if (!ids.length) return undefined;
+
+        const qs = new URLSearchParams({
+          ids: ids.join(','),
+          start: f.tripStart,
+          end: f.tripEnd,
+          lang,
+        });
+
+        fetch(`/api/availability/probe-batch?${qs}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (cancelled || !data || !data.results) return;
+            const map = Object.create(null);
+            Object.entries(data.results).forEach(([id, row]) => {
+              map[id] = row && row.hasAvailability === true;
+            });
+            setLiveAvailability(map);
+          })
+          .catch(() => {
+            if (!cancelled) setLiveAvailability({});
+          });
+
+        return () => { cancelled = true; };
+      }, [
+        enabled,
+        lang,
+        filtersKey,
+        filters && filters.tripStart,
+        filters && filters.tripEnd,
+        state.activities.slice(0, probeLimit).map((vm) => vm.id).join(','),
+      ]);
+
+      const rankedActivities = useMemo(() => (
+        BokunAdapter.applyLiveAvailabilityRank(state.activities, liveAvailability)
+      ), [state.activities, liveAvailability]);
+
+      useEffect(() => {
+        const refreshPrices = () => {
+          setState((s) => (s.raw.length
+            ? { ...s, activities: BokunAdapter.toViewModels(s.raw, lang) }
+            : s));
+        };
+        window.addEventListener('auralis-fx-ready', refreshPrices);
+        return () => window.removeEventListener('auralis-fx-ready', refreshPrices);
+      }, [lang]);
+
+      return { ...state, activities: rankedActivities, liveAvailability };
     };
 
     /**

@@ -352,6 +352,131 @@
     if (document.body) document.body.dataset.screenLabel = title;
   }
 
+  const SITE_DEFAULT_DESCRIPTION = {
+    hant: '冰島行程即時預訂 — 極光、冰川、溫泉與在地嚮導體驗，中文客服支援。',
+    hans: '冰岛行程即时预订 — 极光、冰川、温泉与当地向导体验，中文客服支持。',
+    en: 'Book Iceland tours with live availability — aurora, glaciers, hot springs, and local guides. Mandarin support.',
+  };
+
+  function setHeadMeta(attr, key, content) {
+    if (typeof document === 'undefined' || content == null || content === '') return;
+    let el = document.querySelector(`meta[${attr}="${key}"]`);
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute(attr, key);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', String(content));
+  }
+
+  function setCanonicalUrl(href) {
+    if (typeof document === 'undefined' || !href) return;
+    let el = document.querySelector('link[rel="canonical"]');
+    if (!el) {
+      el = document.createElement('link');
+      el.rel = 'canonical';
+      document.head.appendChild(el);
+    }
+    el.href = href;
+  }
+
+  function applyPageDocument({
+    lang, screen, tour, collection, query, path,
+  }) {
+    if (typeof document === 'undefined') return;
+    const brand = brandFullTitle(lang);
+    let title = brand;
+    let description = pick(lang, SITE_DEFAULT_DESCRIPTION);
+    const pathname = path || (typeof window !== 'undefined' ? window.location.pathname : '/');
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
+    if (screen === 'detail' && tour) {
+      title = `${tour.title} | DJS Tour`;
+      const raw = String(tour.summary || tour.title || '').replace(/\s+/g, ' ').trim();
+      description = raw.slice(0, 155) || pick(lang, SITE_DEFAULT_DESCRIPTION);
+    } else if (collection) {
+      title = `${pick(lang, collection.label)} | DJS Tour`;
+      description = pick(lang, collection.seoDescription);
+    } else if (screen === 'tours' && query && String(query).trim()) {
+      const q = String(query).trim();
+      title = pick(lang, {
+        hant: `「${q}」搜尋結果 | DJS Tour`,
+        hans: `「${q}」搜索结果 | DJS Tour`,
+        en: `"${q}" search | DJS Tour`,
+      });
+    } else if (screen === 'tours') {
+      title = pick(lang, {
+        hant: '全部行程 | DJS Tour',
+        hans: '全部行程 | DJS Tour',
+        en: 'All tours | DJS Tour',
+      });
+    }
+
+    document.title = title;
+    if (document.body) document.body.dataset.screenLabel = title;
+    setHeadMeta('name', 'description', description);
+    setHeadMeta('property', 'og:title', title);
+    setHeadMeta('property', 'og:description', description);
+    setHeadMeta('property', 'og:type', screen === 'detail' ? 'product' : 'website');
+    if (origin) setCanonicalUrl(`${origin}${pathname}`);
+  }
+
+  function buildProductJsonLd(tour, { displayCurrency = 'USD', fxRates = { USD: 1 }, lang = 'hant' } = {}) {
+    if (!tour) return null;
+    const UI = window.AuralisUI || {};
+    const priceUsd = Number(tour.priceUsd ?? tour.price);
+    const hasPrice = tour.priceTrusted !== false && Number.isFinite(priceUsd) && priceUsd > 0;
+    const displayAmount = hasPrice && UI.convertFromUsd
+      ? UI.convertFromUsd(priceUsd, displayCurrency, fxRates)
+      : priceUsd;
+    const image = tour.coverImageUrl || tour.coverImageHeroUrl || null;
+    const data = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: tour.title,
+      description: String(tour.summary || tour.title || '').slice(0, 500),
+      inLanguage: lang === 'en' ? 'en' : (lang === 'hans' ? 'zh-CN' : 'zh-TW'),
+      brand: { '@type': 'Brand', name: 'DJS Tour' },
+    };
+    if (image) data.image = [image];
+    if (hasPrice) {
+      data.offers = {
+        '@type': 'Offer',
+        price: String(Math.round(displayAmount * 100) / 100),
+        priceCurrency: displayCurrency || 'USD',
+        availability: 'https://schema.org/InStock',
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
+      };
+    }
+    if (tour.rating > 0 && tour.reviews > 0) {
+      data.aggregateRating = {
+        '@type': 'AggregateRating',
+        ratingValue: String(Number(tour.rating).toFixed(1)),
+        reviewCount: String(Number(tour.reviews) || 0),
+      };
+    }
+    return data;
+  }
+
+  function mountProductJsonLd(tour, opts) {
+    if (typeof document === 'undefined') return;
+    const existing = document.getElementById('auralis-product-jsonld');
+    if (existing) existing.remove();
+    const payload = buildProductJsonLd(tour, opts);
+    if (!payload) return;
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'auralis-product-jsonld';
+    script.textContent = JSON.stringify(payload);
+    document.head.appendChild(script);
+  }
+
+  function unmountProductJsonLd() {
+    if (typeof document === 'undefined') return;
+    const existing = document.getElementById('auralis-product-jsonld');
+    if (existing) existing.remove();
+  }
+
   // ------------------------------------------------------------------
   // Site-wide theme (aurora | mist | sun) — user picks via ThemePicker; stored in localStorage.
   // Sets html[data-site-theme] → remaps CSS vars app-wide; hero uses heroBackground.
@@ -566,16 +691,44 @@
     { id: 'south-coast',   label: { hant: '南岸',   hans: '南岸',   en: 'South Coast' } },
   ];
 
+  /** Geo corridors for Trip Composer map + server-side geoRoute filter (Phase 2). */
+  const TRIP_GEO_ROUTES = [
+    { id: 'all', label: { hant: '不限路線', hans: '不限路线', en: 'Any route' } },
+    { id: 'golden-circle', label: { hant: '黃金圈', hans: '黄金圈', en: 'Golden Circle' } },
+    { id: 'south-coast', label: { hant: '南岸', hans: '南岸', en: 'South Coast' } },
+    { id: 'ring-road', label: { hant: '環島', hans: '环岛', en: 'Ring Road' } },
+  ];
+
+  const TRIP_GEO_ROUTE_WAYPOINTS = {
+    'golden-circle': [[64.1466, -21.9426], [64.3104, -20.3024], [64.3271, -20.1218], [64.0493, -21.1774]],
+    'south-coast': [[63.4191, -19.0186], [63.5321, -19.5112], [63.6156, -19.9886], [63.8804, -16.6493], [64.0479, -16.1794]],
+    'ring-road': [[64.1466, -21.9426], [64.2559, -15.2083], [65.6885, -18.0878], [66.0758, -23.1240], [63.4191, -19.0186], [64.1466, -21.9426]],
+  };
+
   // -------------------------------------------------------------------
   // Trip search (Hero → Tours → Activity detail)
   // -------------------------------------------------------------------
   const TRIP_SEARCH_STORAGE_KEY = 'auralis.tripSearch';
+  const TRIP_PLAN_STORAGE_KEY = 'auralis.tripPlan';
 
   const TRIP_HUBS = [
     {
       id: 'reykjavik',
       facetId: 'reykjavik',
       label: { hant: '雷克雅維克 (KEF)', hans: '雷克雅未克 (KEF)', en: 'Reykjavík (KEF)' },
+      chipLabel: { hant: '雷克雅維克', hans: '雷克雅未克', en: 'Reykjavík' },
+    },
+    {
+      id: 'akureyri',
+      facetId: 'akureyri',
+      label: { hant: '阿克雷里 (AEY)', hans: '阿克雷里 (AEY)', en: 'Akureyri (AEY)' },
+      chipLabel: { hant: '阿克雷里', hans: '阿克雷里', en: 'Akureyri' },
+    },
+    {
+      id: 'south-coast',
+      routeId: 'south-coast',
+      label: { hant: '南岸 · Vík', hans: '南岸 · Vík', en: 'South Coast · Vík' },
+      chipLabel: { hant: '南岸', hans: '南岸', en: 'South Coast' },
     },
   ];
 
@@ -646,9 +799,150 @@
     } catch (e) { /* ignore */ }
   }
 
-  function facetsFromTripSearch(tripSearch) {
+  function loadTripPlan() {
+    try {
+      const saved = typeof localStorage !== 'undefined' && localStorage.getItem(TRIP_PLAN_STORAGE_KEY);
+      if (saved) {
+        const p = JSON.parse(saved);
+        return {
+          playbookSlug: p.playbookSlug || null,
+          playbookTitle: p.playbookTitle || null,
+          playbookActivityIds: Array.isArray(p.playbookActivityIds) ? p.playbookActivityIds.map(String) : [],
+        };
+      }
+    } catch (e) { /* ignore */ }
+    return { playbookSlug: null, playbookTitle: null, playbookActivityIds: [] };
+  }
+
+  function saveTripPlan(plan) {
+    try {
+      localStorage.setItem(TRIP_PLAN_STORAGE_KEY, JSON.stringify({
+        playbookSlug: plan.playbookSlug || null,
+        playbookTitle: plan.playbookTitle || null,
+        playbookActivityIds: Array.isArray(plan.playbookActivityIds)
+          ? plan.playbookActivityIds.map(String)
+          : [],
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function seasonFacetHintsFromTripSearch(tripSearch) {
+    const { startDate } = normalizeTripSearch(tripSearch);
+    const month = new Date(`${startDate}T12:00:00`).getUTCMonth() + 1;
+    if (month >= 9 || month <= 4) return ['winter'];
+    return [];
+  }
+
+  const TRIP_HUB_MATCH_RULES = {
+    reykjavik: {
+      facetId: 'reykjavik',
+      routeIds: ['golden-circle'],
+      keywords: [/reykjav[ií]k|keflav[ií]k|\bkef\b/i],
+    },
+    akureyri: {
+      facetId: 'akureyri',
+      routeIds: [],
+      keywords: [/akureyri|north\s*iceland|mývatn|myvatn|húsavík|husavik|dettifoss|goðafoss|godafoss/i],
+    },
+    'south-coast': {
+      facetId: null,
+      routeIds: ['south-coast'],
+      keywords: [/south\s*coast|south\s*iceland|\bv[ií]k\b|skógafoss|skogafoss|seljalandsfoss|jökuls[aá]rl[oó]n|jokulsarlon|diamond\s*beach|vatnajökull/i],
+    },
+  };
+
+  function activityTextBlob(vm) {
+    return [
+      vm.title,
+      vm.summary,
+      vm.description,
+      ...((vm.raw && vm.raw.keywords) || []),
+    ].filter(Boolean).join(' ');
+  }
+
+  /** Hard filter for non-default hubs — tags + title/summary keywords. */
+  function activityMatchesTripHub(vm, hubId) {
+    if (!hubId || hubId === 'reykjavik') return true;
+    const rules = TRIP_HUB_MATCH_RULES[hubId];
+    if (!rules) return true;
+    const facetIds = vm.facetIds?.length ? vm.facetIds : (vm.raw && vm.raw.facetIds) || [];
+    const routeIds = vm.routeIds?.length ? vm.routeIds : (vm.raw && vm.raw.routeIds) || [];
+    if (rules.facetId && facetIds.includes(rules.facetId)) return true;
+    if (rules.routeIds.some((r) => routeIds.includes(r))) return true;
+    const text = activityTextBlob(vm);
+    return rules.keywords.some((re) => re.test(text));
+  }
+
+  /** Experience type implied by trip length + season (Hero → Tours). */
+  function tripDurationChipHint(tripSearch) {
+    const { startDate } = normalizeTripSearch(tripSearch);
+    const nights = tripNightCountFromSearch(tripSearch);
+    const month = new Date(`${startDate}T12:00:00`).getUTCMonth() + 1;
+    const isWinterSeason = month >= 9 || month <= 4;
+    if (nights <= 2) return 'day';
+    if (nights >= 7) return 'self-drive';
+    if (isWinterSeason && nights >= 3) return 'aurora';
+    return null;
+  }
+
+  function deriveTripSearchFilters(search, { chipId = null, routeId = null, fromHero = false } = {}) {
+    const normalized = normalizeTripSearch(search);
+    if (fromHero) {
+      return { normalized, cats: [], routes: [], facets: [] };
+    }
+    const cats = chipId ? [chipId] : [];
+    const routes = routeId ? [routeId] : [];
+    return { normalized, cats, routes, facets: [] };
+  }
+
+  function tripSearchSortHints(tripSearch) {
     const hub = TRIP_HUBS.find((h) => h.id === tripSearch?.hubId);
-    return hub && hub.facetId ? [hub.facetId] : [];
+    const facetIds = [];
+    const routeIds = [];
+    if (hub?.facetId) facetIds.push(hub.facetId);
+    if (hub?.routeId) routeIds.push(hub.routeId);
+    seasonFacetHintsFromTripSearch(tripSearch).forEach((id) => {
+      if (!facetIds.includes(id)) facetIds.push(id);
+    });
+    return { facetIds, routeIds };
+  }
+
+  /** @deprecated Use tripSearchSortHints — kept for callers that only need hub facets. */
+  function facetsFromTripSearch(tripSearch) {
+    return tripSearchSortHints(tripSearch).facetIds;
+  }
+
+  function tripNightCountFromSearch(tripSearch) {
+    const { startDate, endDate } = normalizeTripSearch(tripSearch);
+    const start = new Date(`${startDate}T12:00:00`).getTime();
+    const end = new Date(`${endDate}T12:00:00`).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
+    return Math.max(0, Math.round((end - start) / 86400000));
+  }
+
+  function formatTripSearchAvailabilityNote(tripSearch, lang) {
+    const nights = tripNightCountFromSearch(tripSearch);
+    const nightsLabel = nights <= 0
+      ? pick(lang, { hant: '當日', hans: '当日', en: 'same-day' })
+      : pick(lang, {
+        hant: `${nights} 晚`,
+        hans: `${nights} 晚`,
+        en: `${nights} night${nights === 1 ? '' : 's'}`,
+      });
+    const hub = TRIP_HUBS.find((h) => h.id === tripSearch?.hubId);
+    const hubChip = hub && hub.id !== 'reykjavik' ? pick(lang, hub.chipLabel || hub.label) : '';
+    if (hubChip) {
+      return pick(lang, {
+        hant: `${nightsLabel} · ${hubChip} 出發 — 依你的日期排序，有空位者優先；價格請在詳情頁確認。`,
+        hans: `${nightsLabel} · ${hubChip} 出发 — 依你的日期排序，有空位者优先；价格请在详情页确认。`,
+        en: `${nightsLabel} · from ${hubChip} — sorted for your dates; open slots float to the top. Prices on each tour.`,
+      });
+    }
+    return pick(lang, {
+      hant: `${nightsLabel} 行程 — 依你的日期排序，有空位者優先；價格請在詳情頁確認。`,
+      hans: `${nightsLabel} 行程 — 依你的日期排序，有空位者优先；价格请在详情页确认。`,
+      en: `${nightsLabel} trip — sorted for your dates; open slots float to the top. Prices on each tour.`,
+    });
   }
 
   function formatTripSearchDateRange(tripSearch, lang) {
@@ -1603,6 +1897,237 @@
     { chipId: 'self-drive' },
   ];
 
+  /** Home — GYG-style destination quick entry (Hero → Tours). */
+  const HOME_DESTINATIONS = [
+    {
+      id: 'reykjavik',
+      slug: 'reykjavik',
+      hubId: 'reykjavik',
+      icon: 'map-pin',
+      label: { hant: '雷克雅維克', hans: '雷克雅未克', en: 'Reykjavík' },
+    },
+    {
+      id: 'golden-circle',
+      slug: 'golden-circle',
+      routeId: 'golden-circle',
+      icon: 'route',
+      label: { hant: '黃金圈', hans: '黄金圈', en: 'Golden Circle' },
+    },
+    {
+      id: 'south-coast',
+      slug: 'south-coast',
+      routeId: 'south-coast',
+      icon: 'waves',
+      label: { hant: '南岸', hans: '南岸', en: 'South Coast' },
+    },
+    {
+      id: 'ring-road',
+      slug: 'ring-road',
+      chipId: 'self-drive',
+      icon: 'navigation',
+      label: { hant: '環島', hans: '环岛', en: 'Ring Road' },
+    },
+    {
+      id: 'aurora',
+      slug: 'northern-lights',
+      chipId: 'aurora',
+      icon: 'sparkles',
+      label: { hant: '極光季', hans: '极光季', en: 'Aurora season' },
+    },
+  ];
+
+  /** Home — landmark / theme tiles with activity counts. */
+  const HOME_THEME_TILES = [
+    {
+      id: 'bluelagoon',
+      slug: 'blue-lagoon',
+      chipId: 'hotspring',
+      photo: 'bluelagoon',
+      label: { hant: '藍湖溫泉', hans: '蓝湖温泉', en: 'Blue Lagoon' },
+    },
+    {
+      id: 'golden-circle',
+      slug: 'golden-circle',
+      routeId: 'golden-circle',
+      photo: 'geyser',
+      label: { hant: '黃金圈', hans: '黄金圈', en: 'Golden Circle' },
+    },
+    {
+      id: 'glacier-lagoon',
+      slug: 'glacier-lagoon',
+      chipId: 'glacier',
+      photo: 'glacier',
+      label: { hant: '冰川潟湖', hans: '冰川潟湖', en: 'Glacier lagoon' },
+    },
+    {
+      id: 'aurora',
+      slug: 'northern-lights',
+      chipId: 'aurora',
+      photo: 'aurora',
+      label: { hant: '極光獵人', hans: '极光猎人', en: 'Northern Lights' },
+    },
+    {
+      id: 'south-coast',
+      slug: 'south-coast',
+      routeId: 'south-coast',
+      photo: 'waterfall',
+      label: { hant: '南岸瀑布', hans: '南岸瀑布', en: 'South Coast falls' },
+    },
+    {
+      id: 'black-beach',
+      slug: 'black-sand-beach',
+      chipId: 'water',
+      photo: 'blackbeach',
+      label: { hant: '黑沙灘', hans: '黑沙滩', en: 'Black sand beach' },
+    },
+  ];
+
+  /** Home — trust pillars (Why book with DJS Tour). */
+  const HOME_TRUST_PILLARS = [
+    {
+      id: 'worth-it',
+      icon: 'sparkles',
+      title: {
+        hant: '值得飛一趟的體驗',
+        hans: '值得飞一趟的体验',
+        en: 'Experiences worth the trip',
+      },
+      body: {
+        hant: '極光、冰川、溫泉 — 在地嚮導帶路，不是組合包。',
+        hans: '极光、冰川、温泉 — 当地向导带路，不是组合包。',
+        en: 'Aurora, glaciers, hot springs — led by locals, not generic bundles.',
+      },
+    },
+    {
+      id: 'confidence',
+      icon: 'shield-check',
+      title: {
+        hant: '放心預訂',
+        hans: '放心预订',
+        en: 'Book with confidence',
+      },
+      body: {
+        hant: 'Bókun 即時空位、透明取消政策、中文客服隨時協助。',
+        hans: 'Bókun 即时空位、透明取消政策、中文客服随时协助。',
+        en: 'Live Bókun availability, clear cancellation terms, and Mandarin support.',
+      },
+    },
+    {
+      id: 'flexible',
+      icon: 'calendar-range',
+      title: {
+        hant: '行程可以改',
+        hans: '行程可以改',
+        en: 'Plans can change',
+      },
+      body: {
+        hant: '先排再訂、自由加減項目；多數行程支援免費取消（依供應商政策）。',
+        hans: '先排再订、自由加减项目；多数行程支持免费取消（依供应商政策）。',
+        en: 'Plan first, book later — add or drop items; free cancellation on many tours.',
+      },
+    },
+  ];
+
+  const ICELAND_COLLECTION_SEO_DEFAULT = {
+    hant: (name) => `探索冰島${name}相關行程 — 即時空位、透明價格、中文客服。`,
+    hans: (name) => `探索冰岛${name}相关行程 — 即时空位、透明价格、中文客服。`,
+    en: (name) => `Browse ${name} tours in Iceland — live availability, clear pricing, Mandarin support.`,
+  };
+
+  function buildIcelandCollection(entry, navGroup) {
+    const slug = entry.slug || entry.id;
+    const label = entry.label;
+    const seoName = pick('hant', label);
+    return {
+      slug,
+      chipId: entry.chipId || null,
+      routeId: entry.routeId || null,
+      hubId: entry.hubId || null,
+      label,
+      navGroup,
+      seoDescription: entry.seoDescription || {
+        hant: ICELAND_COLLECTION_SEO_DEFAULT.hant(seoName),
+        hans: ICELAND_COLLECTION_SEO_DEFAULT.hans(pick('hans', label)),
+        en: ICELAND_COLLECTION_SEO_DEFAULT.en(pick('en', label)),
+      },
+    };
+  }
+
+  /** SEO-friendly /iceland/:slug catalog entry points. */
+  const ICELAND_COLLECTIONS = (() => {
+    const bySlug = new Map();
+    function add(entry, navGroup) {
+      const col = buildIcelandCollection(entry, navGroup);
+      if (!bySlug.has(col.slug)) bySlug.set(col.slug, col);
+    }
+    HOME_DESTINATIONS.forEach((d) => add(d, 'destination'));
+    HOME_THEME_TILES.forEach((t) => add(t, 'theme'));
+    CATEGORIES.forEach((c) => {
+      if (!bySlug.has(c.id)) add({ id: c.id, slug: c.id, chipId: c.id, label: c.label }, 'category');
+    });
+    return [...bySlug.values()];
+  })();
+
+  const ICELAND_COLLECTION_BY_SLUG = Object.fromEntries(
+    ICELAND_COLLECTIONS.map((c) => [c.slug, c]),
+  );
+
+  function findIcelandCollectionBySlug(slug) {
+    return ICELAND_COLLECTION_BY_SLUG[String(slug || '').trim()] || null;
+  }
+
+  function findCollectionForFilters({ chip, route, supplier, q, hubId } = {}) {
+    if (supplier && supplier !== 'all') return null;
+    if (q && String(q).trim()) return null;
+    const chipVal = chip || null;
+    const routeVal = route || null;
+    const hubVal = hubId || null;
+    return ICELAND_COLLECTIONS.find((c) => (
+      (c.chipId || null) === chipVal
+      && (c.routeId || null) === routeVal
+      && (c.hubId || null) === hubVal
+    )) || null;
+  }
+
+  function buildIcelandCollectionPath(slug) {
+    const clean = String(slug || '').trim();
+    return clean ? `/iceland/${clean}` : '/tours';
+  }
+
+  function collectionFilters(col) {
+    if (!col) return { chipId: null, routeId: null, hubId: null };
+    return {
+      chipId: col.chipId || null,
+      routeId: col.routeId || null,
+      hubId: col.hubId || null,
+    };
+  }
+
+  /** Trip Composer one-click itinerary templates. */
+  const TRIP_COMPOSER_TEMPLATES = [
+    {
+      id: 'aurora-golden',
+      label: { hant: '極光 + 黃金圈', hans: '极光 + 黄金圈', en: 'Aurora + Golden Circle' },
+      intents: ['aurora'],
+      routes: ['golden-circle'],
+      slots: ['aurora', 'golden-circle'],
+    },
+    {
+      id: 'south-glacier',
+      label: { hant: '南岸 + 冰川', hans: '南岸 + 冰川', en: 'South Coast + Glacier' },
+      intents: ['glacier'],
+      routes: ['south-coast'],
+      slots: ['glacier', 'water'],
+    },
+    {
+      id: 'relax-day',
+      label: { hant: '溫泉 + 一日遊', hans: '温泉 + 一日游', en: 'Hot springs + day tours' },
+      intents: ['hotspring', 'day'],
+      routes: [],
+      slots: ['hotspring', 'day'],
+    },
+  ];
+
   /** Orthogonal facets (maps to activity.facetIds; AND when multiple selected). */
   const FACETS = [
     { id: 'premium',      label: { hant: '頂級／私人', hans: '顶级／私人', en: 'Premium / private' } },
@@ -1610,6 +2135,7 @@
     { id: 'mandarin',     label: { hant: '中文導覽',   hans: '中文导览',   en: 'Mandarin guide' } },
     { id: 'winter',       label: { hant: '冬季',       hans: '冬季',       en: 'Winter' } },
     { id: 'reykjavik',    label: { hant: '雷市出發',   hans: '雷市出发',   en: 'From Reykjavík' } },
+    { id: 'akureyri',     label: { hant: '北岸出發',   hans: '北岸出发',   en: 'From Akureyri' } },
   ];
 
   // -------------------------------------------------------------------
@@ -1623,6 +2149,49 @@
     if (!Number.isFinite(num) || num <= 0) return pick(lang, { hant: '—', hans: '—', en: '—' });
     const locale = lang === 'en' ? 'en-US' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW';
     return num.toLocaleString(locale);
+  }
+
+  function countActivitiesForHomeFilter(activities, { chipId, routeId, facetId, hubId } = {}) {
+    if (!Array.isArray(activities)) return 0;
+    return activities.filter((a) => {
+      if (!a) return false;
+      if (chipId && !(a.chipIds || []).includes(chipId)) return false;
+      if (routeId && !(a.routeIds || []).includes(routeId)) return false;
+      if (facetId && !(a.facetIds || []).includes(facetId)) return false;
+      if (hubId && !activityMatchesTripHub(a, hubId)) return false;
+      return true;
+    }).length;
+  }
+
+  function formatHomeActivityCount(count, lang) {
+    const n = Number(count);
+    if (!Number.isFinite(n) || n <= 0) {
+      return pick(lang, { hant: '即將上架', hans: '即将上架', en: 'Coming soon' });
+    }
+    const formatted = formatCatalogCount(n, lang);
+    if (lang === 'en') {
+      return n === 1 ? '1 activity' : `${formatted} activities`;
+    }
+    return pick(lang, {
+      hant: `${formatted} 個行程`,
+      hans: `${formatted} 个行程`,
+      en: `${formatted} activities`,
+    });
+  }
+
+  function homeDestinationToFilters(dest, tripSearch) {
+    const col = dest && dest.slug ? findIcelandCollectionBySlug(dest.slug) : null;
+    const normalized = normalizeTripSearch({
+      ...tripSearch,
+      ...(dest && dest.hubId ? { hubId: dest.hubId } : {}),
+      ...(col && col.hubId ? { hubId: col.hubId } : {}),
+    });
+    return {
+      search: normalized,
+      chipId: (col && col.chipId) || (dest && dest.chipId) || null,
+      routeId: (col && col.routeId) || (dest && dest.routeId) || null,
+      collection: col,
+    };
   }
 
   /** Same-origin WebP thumb for Bókun S3 covers (see /api/media/thumb). */
@@ -1704,14 +2273,28 @@
     const path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
     const params = new URLSearchParams(window.location.search || '');
 
-    // /tours/<id> → detail overlay. Accept positive integer ids only so that
-    // future slug-based paths can be added without ambiguity.
     let activityId = null;
-    const detailMatch = path.match(/^\/tours\/(\d+)$/);
+    let collectionSlug = null;
+    let hub = null;
+    let chip = params.get('chip') || null;
+    let route = params.get('route') || null;
     let screen;
+
+    const detailMatch = path.match(/^\/tours\/(\d+)$/);
+    const icelandMatch = path.match(/^\/iceland\/([a-z0-9-]+)$/);
+
     if (detailMatch) {
       screen = 'detail';
       activityId = Number(detailMatch[1]);
+    } else if (icelandMatch) {
+      screen = 'tours';
+      collectionSlug = icelandMatch[1];
+      const col = findIcelandCollectionBySlug(collectionSlug);
+      if (col) {
+        chip = col.chipId || null;
+        route = col.routeId || null;
+        hub = col.hubId || null;
+      }
     } else if (path === '/tours' || path.startsWith('/tours/')) {
       screen = 'tours';
     } else if (path === '/trip') {
@@ -1727,8 +2310,10 @@
     return {
       screen,
       activityId,
-      chip: params.get('chip') || null,
-      route: params.get('route') || null,
+      collectionSlug,
+      hub,
+      chip,
+      route,
       supplier: params.get('supplier') || 'all',
       q: params.get('q') || '',
       lang: ['hant', 'hans', 'en'].includes(params.get('lang') || '') ? params.get('lang') : null,
@@ -1736,9 +2321,9 @@
     };
   }
 
-  function buildUrlForState({ screen, chip, route, supplier, q, activityId, lang, translationPreview }) {
-    // Detail screen URL is /tours/<id> so the page survives a hard reload and
-    // shareable links land directly on the activity.
+  function buildUrlForState({
+    screen, chip, route, supplier, q, activityId, lang, translationPreview, hubId,
+  }) {
     if (screen === 'detail' && Number.isFinite(Number(activityId)) && Number(activityId) > 0) {
       const params = new URLSearchParams();
       if (chip) params.set('chip', chip);
@@ -1752,12 +2337,25 @@
       return search ? `${detailPath}?${search}` : detailPath;
     }
 
+    if (screen === 'tours') {
+      const col = findCollectionForFilters({
+        chip,
+        route,
+        supplier,
+        q,
+        hubId,
+      });
+      if (col) return buildIcelandCollectionPath(col.slug);
+    }
+
     const path = URL_PATH_BY_SCREEN[screen] || '/';
     const params = new URLSearchParams();
     if (chip) params.set('chip', chip);
     if (route) params.set('route', route);
     if (supplier && supplier !== 'all') params.set('supplier', String(supplier));
     if (q && String(q).trim()) params.set('q', String(q).trim());
+    if (lang && ['hant', 'hans', 'en'].includes(lang)) params.set('lang', lang);
+    if (translationPreview) params.set('translationPreview', '1');
     const search = params.toString();
     return search ? `${path}?${search}` : path;
   }
@@ -1918,14 +2516,23 @@
     aboveFoldImagePriorityCount, prefersReducedData,
     CATEGORIES, ROUTES, FACETS, formatCatalogCount, formatToursToolbarSummary, formatToursPageTitle,
     readUrlState, buildUrlForState, currentUrlString, URL_PATH_BY_SCREEN,
-    TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch,
+    TRIP_HUBS, HERO_POPULAR_CHIPS, HOME_DESTINATIONS, HOME_THEME_TILES, HOME_TRUST_PILLARS,
+    ICELAND_COLLECTIONS, findIcelandCollectionBySlug, findCollectionForFilters,
+    buildIcelandCollectionPath, collectionFilters,
+    countActivitiesForHomeFilter, formatHomeActivityCount, homeDestinationToFilters,
+    applyPageDocument, buildProductJsonLd, mountProductJsonLd, unmountProductJsonLd,
+    TRIP_COMPOSER_TEMPLATES, TRIP_GEO_ROUTES, TRIP_GEO_ROUTE_WAYPOINTS,
+    TRIP_PAX_LIMITS, defaultTripSearch, normalizeTripSearch, loadTripSearch, saveTripSearch, loadTripPlan, saveTripPlan,
     isWishlisted, toggleWishlist, subscribeWishlist,
     showToast,
     sanitizeVendorHtml, vendorHtmlIsMeaningful,
     plainTextToParagraphHtml, plainTextToStructuredHtml, prepareVendorHtml,
     prepareActivityDescription, alignStringListToSource,
     buildLocalizedCancellationPolicyHtml, shouldUseStructuredCancellationPolicy,
-    facetsFromTripSearch, formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
+    facetsFromTripSearch, tripSearchSortHints, seasonFacetHintsFromTripSearch,
+    activityMatchesTripHub, tripDurationChipHint, deriveTripSearchFilters,
+    formatTripSearchAvailabilityNote, tripNightCountFromSearch,
+    formatTripSearchDateRange, formatTripSearchPax, formatTripSearchSummary,
     todayIsoDate, isoDateOffset,
     getSupplierOptions, activityVendor, vendorIdKey, vendorIdsMatch, LANGS, pick, makeT, applyHtmlLang,
     brandZhName, brandFullTitle, brandLogoSrc, brandLogoAlt, applyBrandDocument,

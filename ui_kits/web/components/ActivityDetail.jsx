@@ -355,6 +355,7 @@
     const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '', data: null });
     const [availabilityOpen, setAvailabilityOpen] = useState(false);
     const [stickyBarVisible, setStickyBarVisible] = useState(false);
+    const bookPanelRef = useRef(null);
     const [inquiryOpen, setInquiryOpen] = useState(false);
     const [inquirySubmitting, setInquirySubmitting] = useState(false);
     const [inquiryStatus, setInquiryStatus] = useState({ ok: false, message: '' });
@@ -454,10 +455,19 @@
         setStickyBarVisible(false);
         return undefined;
       }
-      const onScroll = () => setStickyBarVisible(window.scrollY > 920);
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
-      return () => window.removeEventListener('scroll', onScroll);
+      const node = bookPanelRef.current;
+      if (!node || typeof IntersectionObserver === 'undefined') {
+        const onScroll = () => setStickyBarVisible(window.scrollY > 520);
+        onScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+      }
+      const obs = new IntersectionObserver(
+        ([entry]) => setStickyBarVisible(!entry.isIntersecting),
+        { threshold: 0, rootMargin: '0px 0px -35% 0px' },
+      );
+      obs.observe(node);
+      return () => obs.disconnect();
     }, [isMobile, tour && tour.id]);
 
     useEffect(() => {
@@ -1817,6 +1827,7 @@
             inquirySubmitting={inquirySubmitting}
             inquiryStatus={inquiryStatus}
             onSubmitInquiry={submitInquiry}
+            panelRef={bookPanelRef}
           />
         </div>
 
@@ -1853,7 +1864,7 @@
     pickupInfo, pickupPlaces, selectedPickupId, onSelectedPickupId,
     optionalExtras, selectedExtras, onSelectedExtras, extrasSubtotal,
     stickyBarVisible, availabilityState, availabilityOpen, onAvailabilityOpen, onCheckAvailability, inquiryOpen, onInquiryOpen, inquiryForm, onInquiryForm,
-    inquirySubmitting, inquiryStatus, onSubmitInquiry,
+    inquirySubmitting, inquiryStatus, onSubmitInquiry, panelRef,
   }) {
     const priceLabel = priceUsd != null
       ? formatDisplayPrice(priceUsd, displayCurrency, fxRates)
@@ -1861,6 +1872,17 @@
         ? '…'
         : T({ hant: '選擇日期查看價格', hans: '选择日期查看价格', en: 'Select a date for pricing' }));
     const guestTotal = Pax.paxCountsTotal ? Pax.paxCountsTotal(paxCounts) : 0;
+    const liveTotal = availabilityState.data
+      ? (Number(availabilityState.data.total) || 0) + (Number(extrasSubtotal) || 0)
+      : null;
+    const stickyPriceCaption = liveTotal != null
+      ? T({ hant: '總價', hans: '总价', en: 'Total' })
+      : T({ hant: '每人起價', hans: '每人起价', en: 'From per person' });
+    const stickyPriceValue = liveTotal != null
+      ? formatDisplayPrice(liveTotal, displayCurrency, fxRates)
+      : priceLabel;
+    const stepTravelersDone = guestTotal > 0;
+    const stepConfirmDone = !!(availabilityState.data && availabilityState.data.available);
     const peopleUnitPriceLine = bookableCategories
       .map((cat) => {
         const unit = unitPriceByCategoryId && unitPriceByCategoryId.get(String(cat.id));
@@ -1902,11 +1924,33 @@
     return (
       <>
         <aside
+          ref={panelRef}
           className="detail-sticky-book"
           role="complementary"
           aria-label={T({ hant: '預訂', hans: '预订', en: 'Booking' })}
         >
           <div className="detail-sticky-book__card">
+            <ol className="detail-book-steps" aria-label={T({ hant: '預訂步驟', hans: '预订步骤', en: 'Booking steps' })}>
+              <li className={`detail-book-steps__item${selectedDate ? ' is-complete' : ' is-current'}`}>
+                <span className="detail-book-steps__num">1</span>
+                {T({ hant: '日期', hans: '日期', en: 'Date' })}
+              </li>
+              <li className={`detail-book-steps__item${
+                stepConfirmDone ? ' is-complete' : (selectedDate && stepTravelersDone ? ' is-current' : '')
+              }`}>
+                <span className="detail-book-steps__num">2</span>
+                {T({ hant: '旅人', hans: '旅人', en: 'Travelers' })}
+              </li>
+              <li className={`detail-book-steps__item${
+                stepConfirmDone
+                  ? ' is-complete is-current'
+                  : (selectedDate && stepTravelersDone ? ' is-current' : '')
+              }`}>
+                <span className="detail-book-steps__num">3</span>
+                {T({ hant: '確認', hans: '确认', en: 'Confirm' })}
+              </li>
+            </ol>
+
             <div className="detail-book-summary">
               <div className="detail-book-label">
                 {priceUsd != null
@@ -2416,23 +2460,33 @@
 
         {isMobile && (
           <div className={`detail-mobile-sticky-bar${stickyBarVisible ? ' is-visible' : ''}`}>
-            <div className="detail-mobile-sticky-bar__price">
-              <span className="detail-mobile-sticky-bar__label">
-                {T({ hant: '每人起價', hans: '每人起价', en: 'From per person' })}
-              </span>
-              <strong>{priceLabel}</strong>
-            </div>
             <button
               type="button"
-              className="detail-mobile-sticky-bar__cta"
-              onClick={onBookNow || onAddSelection}
+              className="detail-mobile-sticky-bar__price"
+              onClick={() => onAvailabilityOpen(true)}
             >
-              {onBookNow
-                ? T({ hant: '立即預訂', hans: '立即预订', en: 'Book now' })
-                : (inTrip
-                  ? T({ hant: '更新行程', hans: '更新行程', en: 'Update trip' })
-                  : T({ hant: '加入行程', hans: '加入行程', en: 'Add to trip' }))}
+              <span className="detail-mobile-sticky-bar__label">{stickyPriceCaption}</span>
+              <strong>{stickyPriceValue}</strong>
             </button>
+            <div className="detail-mobile-sticky-bar__actions">
+              <button
+                type="button"
+                className="detail-mobile-sticky-bar__cta detail-mobile-sticky-bar__cta--secondary"
+                onClick={onAddSelection}
+              >
+                {inTrip
+                  ? T({ hant: '更新', hans: '更新', en: 'Update' })
+                  : T({ hant: '加入', hans: '加入', en: 'Add' })}
+              </button>
+              <button
+                type="button"
+                className="detail-mobile-sticky-bar__cta detail-mobile-sticky-bar__cta--primary"
+                onClick={onBookNow || onAddSelection}
+                disabled={!onBookNow}
+              >
+                {T({ hant: '立即預訂', hans: '立即预订', en: 'Book now' })}
+              </button>
+            </div>
           </div>
         )}
       </>

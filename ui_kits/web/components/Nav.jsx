@@ -6,7 +6,7 @@
   const { createPortal } = ReactDOM;
   const {
     Icon, LANGS, DISPLAY_CURRENCIES, pick, currencyLabel, ThemePicker,
-    brandLogoSrc, brandLogoAlt,
+    brandLogoSrc, brandLogoAlt, NavDestinationsMenu, MobileDestinationsSection,
   } = window.AuralisUI;
 
   const LOCALE_MENU_MAX_H = 288;
@@ -118,7 +118,7 @@
   function Nav({
     currentScreen, onNav, cartCount = 0, lang, onCycleLang,
     displayCurrency, onCurrencyChange, siteThemeId, onSiteThemeChange,
-    onOpenSearch,
+    onOpenSearch, onSelectCollection,
   }) {
     const T = (opts) => pick(lang, opts);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -180,6 +180,12 @@
         </a>
 
         <nav className="nav-links" aria-label={T({ hant: '主要導覽', hans: '主要导航', en: 'Main' })}>
+          {onSelectCollection && (
+            <NavDestinationsMenu
+              lang={lang}
+              onSelectCollection={onSelectCollection}
+            />
+          )}
           {navItems.map((item) => {
             const active = currentScreen === item.id;
             return (
@@ -203,6 +209,15 @@
               </a>
             );
           })}
+          {onSelectCollection && (
+            <MobileDestinationsSection
+              lang={lang}
+              onSelectCollection={(col) => {
+                onSelectCollection(col);
+                setMenuOpen(false);
+              }}
+            />
+          )}
           <MobileMenuSettings
             lang={lang}
             onLangChange={onCycleLang}

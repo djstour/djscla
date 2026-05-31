@@ -271,6 +271,14 @@
               })}
             </div>
           )}
+          {tour.tripRank && tour.tripRank.liveAvailable === true && (
+            <div className="tour-card-trip-fit">
+              <span className="tour-card-trip-fit__avail">
+                <Icon name="check-circle" size={12} />
+                {T({ hant: '你的日期可訂', hans: '你的日期可订', en: 'Available on your dates' })}
+              </span>
+            </div>
+          )}
           {tour.availability && tour.availability.warning && !showLowCapacity && (
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,

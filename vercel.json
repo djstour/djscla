@@ -8,6 +8,10 @@
     {
       "path": "/api/catalog/sync",
       "schedule": "15 */2 * * *"
+    },
+    {
+      "path": "/api/catalog/availability-windows-sync",
+      "schedule": "30 */6 * * *"
     }
   ],
   "rewrites": [
@@ -45,6 +49,10 @@
     },
     {
       "source": "/trip",
+      "destination": "/ui_kits/web/index.html"
+    },
+    {
+      "source": "/iceland/:slug*",
       "destination": "/ui_kits/web/index.html"
     },
     {

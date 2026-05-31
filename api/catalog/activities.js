@@ -10,6 +10,7 @@ const {
 } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
+const { sortActivitiesByTripContext, parseIdList } = require('../../lib/sortByTripContext');
 const {
   isDisplayableTranslation,
   getTranslationPublicMeta,
@@ -21,11 +22,6 @@ function cors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-/**
- * Decide which catalog backend to read from.
- * - ?source=db|bokun query param (debugging / forced live Bókun)
- * - CATALOG_SOURCE env (default db after catalog sync)
- */
 function resolveSource(req) {
   const requested = (req.query.source || process.env.CATALOG_SOURCE || 'db')
     .toString()
@@ -34,7 +30,10 @@ function resolveSource(req) {
 }
 
 async function readFromDb(opts) {
-  const { fetchAll, vendorId, page, pageSize, maxItems, chips, routes, facets, q } = opts;
+  const {
+    fetchAll, vendorId, page, pageSize, maxItems, chips, routes, facets, q,
+    durationMin, durationMax, uiLang,
+  } = opts;
   if (fetchAll) {
     return fetchAllCatalogFromDb({
       maxItems,
@@ -43,9 +42,14 @@ async function readFromDb(opts) {
       routes,
       facets,
       q,
+      durationMin,
+      durationMax,
+      uiLang,
     });
   }
-  return fetchCatalogPageFromDb({ page, pageSize, vendorId, chips, routes, facets, q });
+  return fetchCatalogPageFromDb({
+    page, pageSize, vendorId, chips, routes, facets, q, durationMin, durationMax, uiLang,
+  });
 }
 
 async function readFromBokun({ fetchAll, vendorId, page, pageSize, uiLang, maxItems }) {
@@ -82,9 +86,24 @@ module.exports = async function handler(req, res) {
   const routes = req.query.routes || req.query.route;
   const facets = req.query.facets || req.query.facet;
   const q = req.query.q;
-  const hasServerFilters = !!(chips || routes || facets || q);
+  const durationMin = req.query.durationMin != null ? parseInt(req.query.durationMin, 10) : undefined;
+  const durationMax = req.query.durationMax != null ? parseInt(req.query.durationMax, 10) : undefined;
 
-  const opts = { fetchAll, vendorId, page, pageSize, uiLang, maxItems, chips, routes, facets, q };
+  const tripStart = req.query.tripStart || undefined;
+  const tripEnd = req.query.tripEnd || undefined;
+  const sortHub = req.query.sortHub || undefined;
+  const playbookActivityIds = parseIdList(req.query.playbookIds);
+  const preferenceChips = parseIdList(req.query.preferenceChips || chips);
+  const preferenceRoutes = parseIdList(req.query.preferenceRoutes || routes);
+  const hasRankContext = !!(tripStart && tripEnd) || !!sortHub || playbookActivityIds.length
+    || preferenceChips.length || preferenceRoutes.length;
+
+  const hasServerFilters = !!(chips || routes || facets || q || durationMin != null || durationMax != null);
+
+  const opts = {
+    fetchAll, vendorId, page, pageSize, uiLang, maxItems, chips, routes, facets, q,
+    durationMin, durationMax,
+  };
 
   try {
     let result;
@@ -109,7 +128,19 @@ module.exports = async function handler(req, res) {
       result = await readFromBokun(opts);
     }
 
-    let list = full ? result.activities : result.activities.map(slimActivityForList);
+    let activities = result.activities;
+    if (hasRankContext) {
+      activities = sortActivitiesByTripContext(activities, {
+        tripStart,
+        tripEnd,
+        hub: sortHub,
+        playbookActivityIds,
+        preferenceChips: chips ? preferenceChips : [],
+        preferenceRoutes: routes ? preferenceRoutes : [],
+      });
+    }
+
+    let list = full ? activities : activities.map(slimActivityForList);
     const translations = await loadTranslationsForActivities(list);
 
     if (uiLang === 'hant' || uiLang === 'hans') {
@@ -123,6 +154,7 @@ module.exports = async function handler(req, res) {
     const meta = {
       ...result.meta,
       source: usedSource,
+      rankMode: hasRankContext ? 'trip-context' : 'default',
       ...getTranslationPublicMeta(),
       ...(uiLang === 'hant' || uiLang === 'hans'
         ? {
