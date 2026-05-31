@@ -478,10 +478,12 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
 
 .hero-field__date-range-trigger {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
   width: 100%;
+  min-height: 100%;
   border: 0;
   padding: 0;
   margin: 0;
@@ -494,12 +496,54 @@ html[data-site-theme="sun"] .trip-map-shell text[fill="#11151F"] {
   -webkit-tap-highlight-color: transparent;
 }
 
+.hero-field__date-range-compact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hero-field__date-nights {
+  font: 600 11px/1.2 var(--font-text);
+  color: var(--fg-3);
+  letter-spacing: 0.01em;
+}
+
+.hero-search-submit {
+  margin-top: 16px;
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  border: 0;
+  cursor: pointer;
+  background: var(--gradient-aurora);
+  color: var(--brand-on-gradient);
+  font: 700 15px/1.25 var(--font-text);
+  box-shadow: var(--shadow-glow-aurora);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hero-search-helper {
+  margin: 10px 0 0;
+  font: 500 12px/1.5 var(--font-text);
+  color: var(--fg-3);
+}
+
 .hero-field__date-range-trigger:hover {
   color: var(--aurora-deep);
 }
 
 .hero-field__date-range-part {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---- Date range picker (Hero) -------------------------------------------- */

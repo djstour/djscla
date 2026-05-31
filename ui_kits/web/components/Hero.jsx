@@ -13,12 +13,39 @@
     return lang === 'en' ? 'en-GB' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW';
   }
 
+  function formatHeroDateShort(iso, lang) {
+    if (!iso) return '';
+    return new Date(`${iso}T12:00:00`).toLocaleDateString(heroDateLocale(lang), {
+      day: 'numeric',
+      month: 'short',
+    });
+  }
+
   function formatHeroDateFull(iso, lang) {
     if (!iso) return '';
     return new Date(`${iso}T12:00:00`).toLocaleDateString(heroDateLocale(lang), {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+    });
+  }
+
+  function tripNightCount(startDate, endDate) {
+    if (!startDate || !endDate) return 0;
+    const start = new Date(`${startDate}T12:00:00`).getTime();
+    const end = new Date(`${endDate}T12:00:00`).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
+    return Math.max(0, Math.round((end - start) / 86400000));
+  }
+
+  function formatTripNightsLabel(nights, lang) {
+    if (nights <= 0) {
+      return pick(lang, { hant: '當日', hans: '当日', en: 'Same day' });
+    }
+    return pick(lang, {
+      hant: `${nights} 晚`,
+      hans: `${nights} 晚`,
+      en: `${nights} night${nights === 1 ? '' : 's'}`,
     });
   }
 
@@ -44,8 +71,11 @@
     const singleHub = TRIP_HUBS.length <= 1;
     const hub = TRIP_HUBS[0] || null;
     const paxSummary = formatTripSearchPax(search, lang);
-    const startDateLabel = formatHeroDateFull(search.startDate, lang);
-    const endDateLabel = formatHeroDateFull(search.endDate, lang);
+    const startDateShort = formatHeroDateShort(search.startDate, lang);
+    const endDateShort = formatHeroDateShort(search.endDate, lang);
+    const tripNights = tripNightCount(search.startDate, search.endDate);
+    const tripNightsLabel = formatTripNightsLabel(tripNights, lang);
+    const dateRangeAria = `${formatHeroDateFull(search.startDate, lang)} – ${formatHeroDateFull(search.endDate, lang)}, ${tripNightsLabel}`;
     const popularLabels = T({
       hant: ['極光', '黃金圈', '藍湖', '自駕'],
       hans: ['极光', '黄金圈', '蓝湖', '自驾'],
@@ -174,15 +204,19 @@
                     type="button"
                     className="hero-field__date-range-trigger"
                     aria-expanded={calendarOpen}
+                    aria-label={dateRangeAria}
                     onClick={(e) => {
                       e.stopPropagation();
                       setPaxOpen(false);
                       setCalendarOpen((open) => !open);
                     }}
                   >
-                    <span className="hero-field__date-range-part">{startDateLabel}</span>
-                    <span className="hero-field__date-sep" aria-hidden="true">→</span>
-                    <span className="hero-field__date-range-part">{endDateLabel}</span>
+                    <span className="hero-field__date-range-compact">
+                      <span className="hero-field__date-range-part">{startDateShort}</span>
+                      <span className="hero-field__date-sep" aria-hidden="true">→</span>
+                      <span className="hero-field__date-range-part">{endDateShort}</span>
+                    </span>
+                    <span className="hero-field__date-nights">{tripNightsLabel}</span>
                   </button>
                   <DateRangePicker
                     open={calendarOpen}
@@ -229,20 +263,21 @@
               </Field>
             </div>
 
-            <button type="button" onClick={submitSearch} style={{
-              marginTop: 16, width: '100%', height: 52, borderRadius: 16, border: 0, cursor: 'pointer',
-              background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
-              font: '700 15px/1 var(--font-text)',
-              boxShadow: 'var(--shadow-glow-aurora)',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}>
-              <Icon name="search" size={18} />
+            <button type="button" className="hero-search-submit" onClick={submitSearch}>
+              <Icon name="arrow-right" size={18} />
               {T({
-                hant: `搜尋 ${countLabel} 個體驗`,
-                hans: `搜索 ${countLabel} 个体验`,
-                en: `Search ${countLabel} experiences`,
+                hant: `依日期規劃行程（${countLabel} 個體驗）`,
+                hans: `按日期规划行程（${countLabel} 个体验）`,
+                en: `Plan your trip (${countLabel} experiences)`,
               })}
             </button>
+            <p className="hero-search-helper">
+              {T({
+                hant: '依你的日期與人數進入行程列表；各體驗的空位與價格請在詳情頁確認。',
+                hans: '按你的日期与人数进入行程列表；各体验的空位与价格请在详情页确认。',
+                en: 'We’ll open the catalog for your dates and party size. Availability and price are confirmed on each tour.',
+              })}
+            </p>
 
             <div className="hero-search-divider" style={{
               marginTop: 14, display: 'flex', gap: 6, flexWrap: 'wrap',
