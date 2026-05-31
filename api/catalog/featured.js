@@ -7,6 +7,7 @@
 const { fetchFeaturedActivitiesFromDb } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
+const { isDisplayableTranslation } = require('../../lib/translationVerification');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,8 +27,17 @@ module.exports = async function handler(req, res) {
 
   try {
     const result = await fetchFeaturedActivitiesFromDb({ limit });
-    const list = result.activities.map(slimActivityForList);
+    const uiLang = ['hant', 'hans', 'en'].includes(req.query.lang) ? req.query.lang : 'hant';
+    let list = result.activities.map(slimActivityForList);
     const translations = await loadTranslationsForActivities(list);
+
+    if (uiLang === 'hant' || uiLang === 'hans') {
+      list = list.filter((activity) => isDisplayableTranslation(
+        activity,
+        uiLang,
+        translations[String(activity.id)] || null,
+      ));
+    }
 
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
 
@@ -35,7 +45,7 @@ module.exports = async function handler(req, res) {
       source: 'db',
       activities: list,
       translations,
-      meta: result.meta,
+      meta: { ...result.meta, lang: uiLang, displayableCount: list.length },
     });
   } catch (err) {
     const status = err.code === 'SUPABASE_CONFIG' ? 503 : 500;

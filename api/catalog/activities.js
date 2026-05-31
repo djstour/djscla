@@ -117,13 +117,28 @@ module.exports = async function handler(req, res) {
       ));
     }
 
+    const meta = {
+      ...result.meta,
+      source: usedSource,
+      ...(uiLang === 'hant' || uiLang === 'hans'
+        ? {
+          displayableCount: list.length,
+          totalBeforeTranslationGate: result.meta?.total ?? result.activities.length,
+        }
+        : {}),
+    };
+    if (uiLang === 'hant' || uiLang === 'hans') {
+      meta.total = list.length;
+      meta.uniqueInChannel = list.length;
+    }
+
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
 
     return res.status(200).json({
       source: usedSource,
       activities: list,
       translations,
-      meta: { ...result.meta, source: usedSource },
+      meta,
     });
   } catch (err) {
     const status = err.code === 'BOKUN_CONFIG' ? 503 : err.status >= 400 && err.status < 600 ? err.status : 502;
