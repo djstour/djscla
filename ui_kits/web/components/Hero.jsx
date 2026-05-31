@@ -4,15 +4,10 @@
 (function () {
   const { useMemo, useState, useRef } = React;
   const {
-    Icon, pick, formatCatalogCount, TRIP_HUBS, HERO_POPULAR_CHIPS, TRIP_PAX_LIMITS,
-    normalizeTripSearch, todayIsoDate, DateRangePicker,
+    Icon, pick, formatCatalogCount, TRIP_HUBS, HERO_POPULAR_CHIPS,
+    normalizeTripSearch, todayIsoDate, DateRangePicker, formatTripSearchPax,
+    HeroPaxPicker,
   } = window.AuralisUI;
-
-  function rangeArr(start, end) {
-    const out = [];
-    for (let i = start; i <= end; i += 1) out.push(i);
-    return out;
-  }
 
   function heroDateLocale(lang) {
     return lang === 'en' ? 'en-GB' : lang === 'hans' ? 'zh-Hans-CN' : 'zh-Hant-TW';
@@ -43,9 +38,12 @@
     const search = normalizeTripSearch(tripSearch);
     const minDate = todayIsoDate();
     const [calendarOpen, setCalendarOpen] = useState(false);
+    const [paxOpen, setPaxOpen] = useState(false);
     const datesAnchorRef = useRef(null);
-    const adultLabel = T({ hant: '成人', hans: '成人', en: 'Adult' });
-    const childLabel = T({ hant: '孩童', hans: '孩童', en: 'Children' });
+    const paxAnchorRef = useRef(null);
+    const singleHub = TRIP_HUBS.length <= 1;
+    const hub = TRIP_HUBS[0] || null;
+    const paxSummary = formatTripSearchPax(search, lang);
     const startDateLabel = formatHeroDateFull(search.startDate, lang);
     const endDateLabel = formatHeroDateFull(search.endDate, lang);
     const popularLabels = T({
@@ -77,6 +75,14 @@
 
     function handleDateRangeChange({ startDate, endDate }) {
       patch({ startDate, endDate });
+    }
+
+    function handlePaxChange({ adults, children }) {
+      patch({ adults, children });
+    }
+
+    function submitSearch() {
+      if (onSearch) onSearch(search);
     }
 
     return (
@@ -118,22 +124,18 @@
               hans: '通过 Bókun 实时串接当地供应商 — 一次规划，多家体验，一笔结账。',
               en: 'Live operator inventory via Bókun — plan once, book many, pay once.',
             })}</p>
-
-            <div style={{ display: 'flex', gap: 14, marginTop: 32, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button type="button" onClick={() => onSearch && onSearch(search)} style={{
-                height: 54, padding: '0 28px', borderRadius: 999, border: 0, cursor: 'pointer',
-                background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
-                font: '700 15px/1 var(--font-text)',
-                boxShadow: 'var(--shadow-glow-aurora)',
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-              }}>
-                {T({ hant: '開始規劃', hans: '开始规划', en: 'Start your itinerary' })}
-                <Icon name="arrow-right" size={18} />
-              </button>
-            </div>
           </div>
 
-          <div className="glass hero-search-panel" style={{ padding: 24, borderRadius: 28 }}>
+          <div
+            className="glass hero-search-panel"
+            style={{ padding: 24, borderRadius: 28 }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !calendarOpen && !paxOpen) {
+                e.preventDefault();
+                submitSearch();
+              }
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <Icon name="map-pin" size={16} color="var(--coral)" />
               <span style={{ font: '600 13px/1 var(--font-text)', color: 'var(--fg-2)' }}>
@@ -141,18 +143,25 @@
               </span>
             </div>
 
-            <Field label={T({ hant: '主要出發地', hans: '主要出发地', en: 'Starting from' })} icon="map-pin">
-              <select
-                className="hero-field__input hero-field__select hero-field__select--full"
-                value={search.hubId}
-                onChange={(e) => patch({ hubId: e.target.value })}
-                aria-label={T({ hant: '主要出發地', hans: '主要出发地', en: 'Starting from' })}
-              >
-                {TRIP_HUBS.map((hub) => (
-                  <option key={hub.id} value={hub.id}>{pick(lang, hub.label)}</option>
-                ))}
-              </select>
-            </Field>
+            {singleHub && hub ? (
+              <p className="hero-hub-static">
+                <Icon name="map-pin" size={14} color="var(--fg-3)" />
+                {pick(lang, hub.label)}
+              </p>
+            ) : (
+              <Field label={T({ hant: '主要出發地', hans: '主要出发地', en: 'Starting from' })} icon="map-pin">
+                <select
+                  className="hero-field__input hero-field__select hero-field__select--full"
+                  value={search.hubId}
+                  onChange={(e) => patch({ hubId: e.target.value })}
+                  aria-label={T({ hant: '主要出發地', hans: '主要出发地', en: 'Starting from' })}
+                >
+                  {TRIP_HUBS.map((h) => (
+                    <option key={h.id} value={h.id}>{pick(lang, h.label)}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             <div className="hero-search-dates" style={{ marginTop: 10 }}>
               <Field
@@ -167,6 +176,7 @@
                     aria-expanded={calendarOpen}
                     onClick={(e) => {
                       e.stopPropagation();
+                      setPaxOpen(false);
                       setCalendarOpen((open) => !open);
                     }}
                   >
@@ -190,46 +200,36 @@
               <Field
                 label={T({ hant: '旅人', hans: '旅客', en: 'Travelers' })}
                 icon="users"
-                controlClass="hero-field__control--pax"
+                focused={paxOpen}
+                controlClass="hero-field__control--pax-trigger"
               >
-                <div className="hero-field__pax">
-                  <div className="hero-field__pax-row">
-                    <span className="hero-field__pax-label">{adultLabel}</span>
-                    <select
-                      className="hero-field__input hero-field__select hero-field__select--num"
-                      value={search.adults}
-                      onChange={(e) => patch({ adults: Number(e.target.value) })}
-                      aria-label={adultLabel}
-                    >
-                      {rangeArr(TRIP_PAX_LIMITS.adultMin, TRIP_PAX_LIMITS.adultMax).map((n) => {
-                        const disabled = n + search.children > TRIP_PAX_LIMITS.totalMax;
-                        return (
-                          <option key={n} value={n} disabled={disabled}>{n}</option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                  <div className="hero-field__pax-row">
-                    <span className="hero-field__pax-label">{childLabel}</span>
-                    <select
-                      className="hero-field__input hero-field__select hero-field__select--num"
-                      value={search.children}
-                      onChange={(e) => patch({ children: Number(e.target.value) })}
-                      aria-label={childLabel}
-                    >
-                      {rangeArr(TRIP_PAX_LIMITS.childMin, TRIP_PAX_LIMITS.childMax).map((n) => {
-                        const disabled = search.adults + n > TRIP_PAX_LIMITS.totalMax;
-                        return (
-                          <option key={n} value={n} disabled={disabled}>{n}</option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                <div className="hero-field__pax-trigger-wrap" ref={paxAnchorRef}>
+                  <button
+                    type="button"
+                    className="hero-field__pax-trigger"
+                    aria-expanded={paxOpen}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCalendarOpen(false);
+                      setPaxOpen((open) => !open);
+                    }}
+                  >
+                    {paxSummary}
+                  </button>
+                  <HeroPaxPicker
+                    open={paxOpen}
+                    anchorRef={paxAnchorRef}
+                    adults={search.adults}
+                    children={search.children}
+                    onChange={handlePaxChange}
+                    onClose={() => setPaxOpen(false)}
+                    lang={lang}
+                  />
                 </div>
               </Field>
             </div>
 
-            <button type="button" onClick={() => onSearch && onSearch(search)} style={{
+            <button type="button" onClick={submitSearch} style={{
               marginTop: 16, width: '100%', height: 52, borderRadius: 16, border: 0, cursor: 'pointer',
               background: 'var(--gradient-aurora)', color: 'var(--brand-on-gradient)',
               font: '700 15px/1 var(--font-text)',
@@ -270,7 +270,7 @@
 
   function Field({ label, icon, focused, controlClass = '', children }) {
     const { Icon } = window.AuralisUI;
-    const isPax = controlClass.includes('pax');
+    const isPaxTrigger = controlClass.includes('pax-trigger');
     const isDates = controlClass.includes('dates');
     return (
       <div className="hero-field" style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
@@ -278,18 +278,18 @@
         <span
           className={`hero-field__control${controlClass ? ` ${controlClass}` : ''}`}
           style={{
-            height: isPax ? 'auto' : 48,
+            height: isPaxTrigger ? 48 : (isDates ? 48 : 48),
             minHeight: 48,
             padding: icon ? '0 12px' : '0 12px',
             display: 'flex',
             alignItems: 'center',
-            gap: isPax ? 8 : 10,
+            gap: 10,
             background: 'var(--surface-field)',
             borderRadius: 14,
             boxShadow: focused
               ? '0 0 0 2px var(--aurora-cyan), 0 0 0 5px rgba(0,213,255,0.22)'
               : 'inset 0 0 0 1px var(--border-field)',
-            ...(isDates ? { position: 'relative', overflow: 'visible' } : {}),
+            ...(isDates || isPaxTrigger ? { position: 'relative', overflow: 'visible' } : {}),
           }}
         >
           {icon ? <Icon name={icon} size={16} color="var(--fg-3)" className="hero-field__icon" /> : null}
