@@ -8,7 +8,10 @@ const { fetchActivityFromDb, fetchVendorForBokunActivity } = require('../../lib/
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { isDbDetailCacheUsable } = require('../../lib/catalogQuality');
 const { isDisplayableCatalogPrice, hydrateCatalogPriceDisplay } = require('../../lib/catalogPriceVerification');
-const { isDisplayableTranslation } = require('../../lib/translationVerification');
+const {
+  isDisplayableTranslation,
+  getTranslationPublicMeta,
+} = require('../../lib/translationVerification');
 const {
   isAdminAuthorized,
   isTranslationPreviewQuery,
@@ -90,6 +93,19 @@ async function graftCatalogVendor(activity, bokunId) {
     console.warn('[activity] vendor graft failed:', err.message);
   }
   return activity;
+}
+
+/** Keep admin translation trust from Supabase when detail falls back to live Bókun. */
+function mergeDbTrustOverlay(activity, dbOverlay) {
+  if (!activity || !dbOverlay) return activity;
+  if (!dbOverlay.translationDisplay || typeof dbOverlay.translationDisplay !== 'object') {
+    return activity;
+  }
+  return {
+    ...activity,
+    translationDisplay: dbOverlay.translationDisplay,
+    translationUnverified: dbOverlay.translationUnverified === true,
+  };
 }
 
 async function fetchFromBokun(id, uiLang) {
@@ -193,19 +209,24 @@ module.exports = async function handler(req, res) {
   let activity = null;
   let usedSource = 'bokun';
   let lastSyncedAt = null;
+  let dbTrustOverlay = null;
 
   if (source === 'db') {
     try {
       const cached = await fetchActivityFromDb(id);
-      if (
-        cached
-        && cached.activity
-        && isFresh(cached.lastSyncedAt)
-        && isDbDetailCacheUsable(cached.activity)
-      ) {
-        activity = cached.activity;
-        usedSource = 'db';
-        lastSyncedAt = cached.lastSyncedAt;
+      if (cached && cached.activity) {
+        dbTrustOverlay = {
+          translationDisplay: cached.activity.translationDisplay,
+          translationUnverified: cached.activity.translationUnverified,
+        };
+        if (
+          isFresh(cached.lastSyncedAt)
+          && isDbDetailCacheUsable(cached.activity)
+        ) {
+          activity = cached.activity;
+          usedSource = 'db';
+          lastSyncedAt = cached.lastSyncedAt;
+        }
       }
     } catch (dbErr) {
       console.warn('[Auralis] activity DB read failed, falling back to Bókun:', dbErr.message);
@@ -221,6 +242,7 @@ module.exports = async function handler(req, res) {
       quoteCurrency = fresh.quoteCurrency;
       rawUpstream = fresh.raw;
       usedSource = 'bokun';
+      activity = mergeDbTrustOverlay(activity, dbTrustOverlay);
     }
 
     if (activity) {
@@ -352,6 +374,7 @@ module.exports = async function handler(req, res) {
         quoteCurrency,
         translationPreview,
         translationTrusted: uiLang === 'en' || isDisplayableTranslation(activity, uiLang, overlay),
+        ...getTranslationPublicMeta(),
         ...(usedSource === 'db' ? { lastSyncedAt } : {}),
       },
     });
