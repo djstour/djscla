@@ -39,6 +39,88 @@ html {
   gap: clamp(16px, 2.5vw, 20px);
 }
 
+/* Home featured / collection — horizontal rail with peek on wide screens */
+:root {
+  --rail-inset: max(var(--page-pad-x), calc((100vw - var(--container-max)) / 2 + var(--page-pad-x)));
+}
+
+.grid-cards-rail-wrap {
+  width: 100%;
+}
+
+.grid-cards-rail {
+  display: flex;
+  gap: clamp(16px, 2vw, 20px);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline-start: var(--rail-inset);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-inline: var(--rail-inset);
+  padding-bottom: 4px;
+}
+
+.grid-cards-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.grid-cards-rail__item {
+  flex: 0 0 clamp(260px, 72vw, 320px);
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+/* Tours catalog — column count grows with viewport (sidebar ~260–280px) */
+.grid-cards-fluid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 252px), 1fr));
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.auralis-container--tours {
+  max-width: min(100%, 1320px);
+}
+
+@media (min-width: 1280px) {
+  .auralis-container--tours {
+    max-width: min(100%, 1560px);
+  }
+
+  .tours-layout .supplier-filter {
+    width: min(240px, 100%);
+    padding: 18px 20px;
+  }
+}
+
+/* ~27" logical 1440px: main ~1120px → 5 cols at ~208px min */
+@media (min-width: 1360px) {
+  .tours-main .grid-cards-fluid {
+    grid-template-columns: repeat(auto-fill, minmax(208px, 1fr));
+    gap: 20px;
+  }
+
+  .tours-layout .supplier-filter {
+    width: min(232px, 100%);
+  }
+}
+
+@media (min-width: 1600px) {
+  .auralis-container--tours {
+    max-width: min(100%, 1680px);
+  }
+
+  .tours-layout .supplier-filter {
+    width: min(260px, 100%);
+    padding: 22px;
+  }
+
+  .tours-main .grid-cards-fluid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: clamp(16px, 2vw, 24px);
+  }
+}
+
 @media (max-width: 900px) {
   .grid-cards-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -49,6 +131,10 @@ html {
   .grid-cards-3,
   .grid-cards-2 {
     grid-template-columns: 1fr;
+  }
+
+  .grid-cards-rail__item {
+    flex-basis: clamp(240px, 78vw, 300px);
   }
 }
 

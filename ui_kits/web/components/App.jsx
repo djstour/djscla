@@ -601,6 +601,24 @@
     );
   }
 
+  function TourCardRail({ children }) {
+    return (
+      <div className="grid-cards-rail-wrap">
+        <div className="grid-cards-rail" role="list">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  function TourCardRailItem({ children }) {
+    return (
+      <div className="grid-cards-rail__item" role="listitem">
+        {children}
+      </div>
+    );
+  }
+
   function CollectionSection({
     collection, loading, catalogTotal, onView, onAdd, onRemove, onOpenDetail, tripIdSet, lang, displayCurrency, fxRates,
   }) {
@@ -636,16 +654,21 @@
               {cta} <Icon name="arrow-right" size={14} />
             </button>
           </div>
-          <div className="grid-cards-3">
-            {loading
-              ? Array.from({ length: 3 }, (_, i) => <TourCardSkeleton key={i} />)
-              : activities.slice(0, collection.maxItems || 6).map((t, i) => (
-                <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
-                          inTrip={tripIdSet.has(t.id)} lang={lang}
-                          displayCurrency={displayCurrency} fxRates={fxRates} />
-              ))}
-          </div>
         </div>
+        <TourCardRail>
+          {loading
+            ? Array.from({ length: 4 }, (_, i) => (
+              <TourCardRailItem key={i}><TourCardSkeleton /></TourCardRailItem>
+            ))
+            : activities.slice(0, collection.maxItems || 6).map((t, i) => (
+              <TourCardRailItem key={t.id}>
+                <TourCard tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
+                          inTrip={tripIdSet.has(t.id)} lang={lang}
+                          imagePriority={i < window.AuralisUI.aboveFoldImagePriorityCount('featured')}
+                          displayCurrency={displayCurrency} fxRates={fxRates} />
+              </TourCardRailItem>
+            ))}
+        </TourCardRail>
       </section>
     );
   }
@@ -682,18 +705,22 @@
             en: `View all ${countLabel}`,
           })} <Icon name="arrow-right" size={14} /></button>
         </div>
+        </div>
 
-        <div className="grid-cards-3">
+        <TourCardRail>
           {loading
-            ? Array.from({ length: 6 }, (_, i) => <TourCardSkeleton key={i} />)
+            ? Array.from({ length: 4 }, (_, i) => (
+              <TourCardRailItem key={i}><TourCardSkeleton /></TourCardRailItem>
+            ))
             : activities.slice(0, 6).map((t, i) => (
-                <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
+              <TourCardRailItem key={t.id}>
+                <TourCard tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
                           inTrip={tripIdSet.has(t.id)} lang={lang}
                           imagePriority={i < window.AuralisUI.aboveFoldImagePriorityCount('featured')}
                           displayCurrency={displayCurrency} fxRates={fxRates} />
-              ))}
-        </div>
-        </div>
+              </TourCardRailItem>
+            ))}
+        </TourCardRail>
       </section>
     );
   }
@@ -873,7 +900,7 @@
 
     return (
       <section className="tours-page">
-        <div className="auralis-container">
+        <div className="auralis-container auralis-container--tours">
           <p className="tours-page-kicker">
             {T({ hant: '探索 / 雷克雅維克', hans: '探索 / 雷克雅未克', en: 'Discover / Reykjavík' })}
           </p>
@@ -1031,24 +1058,16 @@
 
     if (loading) {
       return (
-        <div className="grid-cards-2">
-          {Array.from({ length: 4 }, (_, i) => <TourCardSkeleton key={i} />)}
+        <div className="grid-cards-fluid">
+          {Array.from({ length: 8 }, (_, i) => <TourCardSkeleton key={i} />)}
         </div>
       );
     }
     if (error) {
-      return (
-        <div className="grid-cards-2">
-          <CatalogErrorState error={error} lang={lang} />
-        </div>
-      );
+      return <CatalogErrorState error={error} lang={lang} />;
     }
     if (totalCount === 0) {
-      return (
-        <div className="grid-cards-2">
-          <EmptyState lang={lang} />
-        </div>
-      );
+      return <EmptyState lang={lang} />;
     }
 
     const slice = filtered.slice(0, visibleCount);
@@ -1058,7 +1077,7 @@
 
     return (
       <React.Fragment>
-        <div className="grid-cards-2">
+        <div className="grid-cards-fluid">
           {slice.map((t, i) => (
             <TourCard key={t.id} tour={t} onAdd={onAdd} onRemove={onRemove} onView={onOpenDetail}
                       inTrip={tripIdSet.has(t.id)} lang={lang}
