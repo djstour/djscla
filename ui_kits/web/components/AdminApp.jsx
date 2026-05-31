@@ -471,6 +471,18 @@
     );
   }
 
+  function TranslationRowRunning({ activityId, elapsedSec, stepIndex, t }) {
+    return (
+      <AdminJobRunning
+        title={t('retranslateActivityProgress', { id: activityId })}
+        step={TRANSLATION_ROW_STEPS[stepIndex % TRANSLATION_ROW_STEPS.length]}
+        elapsedSec={elapsedSec}
+        progressPct={Math.min(90, Math.round((elapsedSec / 75) * 100))}
+        hint={t('retranslateActivityProgressHint', { s: elapsedSec })}
+      />
+    );
+  }
+
   function TranslationBatchRunning({
     elapsedSec,
     stepIndex,
@@ -1326,6 +1338,206 @@
             <button type="button" className="admin-btn admin-btn--ghost" onClick={onClose} disabled={saving}>Cancel</button>
             <button type="button" className="admin-btn" onClick={save} disabled={saving || loading || !form}>
               {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function TranslationEditorModal({
+    token,
+    bokunActivityId,
+    t,
+    trustBusy,
+    onClose,
+    onSaved,
+    onApprove,
+  }) {
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [saveNote, setSaveNote] = useState('');
+    const [data, setData] = useState(null);
+    const [draft, setDraft] = useState([]);
+
+    const applyEditorData = useCallback((res) => {
+      setData(res);
+      setDraft((res.fields || []).map((f) => ({
+        fieldPath: f.fieldPath,
+        sourcePreview: f.sourcePreview,
+        hant: f.hant?.text || '',
+        hans: f.hans?.text || '',
+        hantBroken: !!f.hant?.broken,
+        hansBroken: !!f.hans?.broken,
+      })));
+    }, []);
+
+    useEffect(() => {
+      if (!bokunActivityId) return undefined;
+      let alive = true;
+      setLoading(true);
+      setError('');
+      setSaveNote('');
+      adminFetch(
+        `/api/admin/translations/edit?bokunActivityId=${encodeURIComponent(bokunActivityId)}`,
+        token,
+      )
+        .then((res) => { if (alive) applyEditorData(res); })
+        .catch((err) => { if (alive) setError(err.message || t('loadQueueFailed')); })
+        .finally(() => { if (alive) setLoading(false); });
+      return () => { alive = false; };
+    }, [token, bokunActivityId, t, applyEditorData]);
+
+    const setFieldLang = (fieldPath, lang, value) => {
+      setDraft((rows) => rows.map((row) => (
+        row.fieldPath === fieldPath ? { ...row, [lang]: value } : row
+      )));
+    };
+
+    const buildUpdates = () => {
+      const updates = [];
+      draft.forEach((row) => {
+        const orig = (data?.fields || []).find((f) => f.fieldPath === row.fieldPath);
+        ['hant', 'hans'].forEach((lang) => {
+          const next = String(row[lang] || '').trim();
+          const prev = orig?.[lang]?.text || '';
+          if (next && next !== prev) {
+            updates.push({ fieldPath: row.fieldPath, lang, text: next });
+          }
+        });
+      });
+      return updates;
+    };
+
+    const save = async () => {
+      const updates = buildUpdates();
+      if (!updates.length) {
+        setError(t('translationEditorNoChanges'));
+        return;
+      }
+      setSaving(true);
+      setError('');
+      setSaveNote('');
+      try {
+        const res = await adminFetch('/api/admin/translations/edit', token, {
+          method: 'PATCH',
+          body: { bokunActivityId, updates },
+        });
+        applyEditorData(res);
+        const hantReady = res.approval?.hant?.readyToApprove
+          ? t('translationEditorReadyLabel')
+          : t('translationEditorBlockedLabel');
+        const hansReady = res.approval?.hans?.readyToApprove
+          ? t('translationEditorReadyLabel')
+          : t('translationEditorBlockedLabel');
+        setSaveNote(t('translationEditorSaved', { hantReady, hansReady }));
+        onSaved();
+      } catch (err) {
+        setError(err.message || t('actionFailed'));
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    if (!bokunActivityId) return null;
+
+    return (
+      <div className="admin-modal-backdrop" onClick={onClose} role="presentation">
+        <div
+          className="admin-modal admin-modal--wide"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="admin-modal__header">
+            <h2>{t('translationEditorTitle')} · {bokunActivityId}</h2>
+            <button type="button" className="admin-btn admin-btn--ghost admin-btn--sm" onClick={onClose}>
+              {t('close')}
+            </button>
+          </div>
+          {loading ? <div className="admin-empty">{t('loading')}</div> : null}
+          {error ? <div className="admin-login__error">{error}</div> : null}
+          {saveNote ? (
+            <div className="admin-result" style={{ margin: '0 16px 8px' }}>{saveNote}</div>
+          ) : null}
+          {data && !loading ? (
+            <div className="admin-modal__body">
+              <p className="admin-page-sub" style={{ marginTop: 0 }}>{t('translationEditorSub')}</p>
+              <p className="admin-page-sub" style={{ marginTop: 0 }}>
+                <strong>{data.title}</strong>
+              </p>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                <LocaleApprovalBadge ap={data.approval?.hant} t={t} localeTag={t('localeTagHant')} />
+                <LocaleApprovalBadge ap={data.approval?.hans} t={t} localeTag={t('localeTagHans')} />
+              </div>
+              {draft.map((row) => (
+                <fieldset key={row.fieldPath} className="admin-fieldset">
+                  <legend>
+                    {row.fieldPath}
+                    {row.hantBroken || row.hansBroken ? (
+                      <span className="admin-locale-badge admin-locale-badge--blocked" style={{ marginLeft: 8 }}>
+                        {t('translationEditorFieldBroken')}
+                      </span>
+                    ) : null}
+                  </legend>
+                  <p className="admin-page-sub" style={{ marginTop: 0, fontSize: 12 }}>
+                    {t('translationEditorSource')}: {row.sourcePreview || '—'}
+                  </p>
+                  <div className="admin-form-grid">
+                    <label className="admin-field admin-field--wide">
+                      <span>{t('thApprovalHant')}</span>
+                      <textarea
+                        rows={row.fieldPath.endsWith('Html') || row.fieldPath === 'description' ? 5 : 2}
+                        value={row.hant}
+                        onChange={(e) => setFieldLang(row.fieldPath, 'hant', e.target.value)}
+                      />
+                    </label>
+                    <label className="admin-field admin-field--wide">
+                      <span>{t('thApprovalHans')}</span>
+                      <textarea
+                        rows={row.fieldPath.endsWith('Html') || row.fieldPath === 'description' ? 5 : 2}
+                        value={row.hans}
+                        onChange={(e) => setFieldLang(row.fieldPath, 'hans', e.target.value)}
+                      />
+                    </label>
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          ) : null}
+          <div className="admin-modal__footer">
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={onClose} disabled={saving}>
+              {t('cancel')}
+            </button>
+            {data?.approval?.hant?.readyToApprove ? (
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost"
+                disabled={saving || trustBusy === `${bokunActivityId}:hant`}
+                onClick={async () => {
+                  const res = await onApprove(bokunActivityId, 'hant');
+                  if (res) applyEditorData(res);
+                }}
+              >
+                {trustBusy === `${bokunActivityId}:hant` ? '…' : t('approveTranslationHantBtn')}
+              </button>
+            ) : null}
+            {data?.approval?.hans?.readyToApprove ? (
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost"
+                disabled={saving || trustBusy === `${bokunActivityId}:hans`}
+                onClick={async () => {
+                  const res = await onApprove(bokunActivityId, 'hans');
+                  if (res) applyEditorData(res);
+                }}
+              >
+                {trustBusy === `${bokunActivityId}:hans` ? '…' : t('approveTranslationHansBtn')}
+              </button>
+            ) : null}
+            <button type="button" className="admin-btn" onClick={save} disabled={saving || loading || !data}>
+              {saving ? t('saving') : t('translationEditorSave')}
             </button>
           </div>
         </div>
@@ -2386,6 +2598,7 @@
     const [selectedBlocked, setSelectedBlocked] = useState(() => new Set());
     const [blockedBatchBusy, setBlockedBatchBusy] = useState(null);
     const [blockedBatchNote, setBlockedBatchNote] = useState('');
+    const [translationEditorId, setTranslationEditorId] = useState(null);
     const batchStartedRef = useRef(0);
     const rowStartedRef = useRef(0);
 
@@ -2564,6 +2777,19 @@
       }
     }
 
+    const approveFromEditor = async (id, lang) => {
+      await approveListing(id, lang);
+      if (String(translationEditorId) !== String(id)) return null;
+      try {
+        return await adminFetch(
+          `/api/admin/translations/edit?bokunActivityId=${encodeURIComponent(id)}`,
+          token,
+        );
+      } catch {
+        return null;
+      }
+    };
+
     async function approveListingBatch(lang, { ids } = {}) {
       const rows = filteredApprovalRows;
       const sourceIds = ids && ids.length ? ids : [...selectedApproval];
@@ -2649,6 +2875,9 @@
     }).length;
     const blockedRows = queue?.blockedQueue || [];
     const selectedBlockedCount = selectedBlocked.size;
+    const rowBusyFromBlocked = !!(rowBusy && blockedRows.some(
+      (r) => String(r.bokunActivityId) === String(rowBusy),
+    ));
     const anyTranslateBusy = running || !!rowBusy || !!blockedBatchBusy;
 
     const cov = queue && queue.coverage;
@@ -2656,6 +2885,17 @@
 
     return (
       <div>
+        {translationEditorId ? (
+          <TranslationEditorModal
+            token={token}
+            bokunActivityId={translationEditorId}
+            t={t}
+            trustBusy={trustBusy}
+            onClose={() => setTranslationEditorId(null)}
+            onSaved={loadQueue}
+            onApprove={approveFromEditor}
+          />
+        ) : null}
         <h1 className="admin-page-title">{t('translationsTitle')}</h1>
         <p className="admin-page-sub">
           {t('translationsSub', { n: formatNumber(queue?.activeActivities) })}
@@ -2738,13 +2978,12 @@
               t={t}
             />
           ) : null}
-          {rowBusy && !running ? (
-            <AdminJobRunning
-              title={`Translating activity #${rowBusy}`}
-              step={TRANSLATION_ROW_STEPS[rowStep % TRANSLATION_ROW_STEPS.length]}
+          {rowBusy && !running && !rowBusyFromBlocked ? (
+            <TranslationRowRunning
+              activityId={rowBusy}
               elapsedSec={rowElapsed}
-              progressPct={Math.min(90, Math.round((rowElapsed / 75) * 100))}
-              hint={`Elapsed ${rowElapsed}s · one activity usually 30–90s · keep this tab open`}
+              stepIndex={rowStep}
+              t={t}
             />
           ) : null}
           {runResult && runResult.summary && !running ? (
@@ -2909,6 +3148,14 @@
                         <button
                           type="button"
                           className="admin-btn admin-btn--ghost admin-btn--sm"
+                          disabled={anyTranslateBusy || !!trustBusy}
+                          onClick={() => setTranslationEditorId(id)}
+                        >
+                          {t('editTranslationBtn')}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--ghost admin-btn--sm"
                           title={t('previewTranslationHantHint')}
                           onClick={() => openTranslationPreview(id, 'hant')}
                         >
@@ -2978,6 +3225,16 @@
                 hint={t('batchRetranslateBlockedHint')}
               />
             ) : null}
+            {rowBusyFromBlocked && !blockedBatchBusy ? (
+              <div style={{ marginBottom: 12 }}>
+                <TranslationRowRunning
+                  activityId={rowBusy}
+                  elapsedSec={rowElapsed}
+                  stepIndex={rowStep}
+                  t={t}
+                />
+              </div>
+            ) : null}
             <div className="admin-sync-actions" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
               <button
                 type="button"
@@ -2997,23 +3254,33 @@
               </button>
               <button
                 type="button"
-                className="admin-btn admin-btn--sm"
+                className={`admin-btn admin-btn--sm${blockedBatchBusy ? ' admin-btn--loading' : ''}`}
                 disabled={!selectedBlockedCount || anyTranslateBusy || !!trustBusy}
                 onClick={() => syncBlockedBatch([...selectedBlocked])}
               >
-                {blockedBatchBusy
-                  ? '…'
-                  : `${t('batchRetranslateBlockedBtn')} (${formatNumber(selectedBlockedCount)})`}
+                {blockedBatchBusy ? (
+                  <>
+                    <span className="admin-sync-spinner" aria-hidden="true" />
+                    {t('batchRetranslateBusyBtn')}
+                  </>
+                ) : (
+                  `${t('batchRetranslateBlockedBtn')} (${formatNumber(selectedBlockedCount)})`
+                )}
               </button>
               <button
                 type="button"
-                className="admin-btn admin-btn--sm"
+                className={`admin-btn admin-btn--sm${blockedBatchBusy ? ' admin-btn--loading' : ''}`}
                 disabled={!blockedRows.length || anyTranslateBusy || !!trustBusy}
                 onClick={() => syncBlockedBatch(blockedRows.map((r) => r.bokunActivityId))}
               >
-                {blockedBatchBusy
-                  ? '…'
-                  : `${t('batchRetranslateAllBlockedBtn')} (${formatNumber(blockedRows.length)})`}
+                {blockedBatchBusy ? (
+                  <>
+                    <span className="admin-sync-spinner" aria-hidden="true" />
+                    {t('batchRetranslateBusyBtn')}
+                  </>
+                ) : (
+                  `${t('batchRetranslateAllBlockedBtn')} (${formatNumber(blockedRows.length)})`
+                )}
               </button>
             </div>
             <div className="admin-table-wrap" style={{ marginBottom: 28 }}>
@@ -3051,10 +3318,25 @@
                           <button
                             type="button"
                             className="admin-btn admin-btn--ghost admin-btn--sm"
+                            disabled={anyTranslateBusy || !!trustBusy}
+                            onClick={() => setTranslationEditorId(id)}
+                          >
+                            {t('editTranslationBtn')}
+                          </button>
+                          <button
+                            type="button"
+                            className={`admin-btn admin-btn--ghost admin-btn--sm${rowBusy === id ? ' admin-btn--loading' : ''}`}
                             disabled={rowBusy === id || anyTranslateBusy}
                             onClick={() => syncOne(id, { force: true })}
                           >
-                            {rowBusy === id ? `… ${rowElapsed}s` : t('translateOne')}
+                            {rowBusy === id ? (
+                              <>
+                                <span className="admin-sync-spinner" aria-hidden="true" />
+                                {`${rowElapsed}s`}
+                              </>
+                            ) : (
+                              t('translateOne')
+                            )}
                           </button>
                           <a
                             href={`/tours/${id}`}
