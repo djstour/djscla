@@ -10,7 +10,10 @@ const {
 } = require('../../lib/catalogDb');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
-const { isDisplayableTranslation } = require('../../lib/translationVerification');
+const {
+  isDisplayableTranslation,
+  getTranslationPublicMeta,
+} = require('../../lib/translationVerification');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -120,6 +123,7 @@ module.exports = async function handler(req, res) {
     const meta = {
       ...result.meta,
       source: usedSource,
+      ...getTranslationPublicMeta(),
       ...(uiLang === 'hant' || uiLang === 'hans'
         ? {
           displayableCount: list.length,

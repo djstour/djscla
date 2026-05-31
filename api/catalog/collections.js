@@ -5,7 +5,10 @@
 const { fetchHomepageCollectionsForSite } = require('../../lib/homepageCollections');
 const { loadTranslationsForActivities } = require('../../lib/attachTranslations');
 const { slimActivityForList } = require('../../lib/slimActivity');
-const { isDisplayableTranslation } = require('../../lib/translationVerification');
+const {
+  isDisplayableTranslation,
+  getTranslationPublicMeta,
+} = require('../../lib/translationVerification');
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -63,7 +66,11 @@ module.exports = async function handler(req, res) {
       source: 'db',
       collections: visibleCollections,
       translations,
-      meta: { ...result.meta, count: visibleCollections.length },
+      meta: {
+        ...result.meta,
+        count: visibleCollections.length,
+        ...getTranslationPublicMeta(),
+      },
     });
   } catch (err) {
     const status = err.code === 'SUPABASE_CONFIG' ? 503 : 500;

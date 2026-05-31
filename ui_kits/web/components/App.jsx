@@ -405,6 +405,11 @@
              siteThemeId={siteTheme.id} onSiteThemeChange={handleSiteThemeChange}
              onOpenSearch={() => setSearchOpen(true)} />
 
+        <TranslationOpenBanner
+          lang={lang}
+          publicMode={meta?.translationPublicMode || window.AuralisData?.getTranslationPublicMode?.()}
+        />
+
         <SearchOverlay
           open={searchOpen}
           onClose={() => setSearchOpen(false)}
@@ -1077,6 +1082,33 @@
         <TripPanel trip={trip} onRemove={onRemove} onCheckout={onCheckout} lang={lang}
                    displayCurrency={displayCurrency} fxRates={fxRates} />
       </MapPanel>
+    );
+  }
+
+  function TranslationOpenBanner({ lang, publicMode }) {
+    if (publicMode !== 'open' || (lang !== 'hant' && lang !== 'hans')) return null;
+    const T = (opts) => pick(lang, opts);
+    return (
+      <div
+        className="translation-open-banner"
+        role="status"
+        style={{
+          margin: '0 auto',
+          maxWidth: 960,
+          padding: '10px 16px',
+          background: 'rgba(255, 193, 7, 0.12)',
+          borderBottom: '1px solid rgba(255, 193, 7, 0.35)',
+          color: 'var(--fg-1)',
+          font: '500 13px/1.55 var(--font-text)',
+          textAlign: 'center',
+        }}
+      >
+        {T({
+          hant: '本頁部分內容由 AI 自動翻譯，僅供參考；若與英文原文或客服說明有出入，請以英文版本為準。',
+          hans: '本页部分内容由 AI 自动翻译，仅供参考；若与英文原文或客服说明有出入，请以英文版本为准。',
+          en: '',
+        })}
+      </div>
     );
   }
 

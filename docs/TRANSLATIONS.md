@@ -54,6 +54,18 @@ Apply migration in Supabase SQL editor or `supabase db push` if using CLI.
 | `CRON_SECRET` | Auto cron | Vercel Cron `Authorization` bearer (can match `TRANSLATION_SYNC_SECRET`) |
 | `TRANSLATION_CRON_MAX_ACTIVITIES` | No | Activities per cron run (default `12`, max `30`) |
 | `TRANSLATION_CRON_MAX_TRANSLATIONS_PER_ACTIVITY` | No | Fields×langs per activity per run (default `10`, max `24`); remainder on next cron |
+| `TRANSLATION_PUBLIC_MODE` | No | `admin` (default): zh catalog/detail require admin-approved translations. `open`: show zh when Supabase has a translated **title** (no admin gate); frontend shows AI disclaimer banner. Reversible — set back to `admin` to restore QA gate. |
+
+## Public display modes
+
+| Mode | Env | zh listing rule | Detail API |
+|------|-----|-----------------|------------|
+| **admin** (default) | unset or `TRANSLATION_PUBLIC_MODE=admin` | Admin-approved + automated checks | 404 when not trusted |
+| **open** (fast launch) | `TRANSLATION_PUBLIC_MODE=open` | Has Supabase **title** overlay for locale | Same gate; no admin approval required |
+
+**Open mode is not “all 199 regardless of translation”.** The zh UI never falls back to English product copy (`pickFromOverlay`), so items without a translated title stay hidden. Cron continues filling gaps; Admin edit/re-approve still available but does not block the storefront.
+
+When `open`, catalog API `meta` includes `translationPublicMode: "open"` and `translationGate: "overlay_title_required"`. The site shows a fixed disclaimer banner on 繁中/简中 pages.
 
 ## Automatic translation (Vercel Cron)
 

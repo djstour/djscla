@@ -112,6 +112,16 @@
     return mp;
   }
 
+  function applyTranslationPublicMeta(meta) {
+    if (meta && meta.translationPublicMode) {
+      A._translationPublicMode = meta.translationPublicMode;
+    }
+  }
+
+  A.getTranslationPublicMode = function getTranslationPublicMode() {
+    return A._translationPublicMode || 'admin';
+  };
+
   /** Merge static bokunTranslations.js with Supabase overlays from API. */
   function mergeActivityOverlay(staticOverlay, runtimeOverlay) {
     if (!staticOverlay || !Object.keys(staticOverlay).length) {
@@ -196,6 +206,7 @@
           if (data.translations && typeof data.translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
           }
+          applyTranslationPublicMeta(data.meta);
           return {
             activities: list,
             meta: data.meta || { total: list.length, page, pageSize },
@@ -233,6 +244,7 @@
           if (data.translations && typeof data.translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
           }
+          applyTranslationPublicMeta(data.meta);
           return {
             activities: list,
             meta: data.meta || { total: list.length },
@@ -270,6 +282,7 @@
           if (data.translations && typeof data.translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
           }
+          applyTranslationPublicMeta(data.meta);
           return {
             collections: list,
             meta: data.meta || { count: list.length },
@@ -361,6 +374,7 @@
           if (data.translations && typeof data.translations === 'object') {
             A._runtimeTranslations = { ...(A._runtimeTranslations || {}), ...data.translations };
           }
+          applyTranslationPublicMeta(data.meta);
           if (!translationPreview) {
             setCachedActivityDetail(numId, lang, data.activity);
           }
