@@ -18,6 +18,15 @@ const {
 
 const ACTIVITY_TABLE = 'activities';
 
+function activityForTrustAudit(rawPayload) {
+  const raw = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+  return {
+    ...normalizeActivity(raw),
+    translationDisplay: raw.translationDisplay || {},
+    translationUnverified: raw.translationUnverified === true,
+  };
+}
+
 module.exports = async function handler(req, res) {
   applyAdminCors(res);
 
@@ -76,33 +85,44 @@ module.exports = async function handler(req, res) {
       continue;
     }
     try {
-      const base = normalizeActivity(row.bokun_payload || {});
+      const rawPayload = row.bokun_payload || {};
+      const activity = activityForTrustAudit(rawPayload);
       const overlay = mergeActivityOverlay({}, overlays[id] || {});
-      let payload;
+
+      let translationDisplay;
       if (trusted) {
-        payload = applyAdminTranslationTrust(base, lang, overlay, { note, reviewedBy: 'admin' });
+        const withTrust = applyAdminTranslationTrust(activity, lang, overlay, {
+          note,
+          reviewedBy: 'admin',
+        });
+        translationDisplay = buildTranslationDisplaySnapshot(withTrust, overlay);
       } else {
-        const audit = evaluateTranslationTrust({ activity: base, overlay, lang });
-        payload = {
-          ...base,
+        const audit = evaluateTranslationTrust({ activity, overlay, lang });
+        translationDisplay = buildTranslationDisplaySnapshot({
+          ...activity,
           translationDisplay: {
-            ...(base.translationDisplay || {}),
+            ...(activity.translationDisplay || {}),
             [lang]: { ...audit, trusted: false, source: 'admin_revoked' },
           },
-          translationUnverified: true,
-        };
+        }, overlay);
       }
 
-      const snapshot = buildTranslationDisplaySnapshot(payload, overlay);
-      payload.translationDisplay = snapshot;
-      payload.translationUnverified = !snapshot.hant?.trusted && !snapshot.hans?.trusted;
+      const translationUnverified = !(
+        translationDisplay.hant?.trusted || translationDisplay.hans?.trusted
+      );
 
       await supabaseRestFetch(
         `/rest/v1/${ACTIVITY_TABLE}?bokun_activity_id=eq.${id}`,
         {
           method: 'PATCH',
           headers: { Prefer: 'return=minimal' },
-          body: { bokun_payload: payload },
+          body: {
+            bokun_payload: {
+              ...rawPayload,
+              translationDisplay,
+              translationUnverified,
+            },
+          },
         },
       );
 
@@ -110,8 +130,11 @@ module.exports = async function handler(req, res) {
         id,
         ok: true,
         lang,
-        trusted: !!payload.translationDisplay?.[lang]?.trusted,
-        reason: payload.translationDisplay?.[lang]?.reason || null,
+        trusted: !!translationDisplay?.[lang]?.trusted,
+        otherLangTrusted: lang === 'hant'
+          ? !!translationDisplay?.hans?.trusted
+          : !!translationDisplay?.hant?.trusted,
+        reason: translationDisplay?.[lang]?.reason || null,
       });
     } catch (err) {
       results.push({
