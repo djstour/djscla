@@ -2991,6 +2991,20 @@
         {priceRows.length > 0 ? (
           <div className="admin-health-issues__block">
             <p className="admin-health-issues__hint">{t('healthImplausiblePriceHint', { min: minUsd })}</p>
+            <p style={{ marginBottom: 8 }}>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost admin-btn--sm"
+                disabled={verifyBusy}
+                onClick={() => postPriceAction(
+                  '/api/admin/prices/trust',
+                  priceRows.map((r) => r.id),
+                  { trusted: true, note: 'Admin verified catalog price vs Bókun' },
+                )}
+              >
+                {verifyBusy ? '…' : t('healthTrustPricesBtn')}
+              </button>
+            </p>
             {issueTable(priceRows, { showMaxUsd: true })}
           </div>
         ) : null}

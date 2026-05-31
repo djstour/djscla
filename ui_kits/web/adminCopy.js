@@ -330,9 +330,9 @@
     healthColRefUsd: { hant: '核准來源', hans: '核准来源', en: 'Trust source' },
     healthColReason: { hant: '原因', hans: '原因', en: 'Reason' },
     healthImplausiblePriceHint: {
-      hant: '快取展示價低於 USD {min}。請在 Bókun 核對定價後，於 Activities 觸發詳情同步，或執行 resync-activity-detail。',
-      hans: '缓存展示价低于 USD {min}。请在 Bókun 核对定价后，于 Activities 触发详情同步，或执行 resync-activity-detail。',
-      en: 'Cached display price is below USD {min}. Verify pricing in Bókun, then run a detail sync from Activities or resync-activity-detail.',
+      hant: '快取展示價低於 USD {min}（多為 tour 防呆門檻）。景點門票（ATTRACTION）低於 {min} 視為正常；其餘請在 Bókun 核對後按「核准前台牌價」，或於 Activities 觸發詳情同步。',
+      hans: '缓存展示价低于 USD {min}（多为 tour 防呆门槛）。景点门票（ATTRACTION）低于 {min} 视为正常；其余请在 Bókun 核对后按「核准前台牌价」，或在 Activities 触发详情同步。',
+      en: 'Cached display price is below USD {min} (tour sanity floor). ATTRACTION tickets below {min} are expected — verify others in Bókun, then Approve display price or run a detail sync from Activities.',
     },
     healthMissingV2Hint: {
       hant: '尚未完成詳情同步，或快取缺少 v2 詳情欄位。通道同步每次最多處理「詳情批次上限」筆；請多跑幾次並勾選強制詳情，或提高批次上限（建議 80–120）。',
