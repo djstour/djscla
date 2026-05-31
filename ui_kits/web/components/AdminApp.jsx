@@ -2402,17 +2402,21 @@
       return () => window.clearInterval(tick);
     }, [rowBusy]);
 
-    const loadQueue = useCallback(() => {
+    const loadQueue = useCallback(async () => {
       setLoading(true);
       setError('');
-      adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50&approvalLimit=100', token)
-        .then((res) => {
-          setQueue(res);
-          setSelectedApproval(new Set());
-        })
-        .catch((err) => setError(err.message || t('loadQueueFailed')))
-        .finally(() => setLoading(false));
-    }, [token]);
+      try {
+        const res = await adminFetch('/api/admin/translations?maxScan=500&pendingLimit=50&approvalLimit=100', token);
+        setQueue(res);
+        setSelectedApproval(new Set());
+        return res;
+      } catch (err) {
+        setError(err.message || t('loadQueueFailed'));
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    }, [token, t]);
 
     useEffect(() => { loadQueue(); }, [loadQueue, reloadKey]);
 
@@ -2472,14 +2476,18 @@
       }
     }
 
-    async function approveListingBatch(lang) {
+    async function approveListingBatch(lang, { ids } = {}) {
       const rows = filteredApprovalRows;
-      const eligible = [...selectedApproval]
+      const sourceIds = ids && ids.length ? ids : [...selectedApproval];
+      const eligible = sourceIds
         .filter((id) => {
           const row = rows.find((r) => String(r.bokunActivityId) === String(id));
           return row?.approval?.[lang]?.readyToApprove;
         });
       if (!eligible.length) return;
+      const liveBefore = lang === 'hant'
+        ? (queue?.approvalSummary?.liveHant ?? 0)
+        : (queue?.approvalSummary?.liveHans ?? 0);
       setTrustBusy(`batch:${lang}`);
       setError('');
       setBatchTrustNote('');
@@ -2495,22 +2503,38 @@
           });
           (res.results || []).forEach((r) => {
             if (r.ok) ok += 1;
-            else failed.push(`${r.id}: ${r.error || t('translationTrustFailed')}`);
+            else failed.push(`${r.id}: ${r.error || r.audit?.message || t('translationTrustFailed')}`);
           });
         }
         if (failed.length) {
-          setError(failed.slice(0, 3).join(' · '));
+          setError(failed.slice(0, 5).join(' · '));
         }
-        setBatchTrustNote(t('batchApproveResult', {
+        const refreshed = await loadQueue();
+        const liveAfter = lang === 'hant'
+          ? (refreshed?.approvalSummary?.liveHant ?? liveBefore)
+          : (refreshed?.approvalSummary?.liveHans ?? liveBefore);
+        const delta = Math.max(0, liveAfter - liveBefore);
+        const resultKey = lang === 'hans' ? 'batchApproveResultHans' : 'batchApproveResult';
+        setBatchTrustNote(t(resultKey, {
           ok: formatNumber(ok),
           failed: failed.length ? ` · ${failed.length} failed` : '',
+          liveBefore: formatNumber(liveBefore),
+          liveAfter: formatNumber(liveAfter),
+          delta: formatNumber(delta),
         }));
-        loadQueue();
       } catch (err) {
         setError(err.message || t('translationTrustFailed'));
       } finally {
         setTrustBusy(null);
       }
+    }
+
+    function approveAllReady(lang) {
+      const ids = filteredApprovalRows
+        .filter((row) => row.approval?.[lang]?.readyToApprove)
+        .map((row) => String(row.bokunActivityId));
+      if (!ids.length) return;
+      approveListingBatch(lang, { ids });
     }
 
     function toggleApprovalSelect(id, on) {
@@ -2683,7 +2707,8 @@
         ) : null}
 
         <h2 style={{ fontSize: 16, margin: '8px 0 8px' }}>{t('approvalQueueTitle')}</h2>
-        <p className="admin-page-sub" style={{ marginTop: 0, marginBottom: 12 }}>{t('approvalQueueSub')}</p>
+        <p className="admin-page-sub" style={{ marginTop: 0, marginBottom: 8 }}>{t('approvalQueueSub')}</p>
+        <p className="admin-page-sub" style={{ marginTop: 0, marginBottom: 12 }}>{t('approvalVerifyHint')}</p>
         <div className="admin-sync-actions" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
           <label style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <input
@@ -2721,10 +2746,26 @@
           <button
             type="button"
             className="admin-btn admin-btn--sm"
+            disabled={!(approvalSummary?.readyHant) || running || !!rowBusy || !!trustBusy}
+            onClick={() => approveAllReady('hant')}
+          >
+            {trustBusy === 'batch:hant' ? '…' : `${t('batchApproveAllReadyHant')} (${formatNumber(approvalSummary?.readyHant || 0)})`}
+          </button>
+          <button
+            type="button"
+            className="admin-btn admin-btn--sm"
             disabled={!selectedHansCount || running || !!rowBusy || trustBusy === 'batch:hans'}
             onClick={() => approveListingBatch('hans')}
           >
             {trustBusy === 'batch:hans' ? '…' : `${t('batchApproveHansBtn')} (${selectedHansCount})`}
+          </button>
+          <button
+            type="button"
+            className="admin-btn admin-btn--sm"
+            disabled={!(approvalSummary?.readyHans) || running || !!rowBusy || !!trustBusy}
+            onClick={() => approveAllReady('hans')}
+          >
+            {trustBusy === 'batch:hans' ? '…' : `${t('batchApproveAllReadyHans')} (${formatNumber(approvalSummary?.readyHans || 0)})`}
           </button>
         </div>
         <div className="admin-table-wrap" style={{ marginBottom: 28 }}>

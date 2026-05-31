@@ -271,9 +271,21 @@
       en: 'Ready — TC {hant} · SC {hans} · both {both}',
     },
     batchApproveResult: {
-      hant: '已核准 {ok} 笔{failed}',
-      hans: '已核准 {ok} 笔{failed}',
-      en: 'Approved {ok}{failed}',
+      hant: '已核准 {ok} 筆{failed} · 已上線繁中 {liveBefore} → {liveAfter}（+{delta}）',
+      hans: '已核准 {ok} 笔{failed} · 已上线繁中 {liveBefore} → {liveAfter}（+{delta}）',
+      en: 'Approved {ok}{failed} · live TC {liveBefore} → {liveAfter} (+{delta})',
+    },
+    batchApproveResultHans: {
+      hant: '已核准 {ok} 筆{failed} · 已上線简中 {liveBefore} → {liveAfter}（+{delta}）',
+      hans: '已核准 {ok} 笔{failed} · 已上线简中 {liveBefore} → {liveAfter}（+{delta}）',
+      en: 'Approved {ok}{failed} · live SC {liveBefore} → {liveAfter} (+{delta})',
+    },
+    batchApproveAllReadyHant: { hant: '核准全部可核准繁中', hans: '核准全部可核准繁中', en: 'Approve all ready TC' },
+    batchApproveAllReadyHans: { hant: '核准全部可核准简中', hans: '核准全部可核准简中', en: 'Approve all ready SC' },
+    approvalVerifyHint: {
+      hant: '批量核准後，請看上方「Approved」數字是否增加；若 Ready 不減少，可能是稽核未通過（滑鼠移到 TC Ready 看原因）或需先勾選列再按批量按鈕。',
+      hans: '批量核准后，请看上方「Approved」数字是否增加；若 Ready 不减少，可能是稽核未通过（鼠标移到 TC Ready 看原因）或需先勾选行再按批量按钮。',
+      en: 'After batch approve, confirm the Approved counts above increase. If Ready stays high, hover TC Ready for audit failures — or use Approve all ready (no checkbox needed).',
     },
     translateOne: { hant: '翻譯此行程', hans: '翻译此行程', en: 'Translate activity' },
 
